@@ -15,7 +15,7 @@ struct DocumentsView: View {
     @Query(sort: \AttachmentRecord.createdAt, order: .reverse) private var attachments: [AttachmentRecord]
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
 
-    @State private var selectedVehicleID: UUID?
+    @EnvironmentObject private var appState: AppState
     @State private var filter: Filter = .all
     @State private var searchText = ""
     @State private var showingComposer = false
@@ -26,7 +26,12 @@ struct DocumentsView: View {
 
     private var filteredAttachments: [AttachmentRecord] {
         attachments.filter { attachment in
-            let matchesVehicle = selectedVehicleID == nil || attachment.vehicle?.id == selectedVehicleID
+            var matchesVehicle = true
+            if appState.showOnlyCurrentVehicle, let globalID = appState.selectedVehicleID {
+                matchesVehicle = (attachment.vehicle?.id == globalID)
+            } else if let localID = appState.selectedVehicleID {
+                matchesVehicle = (attachment.vehicle?.id == localID)
+            }
             let matchesFilter: Bool = {
                 switch filter {
                 case .all: return true
@@ -40,48 +45,52 @@ struct DocumentsView: View {
     }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             PremiumScreenBackground()
 
-            if filteredAttachments.isEmpty {
-                ScrollView(showsIndicators: false) {
-                    ContentUnavailableView {
-                        Label("No documents yet", systemImage: "doc.on.doc.fill")
-                    } description: {
-                        Text("Store receipt photos, PDFs and ownership files so they stay attached to the right vehicle.")
-                    } actions: {
-                        Button("Add Document") {
-                            showingComposer = true
+            VStack(spacing: 0) {
+                VehicleFilterScrollView(vehicles: vehicles)
+
+                if filteredAttachments.isEmpty {
+                    ScrollView(showsIndicators: false) {
+                        ContentUnavailableView {
+                            Label("No documents yet", systemImage: "doc.on.doc.fill")
+                        } description: {
+                            Text("Store receipt photos, PDFs and ownership files so they stay attached to the right vehicle.")
+                        } actions: {
+                            Button("Add Document") {
+                                showingComposer = true
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(AppTheme.accentSecondary)
+                            .disabled(vehicles.isEmpty)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(AppTheme.accentSecondary)
-                        .disabled(vehicles.isEmpty)
+                        .frame(maxWidth: .infinity, alignment: .top)
+                        .padding(.top, 20)
                     }
-                    .frame(maxWidth: .infinity, alignment: .top)
-                    .padding(.top, 20)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            } else {
-                List {
-                    ForEach(filteredAttachments) { attachment in
-                        Button {
-                            previewURL = AttachmentStorageService.fileURL(for: attachment.storageReference)
-                        } label: {
-                            documentRow(for: attachment)
-                        }
-                        .buttonStyle(.plain)
-                        .listRowBackground(Color.clear)
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                deleteTarget = attachment
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                } else {
+                    List {
+                        ForEach(filteredAttachments) { attachment in
+                            Button {
+                                previewURL = AttachmentStorageService.fileURL(for: attachment.storageReference)
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                documentRow(for: attachment)
+                            }
+                            .buttonStyle(.plain)
+                            .listRowBackground(Color.clear)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    deleteTarget = attachment
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
                             }
                         }
                     }
+                    .listStyle(.insetGrouped)
+                    .scrollContentBackground(.hidden)
                 }
-                .listStyle(.insetGrouped)
-                .scrollContentBackground(.hidden)
             }
         }
         .navigationTitle("Documents")
@@ -89,17 +98,6 @@ struct DocumentsView: View {
         .searchable(text: $searchText, prompt: "File or vehicle")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Menu {
-                    Picker("Vehicle", selection: $selectedVehicleID) {
-                        Text("All Vehicles").tag(Optional<UUID>.none)
-                        ForEach(vehicles) { vehicle in
-                            Text(vehicle.title).tag(Optional(vehicle.id))
-                        }
-                    }
-                } label: {
-                    Image(systemName: "car")
-                }
-
                 Menu {
                     Picker("Type", selection: $filter) {
                         ForEach(Filter.allCases) { filter in
@@ -120,7 +118,7 @@ struct DocumentsView: View {
         }
         .sheet(isPresented: $showingComposer) {
             NavigationStack {
-                DocumentComposerSheet(preselectedVehicle: vehicles.first(where: { $0.id == selectedVehicleID }))
+                DocumentComposerSheet(preselectedVehicle: appState.selectedVehicleID != nil ? vehicles.first(where: { $0.id == appState.selectedVehicleID }) : nil)
             }
         }
         .sheet(item: Binding(get: {

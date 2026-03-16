@@ -5,6 +5,7 @@ struct VehicleDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var entitlementStore: EntitlementStore
     @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
+    @EnvironmentObject private var appState: AppState
 
     let vehicle: Vehicle
 
@@ -105,6 +106,11 @@ struct VehicleDetailView: View {
         }
         .navigationTitle(vehicle.title)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if appState.showOnlyCurrentVehicle {
+                appState.selectedVehicleID = vehicle.id
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {

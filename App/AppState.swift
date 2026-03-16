@@ -55,3 +55,13 @@ final class PaywallCoordinator: ObservableObject {
         reason = nil
     }
 }
+@MainActor
+final class AppState: ObservableObject {
+    @AppStorage("showOnlyCurrentVehicle") var showOnlyCurrentVehicle: Bool = false
+    @AppStorage("globalSelectedVehicleID") var globalSelectedVehicleIDString: String = ""
+    
+    var selectedVehicleID: UUID? {
+        get { UUID(uuidString: globalSelectedVehicleIDString) }
+        set { globalSelectedVehicleIDString = newValue?.uuidString ?? "" }
+    }
+}

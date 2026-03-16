@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var entitlementStore: EntitlementStore
     @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
+    @EnvironmentObject private var appState: AppState
 
     @AppStorage("settings.defaultCurrency") private var defaultCurrency = CurrencyPreset.eur.rawValue
 
@@ -27,6 +28,7 @@ struct SettingsView: View {
                             Text(preset.rawValue).tag(preset.rawValue)
                         }
                     }
+                    Toggle("Show only global selected vehicle", isOn: $appState.showOnlyCurrentVehicle)
                 }
 
                 Section("Pro") {
@@ -51,8 +53,8 @@ struct SettingsView: View {
                         entitlementStore.setDebugOverride(value)
                     }))
                     
-                    Button("Generate Mock Vehicle") {
-                        PreviewData.generateMockVehicle(in: modelContext)
+                    Button("Generate Demo Garage") {
+                        PreviewData.generateDemoGarage(in: modelContext)
                         Haptics.success()
                     }
                     #endif

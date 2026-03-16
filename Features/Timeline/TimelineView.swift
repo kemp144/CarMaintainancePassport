@@ -39,7 +39,7 @@ struct TimelineView: View {
     @Query(sort: \AttachmentRecord.createdAt, order: .reverse) private var attachments: [AttachmentRecord]
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
 
-    @State private var selectedVehicleID: UUID?
+    @EnvironmentObject private var appState: AppState
     @State private var category: CategoryFilter = .all
     @State private var sort: SortOption = .newest
     @State private var searchText = ""
@@ -51,13 +51,19 @@ struct TimelineView: View {
             return TimelineEvent(id: service.id, date: service.date, kind: .service(service), mileage: service.mileage, cost: service.price, vehicleTitle: vehicleTitle)
         }
 
-        combined.append(contentsOf: attachments.compactMap { attachment in
+        combined.append(contentsOf: attachments.filter { $0.serviceEntry == nil }.compactMap { attachment in
             guard let vehicleTitle = attachment.vehicle?.title else { return nil }
             return TimelineEvent(id: attachment.id, date: attachment.createdAt, kind: .document(attachment), mileage: attachment.serviceEntry?.mileage ?? 0, cost: 0, vehicleTitle: vehicleTitle)
         })
 
         let filtered = combined.filter { event in
-            let matchesVehicle = selectedVehicleID == nil || vehicleID(for: event) == selectedVehicleID
+            var matchesVehicle = true
+            if appState.showOnlyCurrentVehicle, let globalID = appState.selectedVehicleID {
+                matchesVehicle = (vehicleID(for: event) == globalID)
+            } else if let localID = appState.selectedVehicleID {
+                matchesVehicle = (vehicleID(for: event) == localID)
+            }
+            
             let matchesCategory = matchesCategoryFilter(for: event)
             let matchesSearch = matchesSearch(for: event)
             return matchesVehicle && matchesCategory && matchesSearch
@@ -76,44 +82,48 @@ struct TimelineView: View {
     }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             PremiumScreenBackground()
 
-            if events.isEmpty {
-                ScrollView(showsIndicators: false) {
-                    ContentUnavailableView {
-                        Label("No timeline results", systemImage: "clock.badge.xmark.fill")
-                    } description: {
-                        Text("Adjust filters or add a service entry to start the vehicle history.")
+            VStack(spacing: 0) {
+                VehicleFilterScrollView(vehicles: vehicles)
+
+                if events.isEmpty {
+                    ScrollView(showsIndicators: false) {
+                        ContentUnavailableView {
+                            Label("No timeline results", systemImage: "clock.badge.xmark.fill")
+                        } description: {
+                            Text("Adjust filters or add a service entry to start the vehicle history.")
+                        }
+                        .frame(maxWidth: .infinity, alignment: .top)
+                        .padding(.top, 20)
                     }
-                    .frame(maxWidth: .infinity, alignment: .top)
-                    .padding(.top, 20)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            } else {
-                List {
-                    ForEach(events) { event in
-                        switch event.kind {
-                        case .service(let entry):
-                            NavigationLink {
-                                ServiceDetailView(entry: entry)
-                            } label: {
-                                timelineListRow(for: event)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                } else {
+                    List {
+                        ForEach(events) { event in
+                            switch event.kind {
+                            case .service(let entry):
+                                NavigationLink {
+                                    ServiceDetailView(entry: entry)
+                                } label: {
+                                    timelineListRow(for: event)
+                                }
+                                .listRowBackground(Color.clear)
+                            case .document(let attachment):
+                                Button {
+                                    previewURL = AttachmentStorageService.fileURL(for: attachment.storageReference)
+                                } label: {
+                                    timelineListRow(for: event)
+                                }
+                                .buttonStyle(.plain)
+                                .listRowBackground(Color.clear)
                             }
-                            .listRowBackground(Color.clear)
-                        case .document(let attachment):
-                            Button {
-                                previewURL = AttachmentStorageService.fileURL(for: attachment.storageReference)
-                            } label: {
-                                timelineListRow(for: event)
-                            }
-                            .buttonStyle(.plain)
-                            .listRowBackground(Color.clear)
                         }
                     }
+                    .listStyle(.insetGrouped)
+                    .scrollContentBackground(.hidden)
                 }
-                .listStyle(.insetGrouped)
-                .scrollContentBackground(.hidden)
             }
         }
         .navigationTitle("Timeline")
@@ -121,17 +131,6 @@ struct TimelineView: View {
         .searchable(text: $searchText, prompt: "Workshop, note or vehicle")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Menu {
-                    Picker("Vehicle", selection: $selectedVehicleID) {
-                        Text("All Vehicles").tag(Optional<UUID>.none)
-                        ForEach(vehicles) { vehicle in
-                            Text(vehicle.title).tag(Optional(vehicle.id))
-                        }
-                    }
-                } label: {
-                    Image(systemName: "car")
-                }
-
                 Menu {
                     Picker("Category", selection: $category) {
                         ForEach(CategoryFilter.allCases) { filter in
@@ -175,6 +174,13 @@ struct TimelineView: View {
                 Text(detail(for: event))
                     .font(.caption)
                     .foregroundStyle(AppTheme.tertiaryText)
+                
+                if case .service(let entry) = event.kind, !entry.attachments.isEmpty {
+                    Label("\(entry.attachments.count) \(entry.attachments.count == 1 ? "photo/doc" : "photos/docs")", systemImage: "paperclip")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppTheme.accentSecondary)
+                        .padding(.top, 2)
+                }
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 6) {

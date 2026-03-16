@@ -6,6 +6,7 @@ struct CarServicePassportApp: App {
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @StateObject private var entitlementStore = EntitlementStore()
     @StateObject private var paywallCoordinator = PaywallCoordinator()
+    @StateObject private var appState = AppState()
 
     private let modelContainer: ModelContainer = {
         let schema = Schema([
@@ -37,6 +38,7 @@ struct CarServicePassportApp: App {
             .preferredColorScheme(.dark)
             .environmentObject(entitlementStore)
             .environmentObject(paywallCoordinator)
+            .environmentObject(appState)
             .modelContainer(modelContainer)
             .task {
                 await entitlementStore.prepare()

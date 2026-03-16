@@ -15,6 +15,8 @@ struct AttachmentThumbnailView: View {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
+                        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                        .clipped()
                 } else {
                     VStack(spacing: 8) {
                         Image(systemName: attachment.type.icon)
