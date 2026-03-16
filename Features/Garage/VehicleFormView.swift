@@ -67,7 +67,11 @@ struct VehicleFormView: View {
                 Section("Vehicle") {
                     TextField("Make", text: $make)
                     TextField("Model", text: $model)
-                    Stepper("Year \(year)", value: $year, in: 1950...(Calendar.current.component(.year, from: .now) + 1))
+                    Picker("Year", selection: $year) {
+                        ForEach((1950...(Calendar.current.component(.year, from: .now) + 1)).reversed(), id: \.self) {
+                            Text(String($0)).tag($0)
+                        }
+                    }
                     TextField("License plate", text: $licensePlate)
                     TextField("Current mileage", text: $currentMileage)
                         .keyboardType(.numberPad)

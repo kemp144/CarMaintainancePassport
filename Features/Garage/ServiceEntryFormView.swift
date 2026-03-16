@@ -66,21 +66,18 @@ struct ServiceEntryFormView: View {
                     TextField("Mileage", text: $mileage)
                         .keyboardType(.numberPad)
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(ServiceType.allCases) { type in
-                                Button {
-                                    serviceType = type
-                                    if entry == nil {
-                                        category = type.defaultCategory
-                                    }
-                                } label: {
-                                    ServiceTypeChip(type: type, isSelected: serviceType == type)
-                                }
-                                .buttonStyle(.plain)
+                    Picker("Type", selection: Binding(
+                        get: { serviceType },
+                        set: { newType in
+                            serviceType = newType
+                            if entry == nil {
+                                category = newType.defaultCategory
                             }
                         }
-                        .padding(.vertical, 4)
+                    )) {
+                        ForEach(ServiceType.allCases) { type in
+                            Text(type.title).tag(type)
+                        }
                     }
 
                     if serviceType == .custom {
