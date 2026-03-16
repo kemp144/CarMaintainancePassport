@@ -1,0 +1,41 @@
+name: CarServicePassport
+options:
+  bundleIdPrefix: com.robertengel
+  deploymentTarget:
+    iOS: 18.0
+settings:
+  base:
+    SWIFT_VERSION: 5.10
+    MARKETING_VERSION: 1.0
+    CURRENT_PROJECT_VERSION: 1
+targets:
+  CarServicePassport:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - Components
+      - Data
+      - Features
+      - Helpers
+      - Models
+      - Services
+      - Theme
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.robertengel.CarServicePassport
+        PRODUCT_NAME: Car Service Passport
+        TARGETED_DEVICE_FAMILY: 1
+        SUPPORTS_MACCATALYST: NO
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Car Service Passport
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Add vehicle photos and receipt images to your private service history.
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Save exported visuals and supporting files to your photo library when you choose to.
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone:
+          - UIInterfaceOrientationPortrait
+        CODE_SIGN_STYLE: Automatic
+    scheme:
+      testTargets: []

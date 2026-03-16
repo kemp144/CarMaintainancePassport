@@ -1,0 +1,575 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		03C65148C080A7137E471A57 /* EmptyStateCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A01EBF05137A193FA299FBB /* EmptyStateCard.swift */; };
+		03E3C21804A9F90C3DC88696 /* PDFExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F56EF4A8A210F7B78ECC57 /* PDFExportService.swift */; };
+		09A7DCB961DE77EFC4BB37FB /* EntitlementStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEFEB61C93BB7961B8758CF /* EntitlementStore.swift */; };
+		1B58025DF8753297BC1BD668 /* VehicleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D935BBD3517D0AE797C39CAF /* VehicleDetailView.swift */; };
+		20ACC1E2F36944D788CC7DE4 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB028C99B916AD3B8C3779A4 /* PaywallView.swift */; };
+		363BD0CA582BED1D48830C74 /* StatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A12A3136D6855ECF3346ED6 /* StatCard.swift */; };
+		38A49DCB5F5E031E33C187EB /* VehicleFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 822ADCE5D67B2E53A94BD073 /* VehicleFormView.swift */; };
+		398D7615F76E1DB5DCC475F7 /* TimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 570E8C4A5FAF720F7C7DECA5 /* TimelineView.swift */; };
+		3D64B902C5B39B4D9012A651 /* AttachmentViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 068CCD1462B4A1EBD1A9E954 /* AttachmentViews.swift */; };
+		5267744741E267F29F2658FA /* ServiceEntryFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDCA7BA6E2E1FA1BB94DF251 /* ServiceEntryFormView.swift */; };
+		5AD538E9E717F5C143F5BAA7 /* RemindersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9571B07AFB8E1A6E8512C438 /* RemindersView.swift */; };
+		5CD10C73B922434F4F1773EF /* ReminderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D857726215B5AE0799D9BEF4 /* ReminderItem.swift */; };
+		5D0306143706CE875E7A7273 /* SurfaceCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78C2D135FC29E7C298E10F0 /* SurfaceCard.swift */; };
+		6FDD76FCDA8356326B690933 /* ServiceEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B682A27BB9233B527B6A7B8C /* ServiceEntry.swift */; };
+		7DF4B685F784E48AD0F79CCB /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13D9378B397B9D24F8DC9ECB /* RootTabView.swift */; };
+		80A8E1EAA56028864006B35A /* ReminderFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14CCDDF87DB26D1661DF7BB4 /* ReminderFormView.swift */; };
+		83D20247C25E3F0716D4AE9B /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE98AC51A32868A70E9A810F /* NotificationService.swift */; };
+		852FB2F017A28F78283A8A68 /* AppEnums.swift in Sources */ = {isa = PBXBuildFile; fileRef = 443D76F7736EEC3A9864A759 /* AppEnums.swift */; };
+		8865353157FCD6EF20403C17 /* AttachmentStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B763E5B86A76293A62213F20 /* AttachmentStorageService.swift */; };
+		88658C567AD02E12505B1FA2 /* GarageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6A30822B29841CCD6067C0B /* GarageView.swift */; };
+		8F4B37044319F1342D7F76DD /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA520876B1A06817ABDC59D /* SettingsView.swift */; };
+		942484335C2F47FC6A1DD60E /* VehicleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB27F9C4B4513F6F81D98264 /* VehicleViews.swift */; };
+		9F08379CFB64EF4E34238C91 /* BackupExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73CC718A359B722AAC5ED9CE /* BackupExportService.swift */; };
+		9F4994EFBD9B12CAEE0B2454 /* CarServicePassportApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A445531DBCED21C319E9C2B /* CarServicePassportApp.swift */; };
+		B25E1F7EDF94D731D681B1EF /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 897D4D05497B02C4BD2D160A /* ActivityView.swift */; };
+		B2EDA7C783D43C9A78111A3A /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA723CF66D3BE8ED05EBC3E5 /* Formatters.swift */; };
+		B30070D4D1DE01875C43941B /* ServiceTypeChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24499B55CF20EB779A0CAAF9 /* ServiceTypeChip.swift */; };
+		B5B11BFF37CC4C04CFC27C0B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B62F7482E12840B24732C5C /* OnboardingView.swift */; };
+		B8FE50BBF54B9B974A375D95 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA63B55F84187BBE079CF6A /* AppState.swift */; };
+		B92B6526E9AA3B1F8EC18815 /* ServiceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5D36300CB70757E9422A4F /* ServiceDetailView.swift */; };
+		B938F2EDE116674CF8DEAFDE /* DocumentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78EB9D5EEF6478C0399212AE /* DocumentsView.swift */; };
+		BF0451E234EB01B5D5FF5AA6 /* DraftAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCEE7CDDED180C5C92E6796E /* DraftAttachment.swift */; };
+		CB97B4CBDA3D1788FDA91252 /* PremiumBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C7CFD1BDA5D37AD8FA458A /* PremiumBackground.swift */; };
+		CFC793F29A218CFD07D7F2D7 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFBBCE5735E87E28F4AEFD7A /* Haptics.swift */; };
+		D452F71FDCC0A4A353F12498 /* PreviewURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = B56557CC8B53232DD83AA5CD /* PreviewURL.swift */; };
+		DED4245C447DFE9DDC03B143 /* AttachmentRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 013E733282DCEBFD301072C9 /* AttachmentRecord.swift */; };
+		EC233467E89F1DED8AE6B584 /* Vehicle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74D0494EAD497D20D8A41A27 /* Vehicle.swift */; };
+		F1F1A50F32909696ECA96C4F /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12E49683DB3B2AD8999BF90 /* SampleData.swift */; };
+		F6F79DC2D121FEB38AA8D206 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0549892E577DF0443D60AA81 /* AppTheme.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		013E733282DCEBFD301072C9 /* AttachmentRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentRecord.swift; sourceTree = "<group>"; };
+		0549892E577DF0443D60AA81 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
+		068CCD1462B4A1EBD1A9E954 /* AttachmentViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentViews.swift; sourceTree = "<group>"; };
+		0A01EBF05137A193FA299FBB /* EmptyStateCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateCard.swift; sourceTree = "<group>"; };
+		13D9378B397B9D24F8DC9ECB /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
+		14C7CFD1BDA5D37AD8FA458A /* PremiumBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumBackground.swift; sourceTree = "<group>"; };
+		14CCDDF87DB26D1661DF7BB4 /* ReminderFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderFormView.swift; sourceTree = "<group>"; };
+		21F56EF4A8A210F7B78ECC57 /* PDFExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFExportService.swift; sourceTree = "<group>"; };
+		24499B55CF20EB779A0CAAF9 /* ServiceTypeChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTypeChip.swift; sourceTree = "<group>"; };
+		443D76F7736EEC3A9864A759 /* AppEnums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnums.swift; sourceTree = "<group>"; };
+		4BEFEB61C93BB7961B8758CF /* EntitlementStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementStore.swift; sourceTree = "<group>"; };
+		570E8C4A5FAF720F7C7DECA5 /* TimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineView.swift; sourceTree = "<group>"; };
+		5A12A3136D6855ECF3346ED6 /* StatCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCard.swift; sourceTree = "<group>"; };
+		5A445531DBCED21C319E9C2B /* CarServicePassportApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarServicePassportApp.swift; sourceTree = "<group>"; };
+		5B62F7482E12840B24732C5C /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		73CC718A359B722AAC5ED9CE /* BackupExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupExportService.swift; sourceTree = "<group>"; };
+		74D0494EAD497D20D8A41A27 /* Vehicle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vehicle.swift; sourceTree = "<group>"; };
+		78EB9D5EEF6478C0399212AE /* DocumentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentsView.swift; sourceTree = "<group>"; };
+		822ADCE5D67B2E53A94BD073 /* VehicleFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleFormView.swift; sourceTree = "<group>"; };
+		86C9DF6E3EBDAE3409979578 /* CarServicePassport.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CarServicePassport.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		897D4D05497B02C4BD2D160A /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+		9571B07AFB8E1A6E8512C438 /* RemindersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemindersView.swift; sourceTree = "<group>"; };
+		AB27F9C4B4513F6F81D98264 /* VehicleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleViews.swift; sourceTree = "<group>"; };
+		AE98AC51A32868A70E9A810F /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		B56557CC8B53232DD83AA5CD /* PreviewURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewURL.swift; sourceTree = "<group>"; };
+		B682A27BB9233B527B6A7B8C /* ServiceEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceEntry.swift; sourceTree = "<group>"; };
+		B763E5B86A76293A62213F20 /* AttachmentStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentStorageService.swift; sourceTree = "<group>"; };
+		BFBBCE5735E87E28F4AEFD7A /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		C12E49683DB3B2AD8999BF90 /* SampleData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleData.swift; sourceTree = "<group>"; };
+		C6A30822B29841CCD6067C0B /* GarageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarageView.swift; sourceTree = "<group>"; };
+		CA723CF66D3BE8ED05EBC3E5 /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
+		CCEE7CDDED180C5C92E6796E /* DraftAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftAttachment.swift; sourceTree = "<group>"; };
+		D857726215B5AE0799D9BEF4 /* ReminderItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderItem.swift; sourceTree = "<group>"; };
+		D935BBD3517D0AE797C39CAF /* VehicleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleDetailView.swift; sourceTree = "<group>"; };
+		DAA520876B1A06817ABDC59D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		DB028C99B916AD3B8C3779A4 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		EE5D36300CB70757E9422A4F /* ServiceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceDetailView.swift; sourceTree = "<group>"; };
+		F78C2D135FC29E7C298E10F0 /* SurfaceCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfaceCard.swift; sourceTree = "<group>"; };
+		FDCA7BA6E2E1FA1BB94DF251 /* ServiceEntryFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceEntryFormView.swift; sourceTree = "<group>"; };
+		FEA63B55F84187BBE079CF6A /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		24594AF3570A92ADA2E0A464 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		2A75F2819966B0F31E4667E9 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				6064A8CBFFA4A42003D54A3B /* Documents */,
+				95A7525B3FE6FC64C3BE69CB /* Garage */,
+				DD6130C152E2841B6201CC69 /* Onboarding */,
+				D5D4E782073E857B48C8F289 /* Paywall */,
+				4AF4BE608517651A23D11EB0 /* Reminders */,
+				7370A2964405804C56580D36 /* Settings */,
+				41F3C1D709F3C95C24862177 /* Timeline */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		41F3C1D709F3C95C24862177 /* Timeline */ = {
+			isa = PBXGroup;
+			children = (
+				570E8C4A5FAF720F7C7DECA5 /* TimelineView.swift */,
+			);
+			path = Timeline;
+			sourceTree = "<group>";
+		};
+		4AF4BE608517651A23D11EB0 /* Reminders */ = {
+			isa = PBXGroup;
+			children = (
+				14CCDDF87DB26D1661DF7BB4 /* ReminderFormView.swift */,
+				9571B07AFB8E1A6E8512C438 /* RemindersView.swift */,
+			);
+			path = Reminders;
+			sourceTree = "<group>";
+		};
+		6064A8CBFFA4A42003D54A3B /* Documents */ = {
+			isa = PBXGroup;
+			children = (
+				78EB9D5EEF6478C0399212AE /* DocumentsView.swift */,
+			);
+			path = Documents;
+			sourceTree = "<group>";
+		};
+		7370A2964405804C56580D36 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				DAA520876B1A06817ABDC59D /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		7A76E818A93714FFE0875EE9 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				B763E5B86A76293A62213F20 /* AttachmentStorageService.swift */,
+				73CC718A359B722AAC5ED9CE /* BackupExportService.swift */,
+				4BEFEB61C93BB7961B8758CF /* EntitlementStore.swift */,
+				AE98AC51A32868A70E9A810F /* NotificationService.swift */,
+				21F56EF4A8A210F7B78ECC57 /* PDFExportService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		8BB1509139A9DF629A7FF1E7 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				0549892E577DF0443D60AA81 /* AppTheme.swift */,
+				14C7CFD1BDA5D37AD8FA458A /* PremiumBackground.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		8BD3B994FD81A3FC375D2456 = {
+			isa = PBXGroup;
+			children = (
+				FF23A6714660F52119ED6D0D /* App */,
+				BEEC7D61636C9852EBD2391A /* Components */,
+				24594AF3570A92ADA2E0A464 /* Data */,
+				2A75F2819966B0F31E4667E9 /* Features */,
+				F315040865339C0F831AEBAD /* Helpers */,
+				9EFB88A6CB219BDAA29B88C5 /* Models */,
+				7A76E818A93714FFE0875EE9 /* Services */,
+				8BB1509139A9DF629A7FF1E7 /* Theme */,
+				FBD5C1F14F9C5665050DF533 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		95A7525B3FE6FC64C3BE69CB /* Garage */ = {
+			isa = PBXGroup;
+			children = (
+				C6A30822B29841CCD6067C0B /* GarageView.swift */,
+				EE5D36300CB70757E9422A4F /* ServiceDetailView.swift */,
+				FDCA7BA6E2E1FA1BB94DF251 /* ServiceEntryFormView.swift */,
+				D935BBD3517D0AE797C39CAF /* VehicleDetailView.swift */,
+				822ADCE5D67B2E53A94BD073 /* VehicleFormView.swift */,
+			);
+			path = Garage;
+			sourceTree = "<group>";
+		};
+		9EFB88A6CB219BDAA29B88C5 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				443D76F7736EEC3A9864A759 /* AppEnums.swift */,
+				013E733282DCEBFD301072C9 /* AttachmentRecord.swift */,
+				D857726215B5AE0799D9BEF4 /* ReminderItem.swift */,
+				B682A27BB9233B527B6A7B8C /* ServiceEntry.swift */,
+				74D0494EAD497D20D8A41A27 /* Vehicle.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		BEEC7D61636C9852EBD2391A /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				897D4D05497B02C4BD2D160A /* ActivityView.swift */,
+				068CCD1462B4A1EBD1A9E954 /* AttachmentViews.swift */,
+				0A01EBF05137A193FA299FBB /* EmptyStateCard.swift */,
+				24499B55CF20EB779A0CAAF9 /* ServiceTypeChip.swift */,
+				5A12A3136D6855ECF3346ED6 /* StatCard.swift */,
+				F78C2D135FC29E7C298E10F0 /* SurfaceCard.swift */,
+				AB27F9C4B4513F6F81D98264 /* VehicleViews.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		D5D4E782073E857B48C8F289 /* Paywall */ = {
+			isa = PBXGroup;
+			children = (
+				DB028C99B916AD3B8C3779A4 /* PaywallView.swift */,
+			);
+			path = Paywall;
+			sourceTree = "<group>";
+		};
+		DD6130C152E2841B6201CC69 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				5B62F7482E12840B24732C5C /* OnboardingView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		F315040865339C0F831AEBAD /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				CCEE7CDDED180C5C92E6796E /* DraftAttachment.swift */,
+				CA723CF66D3BE8ED05EBC3E5 /* Formatters.swift */,
+				BFBBCE5735E87E28F4AEFD7A /* Haptics.swift */,
+				B56557CC8B53232DD83AA5CD /* PreviewURL.swift */,
+				C12E49683DB3B2AD8999BF90 /* SampleData.swift */,
+			);
+			path = Helpers;
+			sourceTree = "<group>";
+		};
+		FBD5C1F14F9C5665050DF533 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				86C9DF6E3EBDAE3409979578 /* CarServicePassport.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FF23A6714660F52119ED6D0D /* App */ = {
+			isa = PBXGroup;
+			children = (
+				FEA63B55F84187BBE079CF6A /* AppState.swift */,
+				5A445531DBCED21C319E9C2B /* CarServicePassportApp.swift */,
+				13D9378B397B9D24F8DC9ECB /* RootTabView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FB0DD654A501BFFCBDD11BF0 /* CarServicePassport */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FFDBBEF8C39941778CB81690 /* Build configuration list for PBXNativeTarget "CarServicePassport" */;
+			buildPhases = (
+				C0018CCBCB8BACF4137B3686 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CarServicePassport;
+			packageProductDependencies = (
+			);
+			productName = CarServicePassport;
+			productReference = 86C9DF6E3EBDAE3409979578 /* CarServicePassport.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		41BA5CAE8093A590014929F4 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					FB0DD654A501BFFCBDD11BF0 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 7145967EAD8C5AEDE3976EAF /* Build configuration list for PBXProject "CarServicePassport" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 8BD3B994FD81A3FC375D2456;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = FBD5C1F14F9C5665050DF533 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FB0DD654A501BFFCBDD11BF0 /* CarServicePassport */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C0018CCBCB8BACF4137B3686 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B25E1F7EDF94D731D681B1EF /* ActivityView.swift in Sources */,
+				852FB2F017A28F78283A8A68 /* AppEnums.swift in Sources */,
+				B8FE50BBF54B9B974A375D95 /* AppState.swift in Sources */,
+				F6F79DC2D121FEB38AA8D206 /* AppTheme.swift in Sources */,
+				DED4245C447DFE9DDC03B143 /* AttachmentRecord.swift in Sources */,
+				8865353157FCD6EF20403C17 /* AttachmentStorageService.swift in Sources */,
+				3D64B902C5B39B4D9012A651 /* AttachmentViews.swift in Sources */,
+				9F08379CFB64EF4E34238C91 /* BackupExportService.swift in Sources */,
+				9F4994EFBD9B12CAEE0B2454 /* CarServicePassportApp.swift in Sources */,
+				B938F2EDE116674CF8DEAFDE /* DocumentsView.swift in Sources */,
+				BF0451E234EB01B5D5FF5AA6 /* DraftAttachment.swift in Sources */,
+				03C65148C080A7137E471A57 /* EmptyStateCard.swift in Sources */,
+				09A7DCB961DE77EFC4BB37FB /* EntitlementStore.swift in Sources */,
+				B2EDA7C783D43C9A78111A3A /* Formatters.swift in Sources */,
+				88658C567AD02E12505B1FA2 /* GarageView.swift in Sources */,
+				CFC793F29A218CFD07D7F2D7 /* Haptics.swift in Sources */,
+				83D20247C25E3F0716D4AE9B /* NotificationService.swift in Sources */,
+				B5B11BFF37CC4C04CFC27C0B /* OnboardingView.swift in Sources */,
+				03E3C21804A9F90C3DC88696 /* PDFExportService.swift in Sources */,
+				20ACC1E2F36944D788CC7DE4 /* PaywallView.swift in Sources */,
+				CB97B4CBDA3D1788FDA91252 /* PremiumBackground.swift in Sources */,
+				D452F71FDCC0A4A353F12498 /* PreviewURL.swift in Sources */,
+				80A8E1EAA56028864006B35A /* ReminderFormView.swift in Sources */,
+				5CD10C73B922434F4F1773EF /* ReminderItem.swift in Sources */,
+				5AD538E9E717F5C143F5BAA7 /* RemindersView.swift in Sources */,
+				7DF4B685F784E48AD0F79CCB /* RootTabView.swift in Sources */,
+				F1F1A50F32909696ECA96C4F /* SampleData.swift in Sources */,
+				B92B6526E9AA3B1F8EC18815 /* ServiceDetailView.swift in Sources */,
+				6FDD76FCDA8356326B690933 /* ServiceEntry.swift in Sources */,
+				5267744741E267F29F2658FA /* ServiceEntryFormView.swift in Sources */,
+				B30070D4D1DE01875C43941B /* ServiceTypeChip.swift in Sources */,
+				8F4B37044319F1342D7F76DD /* SettingsView.swift in Sources */,
+				363BD0CA582BED1D48830C74 /* StatCard.swift in Sources */,
+				5D0306143706CE875E7A7273 /* SurfaceCard.swift in Sources */,
+				398D7615F76E1DB5DCC475F7 /* TimelineView.swift in Sources */,
+				EC233467E89F1DED8AE6B584 /* Vehicle.swift in Sources */,
+				1B58025DF8753297BC1BD668 /* VehicleDetailView.swift in Sources */,
+				38A49DCB5F5E031E33C187EB /* VehicleFormView.swift in Sources */,
+				942484335C2F47FC6A1DD60E /* VehicleViews.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2A1E296405559ED700F8B0ED /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.1;
+			};
+			name = Release;
+		};
+		88C5ABAC276FF7EA9D2FAA54 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.1;
+			};
+			name = Debug;
+		};
+		928BBBD83F6EE434830CA4F9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Car Service Passport";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save exported visuals and supporting files to your photo library when you choose to.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Add vehicle photos and receipt images to your private service history.";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = (
+					UIInterfaceOrientationPortrait,
+				);
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.robertengel.CarServicePassport;
+				PRODUCT_NAME = "Car Service Passport";
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		A02D4B4E5C85A3A62094A049 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Car Service Passport";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save exported visuals and supporting files to your photo library when you choose to.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Add vehicle photos and receipt images to your private service history.";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = (
+					UIInterfaceOrientationPortrait,
+				);
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.robertengel.CarServicePassport;
+				PRODUCT_NAME = "Car Service Passport";
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		7145967EAD8C5AEDE3976EAF /* Build configuration list for PBXProject "CarServicePassport" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				88C5ABAC276FF7EA9D2FAA54 /* Debug */,
+				2A1E296405559ED700F8B0ED /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FFDBBEF8C39941778CB81690 /* Build configuration list for PBXNativeTarget "CarServicePassport" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				928BBBD83F6EE434830CA4F9 /* Debug */,
+				A02D4B4E5C85A3A62094A049 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 41BA5CAE8093A590014929F4 /* Project object */;
+}
