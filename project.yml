@@ -30,6 +30,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Car Service Passport
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        INFOPLIST_KEY_NSCameraUsageDescription: Take photos of receipts and service documents to attach them directly.
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Add vehicle photos and receipt images to your private service history.
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Save exported visuals and supporting files to your photo library when you choose to.
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES

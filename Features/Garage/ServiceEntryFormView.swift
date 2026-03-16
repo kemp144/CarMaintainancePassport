@@ -26,6 +26,7 @@ struct ServiceEntryFormView: View {
     @State private var draftAttachments: [DraftAttachment] = []
     @State private var removedAttachmentIDs: Set<UUID> = []
     @State private var showingPDFImporter = false
+    @State private var showingCamera = false
     @State private var isSaving = false
     @State private var savedEntryForReminder: ServiceEntry?
     @State private var showingReminderSuggestion = false
@@ -103,6 +104,12 @@ struct ServiceEntryFormView: View {
                 }
 
                 Section("Attachments") {
+                    Button {
+                        showingCamera = true
+                    } label: {
+                        Label("Take photo", systemImage: "camera")
+                    }
+
                     PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: 5, matching: .images) {
                         Label("Add photos", systemImage: "photo.on.rectangle.angled")
                     }
@@ -148,6 +155,14 @@ struct ServiceEntryFormView: View {
                 }
                 .disabled(isSaving || selectedVehicle == nil || Int(mileage) == nil)
             }
+        }
+        .sheet(isPresented: $showingCamera) {
+            CameraCaptureView { image in
+                if let data = image.jpegData(compressionQuality: 0.8) {
+                    draftAttachments.append(DraftAttachment(type: .image, filename: "Camera Photo \(draftAttachments.count + 1)", imageData: data, sourceURL: nil))
+                }
+            }
+            .ignoresSafeArea()
         }
         .fileImporter(isPresented: $showingPDFImporter, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { result in
             if case .success(let urls) = result {

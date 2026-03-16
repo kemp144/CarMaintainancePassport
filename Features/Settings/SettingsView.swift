@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var entitlementStore: EntitlementStore
     @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
@@ -49,6 +50,11 @@ struct SettingsView: View {
                     }, set: { value in
                         entitlementStore.setDebugOverride(value)
                     }))
+                    
+                    Button("Generate Mock Vehicle") {
+                        PreviewData.generateMockVehicle(in: modelContext)
+                        Haptics.success()
+                    }
                     #endif
                 }
 

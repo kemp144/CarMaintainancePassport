@@ -78,4 +78,62 @@ enum PreviewData {
 
         try? context.save()
     }
+
+    @MainActor
+    static func generateMockVehicle(in context: ModelContext) {
+        let golf = Vehicle(
+            make: "Volkswagen",
+            model: "Golf 8",
+            year: 2021,
+            licensePlate: "BG 123-AB",
+            currentMileage: 68_500,
+            purchaseDate: Calendar.current.date(byAdding: .year, value: -4, to: .now),
+            purchasePrice: 22_000,
+            currencyCode: "EUR",
+            vin: "WVWZZZCDZLW133742",
+            notes: "Test mock data car with lots of history."
+        )
+        context.insert(golf)
+
+        let services: [(type: ServiceType, monthsAgo: Int, mileage: Int, price: Double)] = [
+            (.inspection, 45, 12_000, 250.0),
+            (.oilChange, 40, 18_000, 150.0),
+            (.tires, 36, 22_000, 400.0),
+            (.airConditioning, 30, 30_000, 120.0),
+            (.oilChange, 24, 40_000, 160.0),
+            (.brakes, 18, 48_000, 350.0),
+            (.inspection, 12, 55_000, 280.0),
+            (.oilChange, 6, 62_000, 180.0),
+            (.battery, 2, 67_000, 210.0),
+            (.washDetailing, 0, 68_500, 50.0)
+        ]
+
+        for s in services {
+            var date = Calendar.current.date(byAdding: .month, value: -s.monthsAgo, to: .now)!
+            date = Calendar.current.date(byAdding: .day, value: Int.random(in: -15...15), to: date) ?? date
+
+            let entry = ServiceEntry(
+                vehicle: golf,
+                date: date,
+                mileage: s.mileage,
+                serviceType: s.type,
+                price: s.price,
+                currencyCode: "EUR",
+                workshopName: "Mock Auto Center"
+            )
+            context.insert(entry)
+        }
+
+        let reminder = ReminderItem(
+            vehicle: golf,
+            type: .oilChange,
+            title: "Next Oil Change",
+            dateDue: Calendar.current.date(byAdding: .month, value: 6, to: .now),
+            mileageDue: 75_000,
+            isEnabled: true
+        )
+        context.insert(reminder)
+
+        try? context.save()
+    }
 }
