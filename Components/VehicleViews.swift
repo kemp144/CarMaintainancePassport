@@ -14,10 +14,10 @@ struct VehicleHeroCard: View {
                             .resizable()
                             .scaledToFill()
                             .frame(width: 156, height: 132)
-                            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                             .overlay {
-                                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(AppTheme.separator, lineWidth: 1)
                             }
                             .padding(16)
                     }
@@ -30,7 +30,7 @@ struct VehicleHeroCard: View {
 
                 Text(vehicle.subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(Color.white.opacity(0.8))
+                    .foregroundStyle(AppTheme.secondaryText)
 
                 HStack(spacing: 10) {
                     Label(AppFormatters.mileage(vehicle.currentMileage), systemImage: "speedometer")
@@ -48,59 +48,55 @@ struct VehicleRowCard: View {
     let vehicle: Vehicle
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(AppTheme.surfaceSecondary)
-                .frame(width: 62, height: 62)
-                .overlay {
+        SurfaceCard(padding: 0) {
+            HStack(alignment: .top, spacing: 16) {
+                // Vehicle Image (w-24 h-24 rounded-lg bg-slate-800)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(AppTheme.surfaceSecondary)
+                    
                     if let reference = vehicle.coverImageReference,
                        let image = UIImage(contentsOfFile: AttachmentStorageService.fileURL(for: reference).path) {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFill()
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .frame(width: 96, height: 96)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     } else {
-                        Image(systemName: "car.side.fill")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(AppTheme.accentSecondary)
+                        Image(systemName: "car.fill")
+                            .font(.system(size: 40)) // w-10 h-10 roughly
+                            .foregroundStyle(AppTheme.tertiaryText) // text-slate-600
                     }
                 }
+                .frame(width: 96, height: 96)
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(vehicle.title)
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(AppTheme.primaryText)
+                // Vehicle Info
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(vehicle.make) \(vehicle.model)")
+                        .font(.system(size: 18, weight: .semibold)) // text-lg font-semibold
+                        .foregroundStyle(AppTheme.primaryText) // text-white
+                        .lineLimit(1)
 
-                        Text(vehicle.subtitle)
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.secondaryText)
+                    Text(vehicle.year > 0 ? String(vehicle.year) : "Unknown Year")
+                        .font(.system(size: 14)) // text-sm
+                        .foregroundStyle(AppTheme.secondaryText) // text-slate-400
+                        .padding(.bottom, 4) // mb-2
+
+                    if !vehicle.licensePlate.isEmpty {
+                        Text(vehicle.licensePlate)
+                            .font(.system(size: 12, design: .monospaced)) // text-xs font-mono
+                            .foregroundStyle(Color(hex: "CBD5E1")) // text-slate-300
+                            .padding(.horizontal, 12) // px-3
+                            .padding(.vertical, 4) // py-1
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous) // rounded-md
+                                    .fill(AppTheme.surfaceSecondary) // bg-slate-800
+                            )
                     }
-
-                    Spacer(minLength: 8)
-
-                    Text(AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(AppTheme.accentSecondary)
                 }
-
-                Label(AppFormatters.mileage(vehicle.currentMileage), systemImage: "gauge.with.dots.needle.33percent")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(AppTheme.secondaryText)
-
-                if let latest = vehicle.latestService {
-                    Text("Latest: \(latest.displayTitle) • \(AppFormatters.mediumDate.string(from: latest.date))")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.tertiaryText)
-                        .lineLimit(1)
-                } else if let reminder = vehicle.nextActiveReminder() {
-                    Text("Next: \(reminder.title)")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.tertiaryText)
-                        .lineLimit(1)
-                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .padding(16) // p-4
         }
     }
 }

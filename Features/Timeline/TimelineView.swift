@@ -40,10 +40,13 @@ struct TimelineView: View {
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
 
     @EnvironmentObject private var appState: AppState
-    @State private var category: CategoryFilter = .all
     @State private var sort: SortOption = .newest
     @State private var searchText = ""
     @State private var previewURL: URL?
+
+    private var currentCategory: CategoryFilter {
+        CategoryFilter(rawValue: appState.timelineCategory) ?? .all
+    }
 
     private var events: [TimelineEvent] {
         var combined: [TimelineEvent] = services.compactMap { service in
@@ -83,9 +86,60 @@ struct TimelineView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            PremiumScreenBackground()
+            AppTheme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
+                // Custom Header
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Timeline")
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundStyle(AppTheme.primaryText)
+                            
+                            Text(events.isEmpty ? "No events yet" : "\(events.count) \(events.count == 1 ? "event" : "events")")
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+                        
+                        Spacer()
+                        
+                        Menu {
+                            Picker("Sort", selection: $sort) {
+                                ForEach(SortOption.allCases) { option in
+                                    Text(option.rawValue).tag(option)
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "arrow.up.arrow.down.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(AppTheme.tertiaryText)
+                        }
+                        
+                        Menu {
+                            Picker("Category", selection: $appState.timelineCategory) {
+                                ForEach(CategoryFilter.allCases) { filter in
+                                    Text(filter.rawValue).tag(filter.rawValue)
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(AppTheme.tertiaryText)
+                                .padding(.leading, 8)
+                        }
+                    }
+                    
+                    if !events.isEmpty {
+                        InlineSearchField(title: "Workshop, note or vehicle...", text: $searchText)
+                            .padding(.top, 12)
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 20)
+                .background(AppTheme.heroGradient)
+
                 VehicleFilterScrollView(vehicles: vehicles)
 
                 if events.isEmpty {
@@ -100,58 +154,38 @@ struct TimelineView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 } else {
-                    List {
-                        ForEach(events) { event in
-                            switch event.kind {
-                            case .service(let entry):
-                                NavigationLink {
-                                    ServiceDetailView(entry: entry)
-                                } label: {
-                                    timelineListRow(for: event)
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(spacing: 16) {
+                            ForEach(events) { event in
+                                switch event.kind {
+                                case .service(let entry):
+                                    NavigationLink {
+                                        ServiceDetailView(entry: entry)
+                                    } label: {
+                                        SurfaceCard {
+                                            timelineListRow(for: event)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                case .document(let attachment):
+                                    Button {
+                                        previewURL = AttachmentStorageService.fileURL(for: attachment.storageReference)
+                                    } label: {
+                                        SurfaceCard {
+                                            timelineListRow(for: event)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .listRowBackground(Color.clear)
-                            case .document(let attachment):
-                                Button {
-                                    previewURL = AttachmentStorageService.fileURL(for: attachment.storageReference)
-                                } label: {
-                                    timelineListRow(for: event)
-                                }
-                                .buttonStyle(.plain)
-                                .listRowBackground(Color.clear)
                             }
                         }
+                        .padding(24)
+                        .padding(.bottom, 100)
                     }
-                    .listStyle(.insetGrouped)
-                    .scrollContentBackground(.hidden)
                 }
             }
         }
-        .navigationTitle("Timeline")
-        .navigationBarTitleDisplayMode(.large)
-        .searchable(text: $searchText, prompt: "Workshop, note or vehicle")
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Menu {
-                    Picker("Category", selection: $category) {
-                        ForEach(CategoryFilter.allCases) { filter in
-                            Text(filter.rawValue).tag(filter)
-                        }
-                    }
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                }
-
-                Menu {
-                    Picker("Sort", selection: $sort) {
-                        ForEach(SortOption.allCases) { option in
-                            Text(option.rawValue).tag(option)
-                        }
-                    }
-                } label: {
-                    Image(systemName: "arrow.up.arrow.down.circle")
-                }
-            }
-        }
+        .navigationBarHidden(true)
         .sheet(item: Binding(get: {
             previewURL.map(PreviewURL.init(url:))
         }, set: { value in
@@ -261,7 +295,7 @@ struct TimelineView: View {
     }
 
     private func matchesCategoryFilter(for event: TimelineEvent) -> Bool {
-        switch category {
+        switch currentCategory {
         case .all:
             return true
         case .maintenance:

@@ -1,24 +1,26 @@
 import SwiftUI
 
 enum AppTheme {
-    static let background = Color(hex: "0B1016")
-    static let elevatedBackground = Color(hex: "111823")
-    static let surface = Color(hex: "151F2C")
-    static let surfaceSecondary = Color(hex: "1D2938")
-    static let accent = Color(hex: "4BA9C8")
-    static let accentSecondary = Color(hex: "7AD4D8")
-    static let success = Color(hex: "4DBB87")
-    static let warning = Color(hex: "E5A84A")
-    static let error = Color(hex: "DD6A6A")
+    // New Tailwind Slate and Orange Palette
+    static let background = Color(hex: "020617") // slate-950
+    static let elevatedBackground = Color(hex: "0F172A") // slate-900
+    static let surface = Color(hex: "0F172A") // slate-900
+    static let surfaceSecondary = Color(hex: "1E293B") // slate-800
+    static let accent = Color(hex: "F97316") // orange-500
+    static let accentSecondary = Color(hex: "EA580C") // orange-600
+    static let success = Color(hex: "22C55E") // green-500
+    static let warning = Color(hex: "F59E0B") // amber-500
+    static let error = Color(hex: "EF4444") // red-500
+    
     static let primaryText = Color.white
-    static let secondaryText = Color.white.opacity(0.68)
-    static let tertiaryText = Color.white.opacity(0.42)
-    static let separator = Color.white.opacity(0.08)
+    static let secondaryText = Color(hex: "94A3B8") // slate-400
+    static let tertiaryText = Color(hex: "64748B") // slate-500
+    static let separator = Color(hex: "1E293B") // slate-800
 
     static let heroGradient = LinearGradient(
-        colors: [Color(hex: "111A24"), Color(hex: "0D2430"), Color(hex: "172731")],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
+        colors: [Color(hex: "0F172A"), Color(hex: "020617")],
+        startPoint: .top,
+        endPoint: .bottom
     )
 }
 

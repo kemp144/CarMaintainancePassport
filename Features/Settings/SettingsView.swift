@@ -18,90 +18,150 @@ struct SettingsView: View {
     @State private var backupURL: URL?
 
     var body: some View {
-        ZStack {
-            PremiumScreenBackground()
+        ZStack(alignment: .top) {
+            AppTheme.background.ignoresSafeArea()
 
-            List {
-                Section("Preferences") {
-                    Picker("Default currency", selection: $defaultCurrency) {
-                        ForEach(CurrencyPreset.allCases) { preset in
-                            Text(preset.rawValue).tag(preset.rawValue)
+            VStack(spacing: 0) {
+                // Custom Header
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Settings")
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundStyle(AppTheme.primaryText)
+                            
+                            Text("Preferences and app info")
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondaryText)
                         }
+                        Spacer()
                     }
-                    Toggle("Show only global selected vehicle", isOn: $appState.showOnlyCurrentVehicle)
                 }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 20)
+                .background(AppTheme.heroGradient)
 
-                Section("Pro") {
-                    if entitlementStore.hasProAccess {
-                        Label("Pro unlocked", systemImage: "checkmark.seal.fill")
-                            .foregroundStyle(AppTheme.success)
-                    } else {
-                        Button("Upgrade to Pro") {
-                            paywallCoordinator.present(.settings)
-                        }
-                        Button("Restore Purchases") {
-                            Task {
-                                await entitlementStore.restorePurchases()
+                List {
+                    Section {
+                        Picker("Default currency", selection: $defaultCurrency) {
+                            ForEach(CurrencyPreset.allCases) { preset in
+                                Text(preset.rawValue).tag(preset.rawValue)
                             }
                         }
-                    }
-
-                    #if DEBUG
-                    Toggle("Debug Pro Override", isOn: Binding(get: {
-                        entitlementStore.debugProOverride
-                    }, set: { value in
-                        entitlementStore.setDebugOverride(value)
-                    }))
-                    
-                    Button("Generate Demo Garage") {
-                        PreviewData.generateDemoGarage(in: modelContext)
-                        Haptics.success()
-                    }
-                    #endif
-                }
-
-                Section("Backup") {
-                    Button("Export JSON Backup") {
-                        exportBackup()
-                    }
-                    Text("Create a local JSON snapshot for personal backup. iCloud sync can be added later without changing your records.")
-                        .font(.footnote)
-                        .foregroundStyle(AppTheme.secondaryText)
-                }
-
-                Section("Notifications") {
-                    Button("Open Notification Settings") {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            openURL(url)
-                        }
-                    }
-                    Text("Permission is requested only when you enable date-based reminders.")
-                        .font(.footnote)
-                        .foregroundStyle(AppTheme.secondaryText)
-                }
-
-                Section("Privacy") {
-                    Text("Car Service Passport is local-first. No account, no ads and no backend dependency are required in V1.")
-                        .font(.subheadline)
                         .foregroundStyle(AppTheme.primaryText)
-                }
+                        Toggle("Show only global selected vehicle", isOn: $appState.showOnlyCurrentVehicle)
+                            .foregroundStyle(AppTheme.primaryText)
+                    } header: {
+                        Text("Preferences")
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                    .listRowBackground(AppTheme.surface)
 
-                Section("Support") {
-                    Text("Feedback and support options can be added here before release.")
-                        .font(.subheadline)
-                        .foregroundStyle(AppTheme.secondaryText)
-                }
+                    Section {
+                        if entitlementStore.hasProAccess {
+                            Label("Pro unlocked", systemImage: "checkmark.seal.fill")
+                                .foregroundStyle(AppTheme.success)
+                        } else {
+                            Button("Upgrade to Pro") {
+                                paywallCoordinator.present(.settings)
+                            }
+                            .foregroundStyle(AppTheme.accent)
+                            Button("Restore Purchases") {
+                                Task {
+                                    await entitlementStore.restorePurchases()
+                                }
+                            }
+                            .foregroundStyle(AppTheme.accent)
+                        }
 
-                Section("About") {
-                    LabeledContent("Version", value: appVersion)
-                    LabeledContent("Vehicles", value: "\(vehicles.count)")
-                    LabeledContent("Entries", value: "\(services.count)")
+                        #if DEBUG
+                        Toggle("Debug Pro Override", isOn: Binding(get: {
+                            entitlementStore.debugProOverride
+                        }, set: { value in
+                            entitlementStore.setDebugOverride(value)
+                        }))
+                        .foregroundStyle(AppTheme.primaryText)
+                        
+                        Button("Generate Demo Garage") {
+                            PreviewData.generateDemoGarage(in: modelContext)
+                            Haptics.success()
+                        }
+                        .foregroundStyle(AppTheme.accent)
+                        #endif
+                    } header: {
+                        Text("Pro")
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                    .listRowBackground(AppTheme.surface)
+
+                    Section {
+                        Button("Export JSON Backup") {
+                            exportBackup()
+                        }
+                        .foregroundStyle(AppTheme.accent)
+                        Text("Create a local JSON snapshot for personal backup. iCloud sync can be added later without changing your records.")
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.secondaryText)
+                    } header: {
+                        Text("Backup")
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                    .listRowBackground(AppTheme.surface)
+
+                    Section {
+                        Button("Open Notification Settings") {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                openURL(url)
+                            }
+                        }
+                        .foregroundStyle(AppTheme.accent)
+                        Text("Permission is requested only when you enable date-based reminders.")
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.secondaryText)
+                    } header: {
+                        Text("Notifications")
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                    .listRowBackground(AppTheme.surface)
+
+                    Section {
+                        Text("Car Service Passport is local-first. No account, no ads and no backend dependency are required in V1.")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.primaryText)
+                    } header: {
+                        Text("Privacy")
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                    .listRowBackground(AppTheme.surface)
+
+                    Section {
+                        Text("Feedback and support options can be added here before release.")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.secondaryText)
+                    } header: {
+                        Text("Support")
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                    .listRowBackground(AppTheme.surface)
+
+                    Section {
+                        LabeledContent("Version", value: appVersion)
+                            .foregroundStyle(AppTheme.primaryText)
+                        LabeledContent("Vehicles", value: "\(vehicles.count)")
+                            .foregroundStyle(AppTheme.primaryText)
+                        LabeledContent("Entries", value: "\(services.count)")
+                            .foregroundStyle(AppTheme.primaryText)
+                    } header: {
+                        Text("About")
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                    .listRowBackground(AppTheme.surface)
                 }
+                .scrollContentBackground(.hidden)
             }
-            .scrollContentBackground(.hidden)
         }
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarHidden(true)
         .sheet(item: Binding(get: {
             backupURL.map(PreviewURL.init(url:))
         }, set: { value in

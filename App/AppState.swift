@@ -4,7 +4,6 @@ enum AppTab: Hashable {
     case garage
     case timeline
     case reminders
-    case documents
     case settings
 }
 
@@ -57,8 +56,11 @@ final class PaywallCoordinator: ObservableObject {
 }
 @MainActor
 final class AppState: ObservableObject {
+    @Published var selectedTab: AppTab = .garage
+    
     @AppStorage("showOnlyCurrentVehicle") var showOnlyCurrentVehicle: Bool = false
     @AppStorage("globalSelectedVehicleID") var globalSelectedVehicleIDString: String = ""
+    @Published var timelineCategory: String = "All" // "All", "Maintenance", "Repairs", "Documents", "Expenses"
     
     var selectedVehicleID: UUID? {
         get { UUID(uuidString: globalSelectedVehicleIDString) }

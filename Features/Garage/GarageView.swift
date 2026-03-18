@@ -39,65 +39,106 @@ struct GarageView: View {
     }
 
     var body: some View {
-        ZStack {
-            PremiumScreenBackground()
+        ZStack(alignment: .bottomTrailing) {
+            AppTheme.background.ignoresSafeArea()
 
-            if filteredVehicles.isEmpty {
-                ScrollView(showsIndicators: false) {
-                    ContentUnavailableView {
-                        Label(vehicles.isEmpty ? "Start your garage" : "No vehicles found", systemImage: "car.fill")
-                    } description: {
-                        Text(vehicles.isEmpty ? "Add your first car and keep service history, receipts and reminders in one place." : "Try a different search or sorting option.")
-                    } actions: {
-                        Button(vehicles.isEmpty ? "Add Vehicle" : "Create Vehicle") {
-                            addVehicleTapped()
+            VStack(spacing: 0) {
+                // Custom Header
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 8) { // mb-2 is spacing 8 between title and subtitle
+                            Text("My Garage")
+                                .font(.system(size: 30, weight: .bold)) // text-3xl is 30px
+                                .foregroundStyle(AppTheme.primaryText)
+                            
+                            Text(vehicles.isEmpty ? "Add your first vehicle to get started" : "\(vehicles.count) \(vehicles.count == 1 ? "vehicle" : "vehicles")")
+                                .font(.system(size: 16)) // base text
+                                .foregroundStyle(AppTheme.secondaryText)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(AppTheme.accentSecondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .top)
-                    .padding(.top, 20)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            } else {
-                List {
-                    ForEach(filteredVehicles) { vehicle in
-                        NavigationLink {
-                            VehicleDetailView(vehicle: vehicle)
+                        
+                        Spacer()
+                        
+                        Menu {
+                            Picker("Sort", selection: $sortOption) {
+                                ForForEach(SortOption.allCases) { option in
+                                    Text(option.rawValue).tag(option)
+                                }
+                            }
                         } label: {
-                            VehicleRowCard(vehicle: vehicle)
+                            Image(systemName: "arrow.up.arrow.down.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(AppTheme.tertiaryText)
                         }
-                        .listRowBackground(Color.clear)
+                    }
+                    
+                    if !vehicles.isEmpty {
+                        InlineSearchField(title: "Search vehicles...", text: $searchText)
+                            .padding(.top, 16)
                     }
                 }
-                .listStyle(.insetGrouped)
-                .scrollContentBackground(.hidden)
-            }
-        }
-        .navigationTitle("Garage")
-        .navigationBarTitleDisplayMode(.large)
-        .searchable(text: $searchText, prompt: "Make, model or plate")
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Menu {
-                    Picker("Sort", selection: $sortOption) {
-                        ForEach(SortOption.allCases) { option in
-                            Text(option.rawValue).tag(option)
+                .padding(.horizontal, 24) // px-6
+                .padding(.top, 48) // pt-12
+                .padding(.bottom, 32) // pb-8
+                .background(AppTheme.heroGradient)
+
+                // Content
+                ScrollView(showsIndicators: false) {
+                    if filteredVehicles.isEmpty {
+                        if vehicles.isEmpty {
+                            EmptyStateCard(
+                                icon: "car.fill",
+                                title: "No Vehicles Yet",
+                                message: "Start building your digital service logbook by adding your first vehicle.",
+                                actionTitle: "Add Vehicle"
+                            ) {
+                                addVehicleTapped()
+                            }
+                            .padding(24)
+                        } else {
+                            ContentUnavailableView {
+                                Label("No vehicles found", systemImage: "magnifyingglass")
+                            } description: {
+                                Text("Try a different search or sorting option.")
+                            }
+                            .padding(.top, 40)
                         }
+                    } else {
+                        LazyVStack(spacing: 16) {
+                            ForEach(filteredVehicles) { vehicle in
+                                NavigationLink {
+                                    VehicleDetailView(vehicle: vehicle)
+                                } label: {
+                                    VehicleRowCard(vehicle: vehicle)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(24)
+                        .padding(.bottom, 100) // Space for FAB and TabBar
                     }
-                } label: {
-                    Image(systemName: "arrow.up.arrow.down.circle")
                 }
             }
 
-            ToolbarItem(placement: .topBarTrailing) {
+            // FAB
+            if !vehicles.isEmpty {
                 Button {
                     addVehicleTapped()
                 } label: {
                     Image(systemName: "plus")
+                        .font(.system(size: 24, weight: .bold)) // w-6 h-6
+                        .foregroundStyle(.white)
+                        .frame(width: 56, height: 56) // w-14 h-14
+                        .background(
+                            Circle()
+                                .fill(AppTheme.accent)
+                                .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 4) // shadow-lg
+                        )
                 }
+                .padding(.trailing, 24) // right-6
+                .padding(.bottom, 96) // bottom-24 (roughly, considering tab bar)
             }
         }
+        .navigationBarHidden(true)
         .sheet(isPresented: $showingVehicleForm) {
             NavigationStack {
                 VehicleFormView()
@@ -111,5 +152,20 @@ struct GarageView: View {
         } else {
             paywallCoordinator.present(.secondVehicle)
         }
+    }
+}
+
+// Helper ForEach wrapper for Picker
+struct ForForEach<Data: RandomAccessCollection, ID: Hashable, Content: View>: View where Data.Element: Identifiable, Data.Element.ID == ID {
+    let data: Data
+    let content: (Data.Element) -> Content
+    
+    init(_ data: Data, @ViewBuilder content: @escaping (Data.Element) -> Content) {
+        self.data = data
+        self.content = content
+    }
+    
+    var body: some View {
+        ForEach(data, content: content)
     }
 }

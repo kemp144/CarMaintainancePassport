@@ -29,10 +29,32 @@ struct RemindersView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            PremiumScreenBackground()
+        ZStack(alignment: .bottomTrailing) {
+            AppTheme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
+                // Custom Header
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Reminders")
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundStyle(AppTheme.primaryText)
+                            
+                            let count = grouped.reduce(0) { $0 + $1.1.count }
+                            Text(count == 0 ? "No reminders yet" : "\(count) \(count == 1 ? "reminder" : "reminders")")
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+                        
+                        Spacer()
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 20)
+                .background(AppTheme.heroGradient)
+
                 VehicleFilterScrollView(vehicles: vehicles)
 
                 if grouped.isEmpty {
@@ -53,50 +75,67 @@ struct RemindersView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 } else {
-                    List {
-                        ForEach(grouped, id: \.0.id) { status, items in
-                            Section(status.title) {
-                                ForEach(items) { reminder in
-                                    Button {
-                                        editingReminder = reminder
-                                    } label: {
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(reminder.title)
-                                                    .foregroundStyle(AppTheme.primaryText)
-                                                Text(reminder.vehicle?.title ?? "Unknown vehicle")
-                                                    .font(.subheadline)
-                                                    .foregroundStyle(AppTheme.secondaryText)
-                                                Text(reminder.dateDue.map(AppFormatters.mediumDate.string) ?? reminder.mileageDue.map(AppFormatters.mileage) ?? "Custom reminder")
-                                                    .font(.caption)
-                                                    .foregroundStyle(AppTheme.tertiaryText)
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(spacing: 24) {
+                            ForEach(grouped, id: \.0.id) { status, items in
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text(status.title)
+                                        .font(.headline)
+                                        .foregroundStyle(AppTheme.primaryText)
+                                        .padding(.horizontal, 4)
+                                    
+                                    LazyVStack(spacing: 16) {
+                                        ForEach(items) { reminder in
+                                            Button {
+                                                editingReminder = reminder
+                                            } label: {
+                                                SurfaceCard {
+                                                    HStack {
+                                                        VStack(alignment: .leading, spacing: 4) {
+                                                            Text(reminder.title)
+                                                                .foregroundStyle(AppTheme.primaryText)
+                                                            Text(reminder.vehicle?.title ?? "Unknown vehicle")
+                                                                .font(.subheadline)
+                                                                .foregroundStyle(AppTheme.secondaryText)
+                                                            Text(reminder.dateDue.map(AppFormatters.mediumDate.string) ?? reminder.mileageDue.map(AppFormatters.mileage) ?? "Custom reminder")
+                                                                .font(.caption)
+                                                                .foregroundStyle(AppTheme.tertiaryText)
+                                                        }
+                                                        Spacer()
+                                                        ReminderBadge(status: status)
+                                                    }
+                                                }
                                             }
-                                            Spacer()
-                                            ReminderBadge(status: status)
+                                            .buttonStyle(.plain)
                                         }
                                     }
-                                    .buttonStyle(.plain)
-                                    .listRowBackground(Color.clear)
                                 }
                             }
                         }
+                        .padding(24)
+                        .padding(.bottom, 100)
                     }
-                    .listStyle(.insetGrouped)
-                    .scrollContentBackground(.hidden)
                 }
             }
-        }
-        .navigationTitle("Reminders")
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button {
-                    showingReminderForm = true
-                } label: {
-                    Image(systemName: "plus")
-                }
+            
+            // FAB for Reminders
+            Button {
+                showingReminderForm = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 64, height: 64)
+                    .background(
+                        Circle()
+                            .fill(AppTheme.accent)
+                            .shadow(color: AppTheme.accent.opacity(0.3), radius: 10, x: 0, y: 5)
+                    )
             }
+            .padding(.trailing, 24)
+            .padding(.bottom, 100) // Above tab bar
         }
+        .navigationBarHidden(true)
         .sheet(isPresented: $showingReminderForm) {
             NavigationStack {
                 ReminderFormView()
