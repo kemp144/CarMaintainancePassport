@@ -5,6 +5,8 @@ import SwiftUI
 struct VehicleFormView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var entitlementStore: EntitlementStore
+    @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
     @AppStorage("settings.defaultCurrency") private var defaultCurrency = CurrencyPreset.eur.rawValue
 
     private let vehicle: Vehicle?
@@ -24,6 +26,9 @@ struct VehicleFormView: View {
     @State private var coverPreview: UIImage?
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var isSaving = false
+    @State private var isLookingUpVIN = false
+    @State private var vinLookupError: String?
+    @State private var showingVINError = false
 
     init(vehicle: Vehicle? = nil) {
         self.vehicle = vehicle
@@ -100,11 +105,20 @@ struct VehicleFormView: View {
 
                 Section {
                     HStack {
-                        TextField("VIN", text: $vin)
-                        
-                        if !vin.isEmpty {
-                            Button("Lookup") {
-                                lookupVIN()
+                        TextField("VIN (17 characters)", text: $vin)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+
+                        if isLookingUpVIN {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else if vin.count == 17 {
+                            Button("Autofill") {
+                                if entitlementStore.canUseVINLookup() {
+                                    Task { await lookupVIN() }
+                                } else {
+                                    paywallCoordinator.present(.vinLookup)
+                                }
                             }
                             .font(.caption.weight(.bold))
                             .foregroundStyle(AppTheme.accent)
@@ -119,6 +133,11 @@ struct VehicleFormView: View {
             }
             .scrollContentBackground(.hidden)
             .foregroundStyle(AppTheme.primaryText)
+        }
+        .alert("VIN Lookup Failed", isPresented: $showingVINError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(vinLookupError ?? "Could not fetch vehicle data.")
         }
         .navigationTitle(vehicle == nil ? "Add Vehicle" : "Edit Vehicle")
         .navigationBarTitleDisplayMode(.inline)
@@ -225,10 +244,20 @@ struct VehicleFormView: View {
         return result.storageReference
     }
 
-    private func lookupVIN() {
-        Haptics.success()
-        if vin.count >= 3 {
-            notes = "VIN lookup simulation complete."
+    private func lookupVIN() async {
+        isLookingUpVIN = true
+        defer { isLookingUpVIN = false }
+
+        do {
+            let result = try await VINLookupService.shared.lookup(vin: vin)
+            if !result.make.isEmpty { make = result.make.capitalized }
+            if !result.model.isEmpty { model = result.model.capitalized }
+            if let y = result.year { year = y }
+            Haptics.success()
+        } catch {
+            vinLookupError = error.localizedDescription
+            showingVINError = true
+            Haptics.error()
         }
     }
 }

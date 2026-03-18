@@ -4,6 +4,8 @@ import SwiftUI
 @main
 struct CarServicePassportApp: App {
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @AppStorage("settings.autoBackup") private var autoBackupEnabled = false
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var entitlementStore = EntitlementStore()
     @StateObject private var paywallCoordinator = PaywallCoordinator()
     @StateObject private var appState = AppState()
@@ -13,7 +15,8 @@ struct CarServicePassportApp: App {
             Vehicle.self,
             ServiceEntry.self,
             AttachmentRecord.self,
-            ReminderItem.self
+            ReminderItem.self,
+            FuelEntry.self
         ])
 
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
@@ -47,6 +50,29 @@ struct CarServicePassportApp: App {
                 PaywallView(reason: reason)
                     .environmentObject(entitlementStore)
             }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .background, autoBackupEnabled {
+                    performAutoBackup()
+                }
+            }
+        }
+    }
+
+    private func performAutoBackup() {
+        do {
+            let context = modelContainer.mainContext
+            let vehicles = try context.fetch(FetchDescriptor<Vehicle>())
+            let services = try context.fetch(FetchDescriptor<ServiceEntry>())
+            let reminders = try context.fetch(FetchDescriptor<ReminderItem>())
+            let attachments = try context.fetch(FetchDescriptor<AttachmentRecord>())
+            try BackupExportService.shared.saveToDocuments(
+                vehicles: vehicles,
+                services: services,
+                reminders: reminders,
+                attachments: attachments
+            )
+        } catch {
+            // silent — auto backup failure should not interrupt the user
         }
     }
 }

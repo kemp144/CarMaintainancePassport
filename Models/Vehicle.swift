@@ -27,6 +27,9 @@ final class Vehicle {
     @Relationship(deleteRule: .cascade, inverse: \ReminderItem.vehicle)
     var reminders: [ReminderItem] = []
 
+    @Relationship(deleteRule: .cascade, inverse: \FuelEntry.vehicle)
+    var fuelEntries: [FuelEntry] = []
+
     init(
         id: UUID = UUID(),
         make: String,
@@ -111,5 +114,17 @@ extension Vehicle {
         sortedReminders.first { reminder in
             reminder.status(for: self, referenceDate: referenceDate) != .disabled
         }
+    }
+
+    var sortedFuelEntries: [FuelEntry] {
+        fuelEntries.sorted { $0.date > $1.date }
+    }
+
+    var totalFuelCost: Double {
+        fuelEntries.reduce(0) { $0 + $1.totalCost }
+    }
+
+    var totalFuelLiters: Double {
+        fuelEntries.reduce(0) { $0 + $1.liters }
     }
 }

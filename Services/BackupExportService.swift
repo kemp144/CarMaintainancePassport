@@ -1,7 +1,10 @@
 import Foundation
+import SwiftData
 
 struct BackupExportService {
     static let shared = BackupExportService()
+
+    // MARK: - Export
 
     func exportJSON(vehicles: [Vehicle], services: [ServiceEntry], reminders: [ReminderItem], attachments: [AttachmentRecord]) throws -> URL {
         let snapshot = BackupSnapshot(
@@ -20,9 +23,178 @@ struct BackupExportService {
         try encoder.encode(snapshot).write(to: url)
         return url
     }
+
+    /// Saves a timestamped backup to the app's Documents folder (accessible in Files app).
+    func saveToDocuments(vehicles: [Vehicle], services: [ServiceEntry], reminders: [ReminderItem], attachments: [AttachmentRecord]) throws {
+        let snapshot = BackupSnapshot(
+            exportedAt: .now,
+            vehicles: vehicles.map(BackupVehicle.init),
+            services: services.map(BackupService.init),
+            reminders: reminders.map(BackupReminder.init),
+            attachments: attachments.map(BackupAttachment.init)
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let folder = docs.appendingPathComponent("CarServicePassport/Backups", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd_HHmmss"
+        let timestamp = formatter.string(from: .now)
+        let file = folder.appendingPathComponent("backup_\(timestamp).json")
+
+        try encoder.encode(snapshot).write(to: file)
+
+        // Keep only the latest 10 backups
+        let existing = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.creationDateKey], options: .skipsHiddenFiles)) ?? []
+        let sorted = existing.sorted { a, b in
+            let aDate = (try? a.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
+            let bDate = (try? b.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
+            return aDate > bDate
+        }
+        for old in sorted.dropFirst(10) {
+            try? FileManager.default.removeItem(at: old)
+        }
+    }
+
+    // MARK: - Import
+
+    enum ImportError: LocalizedError {
+        case invalidFile
+        case decodeError(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .invalidFile: return "The selected file is not a valid Car Service Passport backup."
+            case .decodeError(let msg): return "Import failed: \(msg)"
+            }
+        }
+    }
+
+    struct ImportResult {
+        let vehiclesImported: Int
+        let servicesImported: Int
+        let remindersImported: Int
+    }
+
+    /// Imports a JSON backup into the provided modelContext. Skips records with duplicate IDs.
+    @MainActor
+    func importJSON(from url: URL, into context: ModelContext) throws -> ImportResult {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+
+        guard let data = try? Data(contentsOf: url) else { throw ImportError.invalidFile }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let snapshot: BackupSnapshot
+        do {
+            snapshot = try decoder.decode(BackupSnapshot.self, from: data)
+        } catch {
+            throw ImportError.decodeError(error.localizedDescription)
+        }
+
+        // Fetch existing IDs to avoid duplicates
+        let existingVehicleIDs = Set((try? context.fetch(FetchDescriptor<Vehicle>()))?.map(\.id) ?? [])
+        let existingServiceIDs = Set((try? context.fetch(FetchDescriptor<ServiceEntry>()))?.map(\.id) ?? [])
+        let existingReminderIDs = Set((try? context.fetch(FetchDescriptor<ReminderItem>()))?.map(\.id) ?? [])
+
+        var vehicleMap: [UUID: Vehicle] = [:]
+        var vehiclesImported = 0
+
+        for bv in snapshot.vehicles where !existingVehicleIDs.contains(bv.id) {
+            let vehicle = Vehicle(
+                id: bv.id,
+                make: bv.make,
+                model: bv.model,
+                year: bv.year,
+                licensePlate: bv.licensePlate,
+                currentMileage: bv.currentMileage,
+                purchaseDate: bv.purchaseDate,
+                purchasePrice: bv.purchasePrice,
+                currencyCode: bv.currencyCode,
+                vin: bv.vin,
+                notes: bv.notes,
+                coverImageReference: bv.coverImageReference,
+                createdAt: bv.createdAt,
+                updatedAt: bv.updatedAt
+            )
+            context.insert(vehicle)
+            vehicleMap[bv.id] = vehicle
+            vehiclesImported += 1
+        }
+
+        // Also map existing vehicles so we can link imported services
+        if let existing = try? context.fetch(FetchDescriptor<Vehicle>()) {
+            for v in existing { vehicleMap[v.id] = v }
+        }
+
+        var serviceMap: [UUID: ServiceEntry] = [:]
+        var servicesImported = 0
+
+        for bs in snapshot.services where !existingServiceIDs.contains(bs.id) {
+            guard let vehicle = bs.vehicleID.flatMap({ vehicleMap[$0] }) else { continue }
+            let entry = ServiceEntry(
+                id: bs.id,
+                vehicle: vehicle,
+                date: bs.date,
+                mileage: bs.mileage,
+                serviceType: ServiceType(rawValue: bs.serviceType) ?? .custom,
+                customServiceTypeName: bs.customServiceTypeName,
+                category: EntryCategory(rawValue: bs.category) ?? .maintenance,
+                price: bs.price,
+                currencyCode: bs.currencyCode,
+                workshopName: bs.workshopName,
+                notes: bs.notes,
+                isImportant: bs.isImportant,
+                createdAt: bs.createdAt,
+                updatedAt: bs.updatedAt
+            )
+            context.insert(entry)
+            serviceMap[bs.id] = entry
+            servicesImported += 1
+        }
+
+        if let existing = try? context.fetch(FetchDescriptor<ServiceEntry>()) {
+            for s in existing { serviceMap[s.id] = s }
+        }
+
+        var remindersImported = 0
+
+        for br in snapshot.reminders where !existingReminderIDs.contains(br.id) {
+            guard let vehicle = br.vehicleID.flatMap({ vehicleMap[$0] }) else { continue }
+            let serviceEntry = br.serviceEntryID.flatMap { serviceMap[$0] }
+            let reminder = ReminderItem(
+                id: br.id,
+                vehicle: vehicle,
+                serviceEntry: serviceEntry,
+                type: ReminderType(rawValue: br.type) ?? .custom,
+                title: br.title,
+                notes: br.notes,
+                dateDue: br.dateDue,
+                mileageDue: br.mileageDue,
+                notificationTiming: NotificationTiming(rawValue: br.notificationTiming) ?? .sevenDaysBefore,
+                isEnabled: br.isEnabled,
+                createdAt: br.createdAt,
+                updatedAt: br.updatedAt
+            )
+            context.insert(reminder)
+            remindersImported += 1
+        }
+
+        try context.save()
+        return ImportResult(vehiclesImported: vehiclesImported, servicesImported: servicesImported, remindersImported: remindersImported)
+    }
 }
 
-private struct BackupSnapshot: Codable {
+// MARK: - Backup Models (internal so ImportService can use them too)
+
+struct BackupSnapshot: Codable {
     let exportedAt: Date
     let vehicles: [BackupVehicle]
     let services: [BackupService]
@@ -30,7 +202,7 @@ private struct BackupSnapshot: Codable {
     let attachments: [BackupAttachment]
 }
 
-private struct BackupVehicle: Codable {
+struct BackupVehicle: Codable {
     let id: UUID
     let make: String
     let model: String
@@ -64,7 +236,7 @@ private struct BackupVehicle: Codable {
     }
 }
 
-private struct BackupService: Codable {
+struct BackupService: Codable {
     let id: UUID
     let vehicleID: UUID?
     let date: Date
@@ -98,7 +270,7 @@ private struct BackupService: Codable {
     }
 }
 
-private struct BackupReminder: Codable {
+struct BackupReminder: Codable {
     let id: UUID
     let vehicleID: UUID?
     let serviceEntryID: UUID?
@@ -128,7 +300,7 @@ private struct BackupReminder: Codable {
     }
 }
 
-private struct BackupAttachment: Codable {
+struct BackupAttachment: Codable {
     let id: UUID
     let vehicleID: UUID?
     let serviceEntryID: UUID?

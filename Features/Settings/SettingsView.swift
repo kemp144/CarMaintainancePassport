@@ -15,7 +15,14 @@ struct SettingsView: View {
     @Query private var reminders: [ReminderItem]
     @Query private var attachments: [AttachmentRecord]
 
+    @AppStorage("settings.autoBackup") private var autoBackupEnabled = false
+
     @State private var backupURL: URL?
+    @State private var showingImportPicker = false
+    @State private var importResult: BackupExportService.ImportResult?
+    @State private var importError: String?
+    @State private var showingImportResult = false
+    @State private var isImporting = false
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -100,11 +107,46 @@ struct SettingsView: View {
                             exportBackup()
                         }
                         .foregroundStyle(AppTheme.accent)
-                        Text("Create a local JSON snapshot for personal backup. iCloud sync can be added later without changing your records.")
+
+                        Button("Save Backup to Files") {
+                            saveBackupToDocuments()
+                        }
+                        .foregroundStyle(AppTheme.accent)
+
+                        Toggle("Auto Backup on Background", isOn: $autoBackupEnabled)
+                            .foregroundStyle(AppTheme.primaryText)
+
+                        Text("Backups are saved to Files → On My iPhone → CarServicePassport → Backups. Enable auto backup to save automatically when the app goes to background.")
                             .font(.footnote)
                             .foregroundStyle(AppTheme.secondaryText)
                     } header: {
                         Text("Backup")
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                    .listRowBackground(AppTheme.surface)
+
+                    Section {
+                        if isImporting {
+                            HStack(spacing: 10) {
+                                ProgressView()
+                                Text("Importing…")
+                                    .foregroundStyle(AppTheme.secondaryText)
+                            }
+                        } else {
+                            Button("Import from JSON Backup") {
+                                if entitlementStore.canImportData() {
+                                    showingImportPicker = true
+                                } else {
+                                    paywallCoordinator.present(.importData)
+                                }
+                            }
+                            .foregroundStyle(AppTheme.accent)
+                        }
+                        Text("Import a previously exported Car Service Passport backup. Existing records with the same ID will be skipped to avoid duplicates.")
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.secondaryText)
+                    } header: {
+                        Text("Import")
                             .foregroundStyle(AppTheme.secondaryText)
                     }
                     .listRowBackground(AppTheme.surface)
@@ -169,6 +211,30 @@ struct SettingsView: View {
         })) { item in
             ActivityView(activityItems: [item.url])
         }
+        .fileImporter(
+            isPresented: $showingImportPicker,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                importBackup(from: url)
+            }
+        }
+        .alert(
+            importError != nil ? "Import Failed" : "Import Complete",
+            isPresented: $showingImportResult
+        ) {
+            Button("OK", role: .cancel) {
+                importError = nil
+                importResult = nil
+            }
+        } message: {
+            if let err = importError {
+                Text(err)
+            } else if let r = importResult {
+                Text("Imported \(r.vehiclesImported) vehicle(s), \(r.servicesImported) service(s), and \(r.remindersImported) reminder(s).")
+            }
+        }
     }
 
     private var appVersion: String {
@@ -183,6 +249,34 @@ struct SettingsView: View {
             Haptics.success()
         } catch {
             Haptics.error()
+        }
+    }
+
+    private func saveBackupToDocuments() {
+        do {
+            try BackupExportService.shared.saveToDocuments(vehicles: vehicles, services: services, reminders: reminders, attachments: attachments)
+            Haptics.success()
+        } catch {
+            Haptics.error()
+        }
+    }
+
+    private func importBackup(from url: URL) {
+        isImporting = true
+        Task {
+            do {
+                let result = try await MainActor.run {
+                    try BackupExportService.shared.importJSON(from: url, into: modelContext)
+                }
+                importResult = result
+                importError = nil
+                Haptics.success()
+            } catch {
+                importError = error.localizedDescription
+                Haptics.error()
+            }
+            isImporting = false
+            showingImportResult = true
         }
     }
 }

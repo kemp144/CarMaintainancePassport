@@ -218,6 +218,7 @@ struct DocumentComposerSheet: View {
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var draftAttachments: [DraftAttachment] = []
     @State private var showingImporter = false
+    @State private var showingCamera = false
 
     init(preselectedVehicle: Vehicle? = nil) {
         self.preselectedVehicle = preselectedVehicle
@@ -256,6 +257,12 @@ struct DocumentComposerSheet: View {
                 .listRowBackground(AppTheme.surface)
 
                 Section {
+                    Button {
+                        showingCamera = true
+                    } label: {
+                        Label("Take photo", systemImage: "camera")
+                    }
+
                     PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 8, matching: .images) {
                         Label("Add photos", systemImage: "photo.on.rectangle")
                     }
@@ -295,6 +302,14 @@ struct DocumentComposerSheet: View {
             if case .success(let urls) = result {
                 draftAttachments.append(contentsOf: urls.map { DraftAttachment(type: .pdf, filename: $0.lastPathComponent, imageData: nil, sourceURL: $0) })
             }
+        }
+        .sheet(isPresented: $showingCamera) {
+            CameraCaptureView { image in
+                if let data = image.jpegData(compressionQuality: 0.85) {
+                    draftAttachments.append(DraftAttachment(type: .image, filename: "Photo \(draftAttachments.count + 1)", imageData: data, sourceURL: nil))
+                }
+            }
+            .ignoresSafeArea()
         }
         .onChange(of: selectedPhotos) {
             Task {

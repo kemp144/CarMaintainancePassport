@@ -3,9 +3,24 @@ import StoreKit
 
 @MainActor
 final class EntitlementStore: ObservableObject {
-    static let lifetimeProductID = "com.robertengel.carservicepassport.pro.lifetime"
+    enum ProPlan: String, CaseIterable {
+        case monthly
+        case yearly
+        case lifetime
 
-    @Published private(set) var product: Product?
+        var productID: String {
+            switch self {
+            case .monthly:
+                return "com.robertengel.carservicepassport.pro.monthly"
+            case .yearly:
+                return "com.robertengel.carservicepassport.pro.yearly"
+            case .lifetime:
+                return "com.robertengel.carservicepassport.pro.lifetime"
+            }
+        }
+    }
+
+    @Published private(set) var products: [String: Product] = [:]
     @Published private(set) var isProUnlocked: Bool
     @Published private(set) var isBusy = false
     @Published var purchaseErrorMessage: String?
@@ -37,6 +52,10 @@ final class EntitlementStore: ObservableObject {
         #endif
     }
 
+    var lifetimeProduct: Product? {
+        product(for: .lifetime)
+    }
+
     func prepare() async {
         await loadProducts()
         await refreshEntitlements()
@@ -63,18 +82,46 @@ final class EntitlementStore: ObservableObject {
         hasProAccess
     }
 
+    func canUseFuelTracking() -> Bool {
+        hasProAccess
+    }
+
+    func canUseOCR() -> Bool {
+        hasProAccess
+    }
+
+    func canUseVINLookup() -> Bool {
+        hasProAccess
+    }
+
+    func canImportData() -> Bool {
+        hasProAccess
+    }
+
+    func product(for plan: ProPlan) -> Product? {
+        products[plan.productID]
+    }
+
     func loadProducts() async {
         do {
-            product = try await Product.products(for: [Self.lifetimeProductID]).first
+            let productList = try await Product.products(for: ProPlan.allCases.map { $0.productID })
+            products = Dictionary(uniqueKeysWithValues: productList.map { ($0.id, $0) })
         } catch {
             purchaseErrorMessage = error.localizedDescription
         }
     }
 
     func purchaseLifetimePro() async {
-        guard let product else {
+        await purchase(plan: .lifetime)
+    }
+
+    func purchase(plan: ProPlan) async {
+        guard let product = product(for: plan) else {
             await loadProducts()
-            guard let product else { return }
+            guard let product = product(for: plan) else {
+                purchaseErrorMessage = "This plan is not available yet."
+                return
+            }
             await purchase(product)
             return
         }
@@ -138,7 +185,7 @@ final class EntitlementStore: ObservableObject {
         for await result in Transaction.currentEntitlements {
             do {
                 let transaction = try verify(result)
-                if transaction.productID == Self.lifetimeProductID {
+                if ProPlan.allCases.contains(where: { $0.productID == transaction.productID }) {
                     unlocked = true
                 }
             } catch {

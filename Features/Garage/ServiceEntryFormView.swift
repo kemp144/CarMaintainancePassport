@@ -6,6 +6,8 @@ import UniformTypeIdentifiers
 struct ServiceEntryFormView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var entitlementStore: EntitlementStore
+    @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
 
     private let entry: ServiceEntry?
@@ -31,9 +33,16 @@ struct ServiceEntryFormView: View {
     @State private var savedEntryForReminder: ServiceEntry?
     @State private var showingReminderSuggestion = false
     @State private var showingCustomReminder = false
+    @State private var showingOCRScanner = false
+    @State private var showingOCRResult = false
+    @State private var ocrResult: OCRService.OCRResult?
+    @State private var isProcessingOCR = false
 
-    init(vehicle: Vehicle? = nil, entry: ServiceEntry? = nil) {
+    let autoStartOCR: Bool
+
+    init(vehicle: Vehicle? = nil, entry: ServiceEntry? = nil, autoStartOCR: Bool = false) {
         self.entry = entry
+        self.autoStartOCR = autoStartOCR
         self.initialVehicle = vehicle ?? entry?.vehicle
         _selectedVehicleID = State(initialValue: (vehicle ?? entry?.vehicle)?.id)
         _date = State(initialValue: entry?.date ?? .now)
@@ -62,6 +71,33 @@ struct ServiceEntryFormView: View {
                     .disabled(initialVehicle != nil)
                 } header: {
                     Text("Vehicle").foregroundStyle(AppTheme.secondaryText)
+                }
+                .listRowBackground(AppTheme.surface)
+
+                Section {
+                    if isProcessingOCR {
+                        HStack(spacing: 10) {
+                            ProgressView()
+                            Text("Scanning receipt…")
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+                    } else {
+                        Button {
+                            if entitlementStore.canUseOCR() {
+                                showingOCRScanner = true
+                            } else {
+                                paywallCoordinator.present(.ocrScan)
+                            }
+                        } label: {
+                            Label("Scan receipt (OCR)", systemImage: "doc.viewfinder")
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                    }
+                } header: {
+                    Text("Smart Scan").foregroundStyle(AppTheme.secondaryText)
+                } footer: {
+                    Text("Scan a receipt to auto-fill date, cost, mileage and workshop.")
+                        .foregroundStyle(AppTheme.tertiaryText)
                 }
                 .listRowBackground(AppTheme.surface)
 
@@ -160,6 +196,15 @@ struct ServiceEntryFormView: View {
             .scrollContentBackground(.hidden)
             .foregroundStyle(AppTheme.primaryText)
         }
+        .task {
+            if autoStartOCR && entry == nil {
+                if entitlementStore.canUseOCR() {
+                    showingOCRScanner = true
+                } else {
+                    paywallCoordinator.present(.ocrScan)
+                }
+            }
+        }
         .navigationTitle(entry == nil ? "Add Service" : "Edit Service")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -194,6 +239,29 @@ struct ServiceEntryFormView: View {
                     }
                 }
                 selectedPhotoItems = []
+            }
+        }
+        .sheet(isPresented: $showingOCRScanner) {
+            OCRImagePickerSheet { image in
+                guard let image else { return }
+                isProcessingOCR = true
+                Task {
+                    defer { isProcessingOCR = false }
+                    if let result = try? await OCRService.shared.scan(image: image) {
+                        ocrResult = result
+                        showingOCRResult = true
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingOCRResult) {
+            if let result = ocrResult {
+                OCRResultSheet(result: result) { applied in
+                    if let d = applied.date { date = d }
+                    if let p = applied.price { price = String(format: "%.0f", p) }
+                    if let m = applied.mileage { mileage = String(m) }
+                    if let w = applied.workshopName, !w.isEmpty { workshopName = w }
+                }
             }
         }
         .confirmationDialog("Create the next reminder?", isPresented: $showingReminderSuggestion, titleVisibility: .visible) {

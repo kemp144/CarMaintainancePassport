@@ -27,6 +27,233 @@ struct PDFExportService {
         return outputURL
     }
 
+    func exportResaleReport(for vehicle: Vehicle) throws -> URL {
+        let filename = "\(vehicle.make)-\(vehicle.model)-for-sale.pdf".replacingOccurrences(of: " ", with: "-")
+        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        let pageBounds = CGRect(x: 0, y: 0, width: 612, height: 792)
+        let renderer = UIGraphicsPDFRenderer(bounds: pageBounds)
+
+        let slate50  = UIColor(red: 0.97, green: 0.98, blue: 0.99, alpha: 1) // #F8FAFC
+        let slate100 = UIColor(red: 0.94, green: 0.96, blue: 0.98, alpha: 1) // #F1F5F9
+        let slate700 = UIColor(red: 0.20, green: 0.26, blue: 0.36, alpha: 1) // #334155
+        let slate500 = UIColor(red: 0.40, green: 0.47, blue: 0.56, alpha: 1) // #64748B
+        let orange500 = UIColor(red: 0.98, green: 0.45, blue: 0.09, alpha: 1)
+        let green600  = UIColor(red: 0.09, green: 0.67, blue: 0.27, alpha: 1)
+
+        try renderer.writePDF(to: outputURL) { context in
+            let services = vehicle.sortedServices
+
+            // --- Cover Page ---
+            context.beginPage()
+            let ctx = context.cgContext
+
+            // White background
+            ctx.setFillColor(slate50.cgColor)
+            ctx.fill(pageBounds)
+
+            // Top accent bar
+            ctx.setFillColor(orange500.cgColor)
+            ctx.fill(CGRect(x: 0, y: 0, width: pageBounds.width, height: 6))
+
+            // Vehicle photo
+            if let ref = vehicle.coverImageReference,
+               let img = UIImage(contentsOfFile: AttachmentStorageService.fileURL(for: ref).path) {
+                let photoRect = CGRect(x: 32, y: 30, width: pageBounds.width - 64, height: 180)
+                ctx.saveGState()
+                ctx.addPath(UIBezierPath(roundedRect: photoRect, cornerRadius: 16).cgPath)
+                ctx.clip()
+                img.draw(in: photoRect, blendMode: .normal, alpha: 1)
+                ctx.restoreGState()
+            }
+
+            let topOffset: CGFloat = vehicle.coverImageReference != nil ? 230 : 30
+
+            // Badge
+            let badgeRect = CGRect(x: 32, y: topOffset, width: 120, height: 26)
+            ctx.setFillColor(orange500.withAlphaComponent(0.12).cgColor)
+            ctx.addPath(UIBezierPath(roundedRect: badgeRect, cornerRadius: 6).cgPath)
+            ctx.fillPath()
+            draw(text: "FOR SALE — SERVICE HISTORY", in: CGRect(x: 40, y: topOffset + 5, width: 110, height: 16),
+                 font: .systemFont(ofSize: 8, weight: .bold), color: orange500)
+
+            // Title
+            draw(text: "\(vehicle.year) \(vehicle.make) \(vehicle.model)",
+                 in: CGRect(x: 32, y: topOffset + 36, width: pageBounds.width - 64, height: 40),
+                 font: .systemFont(ofSize: 28, weight: .bold), color: slate700)
+
+            // Subtitle row
+            var subtitleParts: [String] = []
+            if !vehicle.licensePlate.isEmpty { subtitleParts.append(vehicle.licensePlate) }
+            if !vehicle.vin.isEmpty { subtitleParts.append("VIN: \(vehicle.vin)") }
+            subtitleParts.append(AppFormatters.mileage(vehicle.currentMileage))
+            draw(text: subtitleParts.joined(separator: "  •  "),
+                 in: CGRect(x: 32, y: topOffset + 82, width: pageBounds.width - 64, height: 22),
+                 font: .systemFont(ofSize: 13, weight: .medium), color: slate500)
+
+            // Divider
+            ctx.setStrokeColor(slate100.cgColor)
+            ctx.setLineWidth(1.5)
+            ctx.move(to: CGPoint(x: 32, y: topOffset + 116))
+            ctx.addLine(to: CGPoint(x: pageBounds.width - 32, y: topOffset + 116))
+            ctx.strokePath()
+
+            // Key stats row
+            let statsY = topOffset + 132
+            let statW = (pageBounds.width - 88) / 4.0
+            drawResaleStat(ctx: ctx, title: "TOTAL SERVICES", value: "\(services.count)",
+                           origin: CGPoint(x: 32, y: statsY), width: statW,
+                           bg: slate100, textColor: slate700, accentColor: orange500)
+            drawResaleStat(ctx: ctx, title: "TOTAL SPENT", value: AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode),
+                           origin: CGPoint(x: 40 + statW, y: statsY), width: statW,
+                           bg: slate100, textColor: slate700, accentColor: orange500)
+            drawResaleStat(ctx: ctx, title: "LAST SERVICE", value: vehicle.latestService.map { AppFormatters.mediumDate.string(from: $0.date) } ?? "—",
+                           origin: CGPoint(x: 48 + statW * 2, y: statsY), width: statW,
+                           bg: slate100, textColor: slate700, accentColor: orange500)
+            drawResaleStat(ctx: ctx, title: "DOCUMENTS", value: "\(vehicle.attachments.count)",
+                           origin: CGPoint(x: 56 + statW * 3, y: statsY), width: statW,
+                           bg: slate100, textColor: slate700, accentColor: orange500)
+
+            // "Why buy with confidence" section
+            let confY = statsY + 110
+            draw(text: "COMPLETE MAINTENANCE RECORD", in: CGRect(x: 32, y: confY, width: 300, height: 18),
+                 font: .systemFont(ofSize: 11, weight: .bold), color: orange500)
+
+            let bullets = [
+                "✓  Full service history documented in Car Service Passport",
+                "✓  \(services.count) verified service \(services.count == 1 ? "entry" : "entries") on record",
+                "✓  All costs transparently reported (\(AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode)) total)",
+                vehicle.latestService != nil ? "✓  Last serviced \(AppFormatters.mediumDate.string(from: vehicle.latestService!.date))" : "✓  Service history available",
+            ]
+            var bulletY = confY + 24
+            for bullet in bullets {
+                draw(text: bullet, in: CGRect(x: 36, y: bulletY, width: pageBounds.width - 72, height: 18),
+                     font: .systemFont(ofSize: 12, weight: .regular), color: slate700)
+                bulletY += 22
+            }
+
+            // Cost by category breakdown
+            let catY = bulletY + 16
+            draw(text: "COST BY CATEGORY", in: CGRect(x: 32, y: catY, width: 200, height: 18),
+                 font: .systemFont(ofSize: 11, weight: .bold), color: orange500)
+
+            let grouped = Dictionary(grouping: services, by: { $0.category })
+            var catRowY = catY + 24
+            for category in EntryCategory.allCases {
+                guard let entries = grouped[category], !entries.isEmpty else { continue }
+                let total = entries.reduce(0.0) { $0 + $1.price }
+                draw(text: category.title, in: CGRect(x: 36, y: catRowY, width: 160, height: 18),
+                     font: .systemFont(ofSize: 12), color: slate500)
+                draw(text: AppFormatters.currency(total, code: vehicle.currencyCode),
+                     in: CGRect(x: 200, y: catRowY, width: 160, height: 18),
+                     font: .systemFont(ofSize: 12, weight: .semibold), color: slate700)
+                catRowY += 20
+            }
+
+            // Footer
+            let footerY = pageBounds.height - 40
+            ctx.setStrokeColor(slate100.cgColor)
+            ctx.setLineWidth(1)
+            ctx.move(to: CGPoint(x: 32, y: footerY - 8))
+            ctx.addLine(to: CGPoint(x: pageBounds.width - 32, y: footerY - 8))
+            ctx.strokePath()
+
+            let generatedDate = AppFormatters.mediumDate.string(from: .now)
+            draw(text: "Generated by Car Service Passport on \(generatedDate)  •  All data entered by vehicle owner",
+                 in: CGRect(x: 32, y: footerY, width: pageBounds.width - 64, height: 16),
+                 font: .systemFont(ofSize: 9), color: slate500)
+
+            // --- Service History Pages ---
+            var currentIndex = 0
+            while currentIndex < services.count {
+                context.beginPage()
+                currentIndex = renderResaleServicePage(in: context.cgContext, bounds: pageBounds,
+                                                        vehicle: vehicle, services: services,
+                                                        startIndex: currentIndex,
+                                                        slate50: slate50, slate100: slate100,
+                                                        slate500: slate500, slate700: slate700,
+                                                        orange500: orange500, green600: green600)
+            }
+        }
+
+        return outputURL
+    }
+
+    private func renderResaleServicePage(in ctx: CGContext, bounds: CGRect, vehicle: Vehicle,
+                                          services: [ServiceEntry], startIndex: Int,
+                                          slate50: UIColor, slate100: UIColor,
+                                          slate500: UIColor, slate700: UIColor,
+                                          orange500: UIColor, green600: UIColor) -> Int {
+        ctx.setFillColor(slate50.cgColor)
+        ctx.fill(bounds)
+        ctx.setFillColor(orange500.cgColor)
+        ctx.fill(CGRect(x: 0, y: 0, width: bounds.width, height: 6))
+
+        draw(text: "\(vehicle.make) \(vehicle.model) — DETAILED SERVICE HISTORY".uppercased(),
+             in: CGRect(x: 32, y: 24, width: bounds.width - 64, height: 20),
+             font: .systemFont(ofSize: 11, weight: .bold), color: orange500)
+
+        var currentY: CGFloat = 56
+        var index = startIndex
+
+        while index < services.count {
+            let entry = services[index]
+            let cardHeight: CGFloat = entry.notes.isEmpty ? 80 : 102
+
+            if currentY + cardHeight > bounds.height - 48 { break }
+
+            let cardRect = CGRect(x: 32, y: currentY, width: bounds.width - 64, height: cardHeight)
+            ctx.setFillColor(slate100.cgColor)
+            ctx.addPath(UIBezierPath(roundedRect: cardRect, cornerRadius: 10).cgPath)
+            ctx.fillPath()
+
+            // Left accent bar
+            ctx.setFillColor(orange500.withAlphaComponent(0.5).cgColor)
+            ctx.fill(CGRect(x: 32, y: currentY, width: 4, height: cardHeight))
+
+            draw(text: entry.displayTitle,
+                 in: CGRect(x: 48, y: currentY + 14, width: 260, height: 20),
+                 font: .systemFont(ofSize: 14, weight: .bold), color: slate700)
+            draw(text: AppFormatters.currency(entry.price, code: entry.currencyCode),
+                 in: CGRect(x: bounds.width - 160, y: currentY + 14, width: 120, height: 20),
+                 font: .systemFont(ofSize: 14, weight: .bold), color: slate700)
+            draw(text: "\(AppFormatters.mediumDate.string(from: entry.date))  •  \(AppFormatters.mileage(entry.mileage))",
+                 in: CGRect(x: 48, y: currentY + 36, width: bounds.width - 96, height: 16),
+                 font: .systemFont(ofSize: 11), color: slate500)
+            if !entry.workshopName.isEmpty {
+                draw(text: entry.workshopName,
+                     in: CGRect(x: 48, y: currentY + 54, width: bounds.width - 96, height: 16),
+                     font: .systemFont(ofSize: 12, weight: .medium), color: slate500)
+            }
+            if !entry.notes.isEmpty {
+                draw(text: String(entry.notes.prefix(120)),
+                     in: CGRect(x: 48, y: currentY + 70, width: bounds.width - 96, height: 28),
+                     font: .systemFont(ofSize: 11), color: slate500)
+            }
+
+            currentY += cardHeight + 10
+            index += 1
+        }
+
+        // Page footer
+        let footerY = bounds.height - 32
+        draw(text: "Car Service Passport  •  \(vehicle.title)  •  Page \(index / 8 + 2)",
+             in: CGRect(x: 32, y: footerY, width: bounds.width - 64, height: 14),
+             font: .systemFont(ofSize: 9), color: slate500)
+
+        return index
+    }
+
+    private func drawResaleStat(ctx: CGContext, title: String, value: String, origin: CGPoint, width: CGFloat,
+                                 bg: UIColor, textColor: UIColor, accentColor: UIColor) {
+        let rect = CGRect(x: origin.x, y: origin.y, width: width - 4, height: 86)
+        bg.setFill()
+        UIBezierPath(roundedRect: rect, cornerRadius: 10).fill()
+        draw(text: title, in: CGRect(x: rect.minX + 10, y: rect.minY + 12, width: rect.width - 20, height: 14),
+             font: .systemFont(ofSize: 8, weight: .bold), color: accentColor)
+        draw(text: value, in: CGRect(x: rect.minX + 10, y: rect.minY + 32, width: rect.width - 20, height: 36),
+             font: .systemFont(ofSize: 14, weight: .bold), color: textColor)
+    }
+
     func exportCSV(for vehicle: Vehicle) throws -> URL {
         let filename = "\(vehicle.make)-\(vehicle.model)-history.csv".replacingOccurrences(of: " ", with: "-")
         let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
