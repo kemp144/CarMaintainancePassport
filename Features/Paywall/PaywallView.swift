@@ -105,12 +105,12 @@ struct PaywallView: View {
                             .foregroundStyle(.white)
                             .lineLimit(2)
 
-                        Text("Smarter reminders, multiple cars, and organized records.")
+                        Text("Keep every car organized with smarter reminders, documents, and export tools.")
                             .font(.body)
                             .foregroundStyle(Color.white.opacity(0.82))
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("No ads. Choose monthly, yearly, or lifetime.")
+                        Text("No ads. Choose monthly, yearly, or lifetime when it fits.")
                             .font(.footnote.weight(.medium))
                             .foregroundStyle(AppTheme.secondaryText)
                     }
@@ -186,7 +186,7 @@ struct PaywallView: View {
                     benefitRow(
                         icon: "doc.richtext.fill",
                         title: "Documents and resale exports",
-                        message: "Keep receipts organized and export buyer-ready service history."
+                        message: "Keep receipts organized and export buyer-ready history when it matters."
                     )
                 }
             }
@@ -493,11 +493,11 @@ struct PaywallView: View {
             ComparisonFeature(title: "Reminders", free: "By date", pro: "Date + mileage", highlightPro: true),
             ComparisonFeature(title: "Receipt scan", free: "Basic photos", pro: "Photos + OCR", highlightPro: true),
             ComparisonFeature(title: "PDF export", free: "Basic PDF", pro: "Advanced + resale", highlightPro: false),
-            ComparisonFeature(title: "Document vault", free: "Not included", pro: "Included", highlightPro: false),
+            ComparisonFeature(title: "Documents", free: "Basic storage", pro: "Glovebox + links", highlightPro: false),
             ComparisonFeature(title: "CSV export", free: "Not included", pro: "Included", highlightPro: false),
             ComparisonFeature(title: "Analytics", free: "Not included", pro: "Included", highlightPro: false),
-            ComparisonFeature(title: "Garage sharing", free: "Not included", pro: "Included", highlightPro: false),
-            ComparisonFeature(title: "Fuel tracking", free: "Not included", pro: "Included", highlightPro: false)
+            ComparisonFeature(title: "Fuel tracking", free: "Basic logs", pro: "Included", highlightPro: false),
+            ComparisonFeature(title: "Backup & import", free: "Manual only", pro: "Included", highlightPro: false)
         ]
     }
 }

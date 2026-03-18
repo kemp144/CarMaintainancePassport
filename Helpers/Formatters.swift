@@ -33,4 +33,10 @@ enum AppFormatters {
         formatter.locale = Locale.autoupdatingCurrent
         return formatter.string(from: NSNumber(value: amount)) ?? "\(amount) \(code)"
     }
+
+    static let receiptFilename: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return formatter
+    }()
 }

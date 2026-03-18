@@ -143,11 +143,18 @@ struct FuelEntryFormSheet: View {
                 isFullTank: isFullTank
             )
             modelContext.insert(newEntry)
-            vehicle.currentMileage = max(vehicle.currentMileage, mileageValue)
-            vehicle.updatedAt = .now
         }
+
+        recalculateVehicleMileage()
         try? modelContext.save()
         Haptics.success()
         dismiss()
+    }
+
+    private func recalculateVehicleMileage() {
+        let fuelMileage = vehicle.fuelEntries.map(\.mileage).max() ?? 0
+        let serviceMileage = vehicle.serviceEntries.map(\.mileage).max() ?? 0
+        vehicle.currentMileage = max(fuelMileage, serviceMileage)
+        vehicle.updatedAt = .now
     }
 }

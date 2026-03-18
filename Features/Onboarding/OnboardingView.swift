@@ -5,10 +5,9 @@ struct OnboardingView: View {
     @State private var page = 0
 
     private let items: [(title: String, message: String, icon: String)] = [
-        ("Every service, one calm record", "Track maintenance, repairs and ownership costs in a private service passport.", "car.rear.and.tire.marks"),
-        ("Keep receipts close", "Store receipt photos, PDFs and vehicle documents locally, ready for visits or resale.", "doc.on.doc.fill"),
-        ("Never miss what is due next", "Create reminders by date or mileage, then review what is due soon at a glance.", "bell.badge.fill"),
-        ("Export a polished history", "Generate a clean PDF passport whenever you want to share or archive your records.", "square.and.arrow.up.on.square.fill")
+        ("Your car, one clean passport", "Keep service records, reminders, and ownership history in one calm place.", "car.rear.and.tire.marks"),
+        ("Receipts and documents stay close", "Store photos, PDFs, and vehicle paperwork with the car they belong to.", "doc.on.doc.fill"),
+        ("See what matters next", "Add reminders, log service, and export a polished history when you need it.", "bell.badge.fill")
     ]
 
     var body: some View {
@@ -17,7 +16,7 @@ struct OnboardingView: View {
 
             VStack(spacing: 28) {
                 TabView(selection: $page) {
-                    ForEach(Array(items.enumerated()), id: \ .offset) { index, item in
+                    ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                         VStack(spacing: 28) {
                             PremiumBackdrop()
                                 .frame(height: 300)

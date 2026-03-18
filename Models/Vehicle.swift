@@ -81,6 +81,14 @@ extension Vehicle {
         attachments.sorted { $0.createdAt > $1.createdAt }
     }
 
+    var documentsCount: Int {
+        attachments.count
+    }
+
+    var activeRemindersCount: Int {
+        reminders.filter { $0.isEnabled }.count
+    }
+
     var sortedReminders: [ReminderItem] {
         reminders.sorted { ($0.dateDue ?? .distantFuture) < ($1.dateDue ?? .distantFuture) }
     }
@@ -101,6 +109,14 @@ extension Vehicle {
 
     var latestService: ServiceEntry? {
         sortedServices.first
+    }
+
+    var latestServiceDate: Date? {
+        latestService?.date
+    }
+
+    var nextDueReminder: ReminderItem? {
+        nextActiveReminder()
     }
 
     func highestSpendingCategory() -> EntryCategory? {

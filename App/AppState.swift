@@ -24,23 +24,23 @@ enum PaywallReason: String, Identifiable {
     var title: String {
         switch self {
         case .secondVehicle:
-            return "Unlock multi-car garage"
+            return "Unlock an unlimited garage"
         case .exportPDF:
-            return "Export the full passport"
+            return "Export a polished passport"
         case .advancedReminders:
-            return "Unlock smart maintenance reminders"
+            return "Unlock smarter reminders"
         case .documentVault:
-            return "Secure your car's documents"
+            return "Keep documents in one glovebox"
         case .analytics:
-            return "Unlock spending analytics"
+            return "See your ownership costs clearly"
         case .fuelTracking:
-            return "Track your fuel costs"
+            return "Track fuel with more insight"
         case .ocrScan:
             return "Scan receipts automatically"
         case .vinLookup:
             return "Auto-fill vehicle details"
         case .importData:
-            return "Import your data"
+            return "Import your existing data"
         case .settings:
             return "Upgrade to Pro"
         }
@@ -49,25 +49,25 @@ enum PaywallReason: String, Identifiable {
     var message: String {
         switch self {
         case .secondVehicle:
-            return "Free includes one vehicle. Pro unlocks an unlimited private garage."
+            return "Free stays useful for one car. Pro lets you keep every vehicle in one organized garage."
         case .exportPDF:
-            return "Generate a polished, multi-page service passport PDF to increase resale value."
+            return "Create a polished, resale-ready PDF passport whenever you need to share the full history."
         case .advancedReminders:
-            return "Set precise reminders by mileage or combined date & mileage triggers."
+            return "Add mileage-based reminders so maintenance follows how much you actually drive."
         case .documentVault:
-            return "Keep all your insurance, registration, and title documents safe in one place."
+            return "Keep receipts, registration, and warranty files attached to the right vehicle."
         case .analytics:
-            return "View detailed charts and breakdown of your vehicle's lifetime costs."
+            return "See where ownership costs go and spot the patterns that matter."
         case .fuelTracking:
-            return "Log every fill-up, track consumption and total fuel costs over time."
+            return "Log fill-ups and build a clearer picture of cost and consumption."
         case .ocrScan:
-            return "Point your camera at a receipt and let the app extract the date, cost, mileage and workshop automatically."
+            return "Let the app extract receipt details so service entries take less time."
         case .vinLookup:
-            return "Enter your VIN and instantly fill in make, model and year from the official database."
+            return "Fill vehicle details faster from a VIN lookup."
         case .importData:
-            return "Restore a previous backup or move your data from another device."
+            return "Bring your existing records into Car Service Passport in one step."
         case .settings:
-            return "A one-time upgrade unlocks the complete service passport experience."
+            return "Unlock the full service passport experience when you're ready for more convenience."
         }
     }
 }

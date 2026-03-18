@@ -110,6 +110,7 @@ enum AttachmentType: String, Codable, CaseIterable, Identifiable {
 
 enum DocumentVaultCategory: String, Codable, CaseIterable, Identifiable {
     case general
+    case receipts
     case insurance
     case registration
     case warranty
@@ -122,6 +123,7 @@ enum DocumentVaultCategory: String, Codable, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .general: return "General"
+        case .receipts: return "Receipts"
         case .insurance: return "Insurance"
         case .registration: return "Registration"
         case .warranty: return "Warranty"
@@ -134,6 +136,7 @@ enum DocumentVaultCategory: String, Codable, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .general: return "doc.fill"
+        case .receipts: return "doc.text.image.fill"
         case .insurance: return "shield.fill"
         case .registration: return "text.book.closed.fill"
         case .warranty: return "checkmark.seal.fill"

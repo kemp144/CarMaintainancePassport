@@ -71,33 +71,82 @@ struct VehicleRowCard: View {
                 .frame(width: 96, height: 96)
 
                 // Vehicle Info
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text("\(vehicle.make) \(vehicle.model)")
                         .font(.system(size: 18, weight: .semibold)) // text-lg font-semibold
                         .foregroundStyle(AppTheme.primaryText) // text-white
                         .lineLimit(1)
 
-                    Text(vehicle.year > 0 ? String(vehicle.year) : "Unknown Year")
-                        .font(.system(size: 14)) // text-sm
-                        .foregroundStyle(AppTheme.secondaryText) // text-slate-400
-                        .padding(.bottom, 4) // mb-2
-
-                    if !vehicle.licensePlate.isEmpty {
-                        Text(vehicle.licensePlate)
-                            .font(.system(size: 12, design: .monospaced)) // text-xs font-mono
-                            .foregroundStyle(Color(hex: "CBD5E1")) // text-slate-300
-                            .padding(.horizontal, 12) // px-3
-                            .padding(.vertical, 4) // py-1
-                            .background(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous) // rounded-md
-                                    .fill(AppTheme.surfaceSecondary) // bg-slate-800
-                            )
+                    HStack(spacing: 6) {
+                        Text(vehicle.year > 0 ? String(vehicle.year) : "Unknown Year")
+                        if !vehicle.licensePlate.isEmpty {
+                            Text("•")
+                            Text(vehicle.licensePlate)
+                        }
                     }
+                    .font(.system(size: 13.5)) // text-sm
+                        .foregroundStyle(AppTheme.secondaryText) // text-slate-400
+                        .lineLimit(1)
+
+                    if let lastServiceDate = vehicle.latestServiceDate {
+                        ownershipInfoRow(
+                            icon: "wrench.and.screwdriver",
+                            title: "Last service",
+                            value: AppFormatters.mediumDate.string(from: lastServiceDate)
+                        )
+                    }
+
+                    if let reminder = vehicle.nextDueReminder {
+                        ownershipInfoRow(
+                            icon: "bell.badge.fill",
+                            title: reminder.status(for: vehicle) == .overdue ? "Attention" : "Next due",
+                            value: reminder.title
+                        )
+                    }
+
+                    HStack(spacing: 8) {
+                        compactMetric(label: "Docs", value: "\(vehicle.documentsCount)")
+                        compactMetric(label: "This year", value: AppFormatters.currency(vehicle.spentThisYear, code: vehicle.currencyCode))
+                        compactMetric(label: "Reminders", value: "\(vehicle.activeRemindersCount)")
+                    }
+
+                    .padding(.top, 2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(16) // p-4
         }
+    }
+
+    private func ownershipInfoRow(icon: String, title: String, value: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(AppTheme.accent)
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppTheme.secondaryText)
+            Text("•")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(AppTheme.tertiaryText)
+            Text(value)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppTheme.primaryText)
+                .lineLimit(1)
+        }
+    }
+
+    private func compactMetric(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.system(size: 10.5, weight: .medium))
+                .foregroundStyle(AppTheme.tertiaryText)
+            Text(value)
+                .font(.system(size: 11.5, weight: .semibold))
+                .foregroundStyle(AppTheme.primaryText)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -106,10 +155,10 @@ struct ReminderBadge: View {
 
     var body: some View {
         Text(status.title)
-            .font(.caption.weight(.semibold))
+            .font(.caption2.weight(.semibold))
             .foregroundStyle(status.tint)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
             .background(Capsule(style: .continuous).fill(status.tint.opacity(0.14)))
     }
 }

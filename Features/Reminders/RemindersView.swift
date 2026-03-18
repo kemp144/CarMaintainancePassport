@@ -28,6 +28,57 @@ struct RemindersView: View {
         }
     }
 
+    private var reminderSummary: some View {
+        let activeReminders = grouped.reduce(0) { $0 + $1.1.count }
+        let overdueCount = reminders.filter { reminder in
+            guard let vehicle = reminder.vehicle else { return false }
+            return reminder.status(for: vehicle) == .overdue
+        }.count
+        let mileageCount = reminders.filter { $0.mileageDue != nil }.count
+
+        return SurfaceCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Reminder overview")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+                    Spacer()
+                    Text("Smart maintenance")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+
+                HStack(spacing: 12) {
+                    reminderStat(title: "Active", value: "\(activeReminders)", icon: "bell.fill")
+                    reminderStat(title: "Overdue", value: "\(overdueCount)", icon: "exclamationmark.triangle.fill")
+                    reminderStat(title: "Mileage", value: mileageCount == 0 ? "Pro" : "\(mileageCount)", icon: "speedometer")
+                }
+
+                Text("Date reminders are available for free. Mileage-based reminders help Pro users keep maintenance tied to actual driving.")
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+        }
+    }
+
+    private func reminderStat(title: String, value: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppTheme.accent)
+                Text(title)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+
+            Text(value)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(AppTheme.primaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             AppTheme.background.ignoresSafeArea()
@@ -59,24 +110,27 @@ struct RemindersView: View {
 
                 if grouped.isEmpty {
                     ScrollView(showsIndicators: false) {
-                        ContentUnavailableView {
-                            Label("No reminders yet", systemImage: "bell.fill")
-                        } description: {
-                            Text("Create reminders for inspection, oil service or registration deadlines only when they matter.")
-                        } actions: {
-                            Button("Add Reminder") {
+                        VStack(spacing: 16) {
+                            reminderSummary
+
+                            EmptyStateCard(
+                                icon: "bell.fill",
+                                title: "Keep maintenance on schedule",
+                                message: "Date reminders are free. If you want smarter mileage-based reminders, Pro adds that extra layer of protection.",
+                                actionTitle: "Add Reminder"
+                            ) {
                                 showingReminderForm = true
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(AppTheme.accentSecondary)
                         }
-                        .frame(maxWidth: .infinity, alignment: .top)
+                        .padding(.horizontal, 24)
                         .padding(.top, 20)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 } else {
                     ScrollView(showsIndicators: false) {
-                        LazyVStack(spacing: 24) {
+                        LazyVStack(spacing: 18) {
+                            reminderSummary
+
                             ForEach(grouped, id: \.0.id) { status, items in
                                 VStack(alignment: .leading, spacing: 12) {
                                     Text(status.title)
@@ -90,16 +144,22 @@ struct RemindersView: View {
                                                 editingReminder = reminder
                                             } label: {
                                                 SurfaceCard {
-                                                    HStack {
+                                                    HStack(alignment: .top) {
                                                         VStack(alignment: .leading, spacing: 4) {
                                                             Text(reminder.title)
                                                                 .foregroundStyle(AppTheme.primaryText)
                                                             Text(reminder.vehicle?.title ?? "Unknown vehicle")
                                                                 .font(.subheadline)
                                                                 .foregroundStyle(AppTheme.secondaryText)
-                                                            Text(reminder.dateDue.map(AppFormatters.mediumDate.string) ?? reminder.mileageDue.map(AppFormatters.mileage) ?? "Custom reminder")
-                                                                .font(.caption)
+                                                            Text(reminderDetailText(reminder))
+                                                                .font(.caption.weight(.medium))
                                                                 .foregroundStyle(AppTheme.tertiaryText)
+                                                            if !reminder.notes.isEmpty {
+                                                                Text(reminder.notes)
+                                                                    .font(.caption2)
+                                                                    .foregroundStyle(AppTheme.tertiaryText)
+                                                                    .lineLimit(2)
+                                                            }
                                                         }
                                                         Spacer()
                                                         ReminderBadge(status: status)
@@ -113,7 +173,7 @@ struct RemindersView: View {
                             }
                         }
                         .padding(24)
-                        .padding(.bottom, 100)
+                        .padding(.bottom, 112)
                     }
                 }
             }
@@ -146,5 +206,15 @@ struct RemindersView: View {
                 ReminderFormView(reminder: reminder)
             }
         }
+    }
+
+    private func reminderDetailText(_ reminder: ReminderItem) -> String {
+        if let dateDue = reminder.dateDue {
+            return "Due \(AppFormatters.mediumDate.string(from: dateDue))"
+        }
+        if let mileageDue = reminder.mileageDue {
+            return "Due \(AppFormatters.mileage(mileageDue))"
+        }
+        return reminder.type.title
     }
 }

@@ -10,6 +10,8 @@ struct OCRService {
         var price: Double?
         var mileage: Int?
         var workshopName: String?
+        var suggestedServiceType: ServiceType?
+        var suggestedCategory: EntryCategory?
         var rawText: String
     }
 
@@ -50,6 +52,24 @@ struct OCRService {
         var price: Double?
         var mileage: Int?
         var workshopName: String?
+        var suggestedServiceType: ServiceType?
+        let lowercasedText = rawText.lowercased()
+
+        if lowercasedText.contains("oil") || lowercasedText.contains("engine oil") {
+            suggestedServiceType = .oilChange
+        } else if lowercasedText.contains("tyre") || lowercasedText.contains("tire") {
+            suggestedServiceType = .tires
+        } else if lowercasedText.contains("battery") {
+            suggestedServiceType = .battery
+        } else if lowercasedText.contains("brake") {
+            suggestedServiceType = .brakes
+        } else if lowercasedText.contains("inspection") || lowercasedText.contains("technical") || lowercasedText.contains("mot") {
+            suggestedServiceType = .inspection
+        } else if lowercasedText.contains("registration") {
+            suggestedServiceType = .registration
+        } else if lowercasedText.contains("insurance") || lowercasedText.contains("policy") {
+            suggestedServiceType = .insurance
+        }
 
         // Date formatters
         let dateFormats = ["dd.MM.yyyy", "d.M.yyyy", "dd/MM/yyyy", "yyyy-MM-dd", "MM/dd/yyyy", "dd.MM.yy"]
@@ -115,6 +135,14 @@ struct OCRService {
             }
         }
 
-        return OCRResult(date: date, price: price, mileage: mileage, workshopName: workshopName, rawText: rawText)
+        return OCRResult(
+            date: date,
+            price: price,
+            mileage: mileage,
+            workshopName: workshopName,
+            suggestedServiceType: suggestedServiceType,
+            suggestedCategory: suggestedServiceType?.defaultCategory,
+            rawText: rawText
+        )
     }
 }

@@ -35,6 +35,13 @@ struct TimelineView: View {
         let vehicleTitle: String
     }
 
+    private struct TimelineGroup: Identifiable {
+        let id: String
+        let title: String
+        let subtitle: String
+        let events: [TimelineEvent]
+    }
+
     @Query(sort: \ServiceEntry.date, order: .reverse) private var services: [ServiceEntry]
     @Query(sort: \AttachmentRecord.createdAt, order: .reverse) private var attachments: [AttachmentRecord]
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
@@ -82,6 +89,52 @@ struct TimelineView: View {
         case .cost:
             return filtered.sorted { $0.cost > $1.cost }
         }
+    }
+
+    private var groupedEvents: [TimelineGroup] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: events) { event in
+            calendar.date(from: calendar.dateComponents([.year, .month], from: event.date)) ?? event.date
+        }
+
+        let sortedKeys = grouped.keys.sorted(by: sort == .oldest ? (<) : (>))
+
+        return sortedKeys.map { monthStart in
+            let monthEvents = grouped[monthStart, default: []]
+            return TimelineGroup(
+                id: monthStart.formatted(date: .abbreviated, time: .omitted),
+                title: monthTitle(for: monthStart),
+                subtitle: "\(monthEvents.count) \(monthEvents.count == 1 ? "entry" : "entries")",
+                events: monthEvents.sorted { sort == .oldest ? $0.date < $1.date : $0.date > $1.date }
+            )
+        }
+    }
+
+    private var timelineSummary: some View {
+        let totalSpent = events.filter { $0.cost > 0 }.reduce(0) { $0 + $1.cost }
+        let eventsThisYear = events.filter { Calendar.current.isDate($0.date, equalTo: .now, toGranularity: .year) }.count
+        let latestDate = events.first?.date
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                timelineSummaryTile(title: "This year", value: "\(eventsThisYear) events", icon: "chart.bar.fill")
+                timelineSummaryTile(title: "Spending", value: AppFormatters.currency(totalSpent, code: primaryCurrencyCode), icon: "dollarsign.circle.fill")
+                timelineSummaryTile(title: "Latest", value: latestDate.map { AppFormatters.mediumDate.string(from: $0) } ?? "No history", icon: "clock.fill")
+            }
+
+            Text(scopeSummaryText)
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(AppTheme.tertiaryText)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(AppTheme.surface)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(AppTheme.separator, lineWidth: 1)
+                }
+        )
     }
 
     var body: some View {
@@ -144,43 +197,66 @@ struct TimelineView: View {
 
                 if events.isEmpty {
                     ScrollView(showsIndicators: false) {
-                        ContentUnavailableView {
-                            Label("No timeline results", systemImage: "clock.badge.xmark.fill")
-                        } description: {
-                            Text("Adjust filters or add a service entry to start the vehicle history.")
+                        EmptyStateCard(
+                            icon: "clock.badge.xmark.fill",
+                            title: "No history yet",
+                            message: "Add your first service entry to turn this into a clean ownership timeline for maintenance, receipts, and resale.",
+                            actionTitle: "Open Garage"
+                        ) {
+                            appState.selectedTab = .garage
                         }
-                        .frame(maxWidth: .infinity, alignment: .top)
+                        .padding(.horizontal, 24)
                         .padding(.top, 20)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 } else {
                     ScrollView(showsIndicators: false) {
-                        LazyVStack(spacing: 16) {
-                            ForEach(events) { event in
-                                switch event.kind {
-                                case .service(let entry):
-                                    NavigationLink {
-                                        ServiceDetailView(entry: entry)
-                                    } label: {
-                                        SurfaceCard {
-                                            timelineListRow(for: event)
+                        LazyVStack(spacing: 18) {
+                            timelineSummary
+
+                            ForEach(groupedEvents) { group in
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(group.title)
+                                                .font(.headline.weight(.semibold))
+                                                .foregroundStyle(AppTheme.primaryText)
+                                            Text(group.subtitle)
+                                                .font(.caption)
+                                                .foregroundStyle(AppTheme.secondaryText)
+                                        }
+                                        Spacer()
+                                    }
+
+                                    LazyVStack(spacing: 12) {
+                                        ForEach(group.events) { event in
+                                            switch event.kind {
+                                            case .service(let entry):
+                                                NavigationLink {
+                                                    ServiceDetailView(entry: entry)
+                                                } label: {
+                                                    SurfaceCard {
+                                                        timelineListRow(for: event)
+                                                    }
+                                                }
+                                                .buttonStyle(.plain)
+                                            case .document(let attachment):
+                                                Button {
+                                                    previewURL = AttachmentStorageService.fileURL(for: attachment.storageReference)
+                                                } label: {
+                                                    SurfaceCard {
+                                                        timelineListRow(for: event)
+                                                    }
+                                                }
+                                                .buttonStyle(.plain)
+                                            }
                                         }
                                     }
-                                    .buttonStyle(.plain)
-                                case .document(let attachment):
-                                    Button {
-                                        previewURL = AttachmentStorageService.fileURL(for: attachment.storageReference)
-                                    } label: {
-                                        SurfaceCard {
-                                            timelineListRow(for: event)
-                                        }
-                                    }
-                                    .buttonStyle(.plain)
                                 }
                             }
                         }
                         .padding(24)
-                        .padding(.bottom, 100)
+                        .padding(.bottom, 116)
                     }
                 }
             }
@@ -320,5 +396,51 @@ struct TimelineView: View {
     private func matchesSearch(for event: TimelineEvent) -> Bool {
         guard !searchText.isEmpty else { return true }
         return searchBlob(for: event).localizedCaseInsensitiveContains(searchText)
+    }
+
+    private var primaryCurrencyCode: String {
+        events.first.flatMap { event in
+            switch event.kind {
+            case .service(let entry):
+                return entry.currencyCode
+            case .document(let attachment):
+                return attachment.vehicle?.currencyCode
+            }
+        } ?? CurrencyPreset.eur.rawValue
+    }
+
+    private var scopeSummaryText: String {
+        if let localID = appState.selectedVehicleID, let vehicle = vehicles.first(where: { $0.id == localID }) {
+            return "Showing \(vehicle.title)"
+        }
+        if appState.showOnlyCurrentVehicle {
+            return "Showing the current vehicle"
+        }
+        return "Showing all vehicles in your garage"
+    }
+
+    private func timelineSummaryTile(title: String, value: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppTheme.accent)
+                Text(title)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+
+            Text(value)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(AppTheme.primaryText)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func monthTitle(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "LLLL yyyy"
+        return formatter.string(from: date)
     }
 }

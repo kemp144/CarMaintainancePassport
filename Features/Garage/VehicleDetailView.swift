@@ -14,6 +14,8 @@ struct VehicleDetailView: View {
     @State private var showingOCRServiceForm = false
     @State private var showingReminderForm = false
     @State private var showingDocumentComposer = false
+    @State private var showingDocuments = false
+    @State private var pendingServiceDraft: ScannedReceiptDraft?
     @State private var showingAnalytics = false
     @State private var showingFuelTracking = false
     @State private var showingDeleteConfirmation = false
@@ -144,10 +146,14 @@ struct VehicleDetailView: View {
                         }
                         .padding(.horizontal, 24)
 
+                        vehicleSummarySection
+                            .padding(.horizontal, 24)
+
                         quickActions.padding(.horizontal, 24)
+                            .padding(.top, -2)
 
                         // Service History
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 10) {
                             HStack(alignment: .center) {
                                 Text("Service History")
                                     .font(.system(size: 17, weight: .semibold))
@@ -169,6 +175,10 @@ struct VehicleDetailView: View {
                                 }
                             }
 
+                            Text("\(vehicle.serviceEntries.count) \(vehicle.serviceEntries.count == 1 ? "record" : "records") keep your ownership history easy to review.")
+                                .font(.system(size: 13.5))
+                                .foregroundStyle(AppTheme.secondaryText)
+
                             if vehicle.sortedServices.isEmpty {
                                 SurfaceCard(padding: 32) { // p-8
                                     VStack(spacing: 0) {
@@ -189,7 +199,7 @@ struct VehicleDetailView: View {
                                     .frame(maxWidth: .infinity)
                                 }
                             } else {
-                                VStack(spacing: 11) { // space-y-3
+                                VStack(spacing: 10) { // space-y-3
                                     ForEach(vehicle.sortedServices.prefix(5)) { entry in
                                         NavigationLink {
                                             ServiceDetailView(entry: entry)
@@ -197,7 +207,7 @@ struct VehicleDetailView: View {
                                             SurfaceCard(padding: 14) {
                                                 VStack(alignment: .leading, spacing: 0) {
                                                     HStack(alignment: .top) {
-                                                        VStack(alignment: .leading, spacing: 4) {
+                                                        VStack(alignment: .leading, spacing: 5) {
                                                             Text(entry.displayTitle)
                                                                 .font(.system(size: 15, weight: .semibold))
                                                                 .foregroundStyle(AppTheme.primaryText)
@@ -205,29 +215,29 @@ struct VehicleDetailView: View {
                                                                 Image(systemName: "calendar")
                                                                     .font(.system(size: 12))
                                                                 Text(AppFormatters.mediumDate.string(from: entry.date))
-                                                                    .font(.system(size: 13.5))
+                                                                    .font(.system(size: 13.5, weight: .medium))
                                                             }
-                                                            .foregroundStyle(AppTheme.secondaryText.opacity(0.95))
+                                                            .foregroundStyle(AppTheme.secondaryText)
                                                         }
                                                         Spacer()
                                                         Text(AppFormatters.currency(entry.price, code: entry.currencyCode))
                                                             .font(.system(size: 15, weight: .semibold))
                                                             .foregroundStyle(AppTheme.primaryText)
                                                     }
-                                                    .padding(.bottom, 7)
+                                                    .padding(.bottom, 8)
 
                                                     HStack(spacing: 6) {
                                                         Image(systemName: "gauge.with.dots.needle.33percent")
                                                             .font(.system(size: 12))
                                                         Text("\(entry.mileage) km")
-                                                            .font(.system(size: 13.5))
+                                                            .font(.system(size: 13.5, weight: .medium))
                                                     }
-                                                    .foregroundStyle(AppTheme.secondaryText.opacity(0.95))
+                                                    .foregroundStyle(AppTheme.secondaryText)
 
                                                     if !entry.notes.isEmpty {
                                                         Text(entry.notes)
                                                             .font(.system(size: 13.5))
-                                                            .foregroundStyle(AppTheme.tertiaryText.opacity(0.95))
+                                                            .foregroundStyle(AppTheme.tertiaryText)
                                                             .lineLimit(1)
                                                             .padding(.top, 5)
                                                     }
@@ -240,7 +250,7 @@ struct VehicleDetailView: View {
                             }
                         }
                         .padding(.horizontal, 24)
-                                .padding(.top, 1)
+                        .padding(.top, 1)
                         
                         // Reminders
                         VStack(alignment: .leading, spacing: 14) {
@@ -291,7 +301,7 @@ struct VehicleDetailView: View {
                         // Fuel section
                         fuelSection.padding(.horizontal, 24)
 
-                        Spacer().frame(height: 164)
+                        Spacer().frame(height: 176)
                     }
                 }
             }
@@ -368,7 +378,19 @@ struct VehicleDetailView: View {
         }
         .sheet(isPresented: $showingDocumentComposer) {
             NavigationStack {
-                DocumentComposerSheet(preselectedVehicle: vehicle)
+                DocumentComposerSheet(preselectedVehicle: vehicle) { _, draft in
+                    pendingServiceDraft = draft
+                }
+            }
+        }
+        .sheet(isPresented: $showingDocuments) {
+            NavigationStack {
+                DocumentsView()
+            }
+        }
+        .sheet(item: $pendingServiceDraft) { draft in
+            NavigationStack {
+                ServiceEntryFormView(vehicle: vehicle, ocrDraft: draft)
             }
         }
         .sheet(isPresented: $showingAnalytics) {
@@ -415,26 +437,9 @@ struct VehicleDetailView: View {
                     paywallCoordinator.present(.fuelTracking)
                 }
             }
-            Menu {
-                Button {
-                    if entitlementStore.canUseDocumentVault() {
-                        showingDocumentComposer = true
-                    } else {
-                        paywallCoordinator.present(.documentVault)
-                    }
-                } label: {
-                    Label("Add Document", systemImage: "doc.fill")
-                }
-
-                Button {
-                    if entitlementStore.canUseOCR() {
-                        showingOCRServiceForm = true
-                    } else {
-                        paywallCoordinator.present(.ocrScan)
-                    }
-                } label: {
-                    Label("Scan Receipt", systemImage: "doc.viewfinder")
-                }
+            Button {
+                appState.selectedVehicleID = vehicle.id
+                showingDocuments = true
             } label: {
                 quickActionLabel(title: "Documents", icon: "doc.fill")
             }
@@ -557,6 +562,78 @@ struct VehicleDetailView: View {
             RoundedRectangle(cornerRadius: 13, style: .continuous)
                 .fill(AppTheme.surfaceSecondary)
         )
+    }
+
+    private var vehicleSummarySection: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
+            summaryTile(title: "Next due", value: nextDueText, icon: "bell.badge.fill", highlight: nextDueIsUrgent)
+            summaryTile(title: "Last service", value: lastServiceText, icon: "wrench.and.screwdriver.fill", highlight: false)
+            summaryTile(title: "Documents", value: "\(vehicle.documentsCount) saved", icon: "doc.fill", highlight: vehicle.documentsCount > 0)
+        }
+    }
+
+    private func summaryTile(title: String, value: String, icon: String, highlight: Bool) -> some View {
+        SurfaceCard(padding: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(highlight ? AppTheme.accent : AppTheme.secondaryText)
+                    Text(title)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+
+                Text(value)
+                    .font(.system(size: 13.5, weight: .semibold))
+                    .foregroundStyle(AppTheme.primaryText)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+            }
+        }
+    }
+
+    private var nextDueText: String {
+        guard let reminder = vehicle.nextDueReminder else { return "No active reminders" }
+
+        switch reminder.status(for: vehicle) {
+        case .overdue:
+            if let dateDue = reminder.dateDue {
+                return "Overdue • \(AppFormatters.mediumDate.string(from: dateDue))"
+            }
+            if let mileageDue = reminder.mileageDue {
+                return "Overdue • \(AppFormatters.mileage(mileageDue))"
+            }
+            return "Overdue • \(reminder.title)"
+        case .dueSoon:
+            if let dateDue = reminder.dateDue {
+                return "Due soon • \(AppFormatters.mediumDate.string(from: dateDue))"
+            }
+            if let mileageDue = reminder.mileageDue {
+                return "Due soon • \(AppFormatters.mileage(mileageDue))"
+            }
+            return "Due soon • \(reminder.title)"
+        case .upcoming:
+            if let dateDue = reminder.dateDue {
+                return "\(AppFormatters.mediumDate.string(from: dateDue))"
+            }
+            if let mileageDue = reminder.mileageDue {
+                return "\(AppFormatters.mileage(mileageDue))"
+            }
+            return reminder.title
+        case .disabled:
+            return "Reminder paused"
+        }
+    }
+
+    private var nextDueIsUrgent: Bool {
+        guard let reminder = vehicle.nextDueReminder else { return false }
+        return reminder.status(for: vehicle) != .upcoming
+    }
+
+    private var lastServiceText: String {
+        guard let service = vehicle.latestService else { return "No service yet" }
+        return "\(service.displayTitle) • \(AppFormatters.mediumDate.string(from: service.date))"
     }
 
     private func quickActionButton(title: String, icon: String, action: @escaping () -> Void) -> some View {

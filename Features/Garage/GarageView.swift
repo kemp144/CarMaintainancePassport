@@ -22,7 +22,17 @@ struct GarageView: View {
     private var filteredVehicles: [Vehicle] {
         let searched = vehicles.filter { vehicle in
             guard !searchText.isEmpty else { return true }
-            let haystack = [vehicle.make, vehicle.model, vehicle.licensePlate].joined(separator: " ").lowercased()
+            let haystack = [
+                vehicle.make,
+                vehicle.model,
+                vehicle.licensePlate,
+                vehicle.vin,
+                String(vehicle.year),
+                String(vehicle.currentMileage),
+                vehicle.notes,
+                vehicle.sortedServices.map { $0.displayTitle }.joined(separator: " "),
+                vehicle.sortedReminders.map { $0.title }.joined(separator: " ")
+            ].joined(separator: " ").lowercased()
             return haystack.contains(searchText.lowercased())
         }
 
@@ -87,8 +97,8 @@ struct GarageView: View {
                         if vehicles.isEmpty {
                             EmptyStateCard(
                                 icon: "car.fill",
-                                title: "No Vehicles Yet",
-                                message: "Start building your digital service logbook by adding your first vehicle.",
+                                title: "Start your garage",
+                                message: "Add your first car to track services, reminders, fuel, and documents in one calm place.",
                                 actionTitle: "Add Vehicle"
                             ) {
                                 addVehicleTapped()

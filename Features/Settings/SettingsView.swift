@@ -66,20 +66,33 @@ struct SettingsView: View {
                     .listRowBackground(AppTheme.surface)
 
                     Section {
-                        if entitlementStore.hasProAccess {
-                            Label("Pro unlocked", systemImage: "checkmark.seal.fill")
-                                .foregroundStyle(AppTheme.success)
-                        } else {
-                            Button("Upgrade to Pro") {
-                                paywallCoordinator.present(.settings)
-                            }
-                            .foregroundStyle(AppTheme.accent)
-                            Button("Restore Purchases") {
-                                Task {
-                                    await entitlementStore.restorePurchases()
+                        VStack(alignment: .leading, spacing: 12) {
+                            if entitlementStore.hasProAccess {
+                                Label("Pro unlocked", systemImage: "checkmark.seal.fill")
+                                    .foregroundStyle(AppTheme.success)
+                            } else {
+                                Text("Pro adds unlimited vehicles, smarter mileage reminders, OCR scanning, and resale-ready exports.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(AppTheme.secondaryText)
+
+                                Button("Upgrade to Pro") {
+                                    paywallCoordinator.present(.settings)
                                 }
+                                .foregroundStyle(AppTheme.accent)
+
+                                Button("Restore Purchases") {
+                                    Task {
+                                        await entitlementStore.restorePurchases()
+                                    }
+                                }
+                                .foregroundStyle(AppTheme.accent)
                             }
-                            .foregroundStyle(AppTheme.accent)
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                settingsProRow(title: "Unlimited vehicles", icon: "car.2.fill")
+                                settingsProRow(title: "Mileage reminders", icon: "speedometer")
+                                settingsProRow(title: "OCR and advanced export", icon: "doc.viewfinder")
+                            }
                         }
 
                         #if DEBUG
@@ -116,7 +129,7 @@ struct SettingsView: View {
                         Toggle("Auto Backup on Background", isOn: $autoBackupEnabled)
                             .foregroundStyle(AppTheme.primaryText)
 
-                        Text("Backups are saved to Files → On My iPhone → CarServicePassport → Backups. Enable auto backup to save automatically when the app goes to background.")
+                        Text("Backups are saved locally in Files. Enable auto backup to save your library when the app moves to the background.")
                             .font(.footnote)
                             .foregroundStyle(AppTheme.secondaryText)
                     } header: {
@@ -142,7 +155,7 @@ struct SettingsView: View {
                             }
                             .foregroundStyle(AppTheme.accent)
                         }
-                        Text("Import a previously exported Car Service Passport backup. Existing records with the same ID will be skipped to avoid duplicates.")
+                        Text("Import a previously exported backup. Existing records with the same ID are skipped to avoid duplicates.")
                             .font(.footnote)
                             .foregroundStyle(AppTheme.secondaryText)
                     } header: {
@@ -158,7 +171,7 @@ struct SettingsView: View {
                             }
                         }
                         .foregroundStyle(AppTheme.accent)
-                        Text("Permission is requested only when you enable date-based reminders.")
+                        Text("Permission is requested only when you enable reminders that need notifications.")
                             .font(.footnote)
                             .foregroundStyle(AppTheme.secondaryText)
                     } header: {
@@ -168,7 +181,7 @@ struct SettingsView: View {
                     .listRowBackground(AppTheme.surface)
 
                     Section {
-                        Text("Car Service Passport is local-first. No account, no ads and no backend dependency are required in V1.")
+                        Text("Car Service Passport is local-first. No account, no ads, and no backend dependency are required.")
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.primaryText)
                     } header: {
@@ -277,6 +290,17 @@ struct SettingsView: View {
             }
             isImporting = false
             showingImportResult = true
+        }
+    }
+
+    private func settingsProRow(title: String, icon: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppTheme.accent)
+            Text(title)
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(AppTheme.primaryText)
         }
     }
 }

@@ -49,6 +49,37 @@ struct AttachmentThumbnailView: View {
     }
 }
 
+struct CompactAttachmentThumbnailView: View {
+    let attachment: AttachmentRecord
+    @State private var image: UIImage?
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(AppTheme.surfaceSecondary)
+
+            if attachment.type == .image, let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            } else {
+                Image(systemName: attachment.type.icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(AppTheme.accentSecondary)
+            }
+        }
+        .frame(width: 52, height: 52)
+        .task {
+            guard attachment.type == .image else { return }
+            let reference = attachment.thumbnailReference ?? attachment.storageReference
+            image = UIImage(contentsOfFile: AttachmentStorageService.fileURL(for: reference).path)
+        }
+    }
+}
+
 struct QuickLookPreviewSheet: UIViewControllerRepresentable {
     let url: URL
 

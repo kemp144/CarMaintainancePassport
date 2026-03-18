@@ -21,6 +21,10 @@ struct FuelTrackingView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
+                    if sortedEntries.isEmpty {
+                        fuelIntroCard
+                    }
+
                     if !sortedEntries.isEmpty {
                         statsSection
                     }
@@ -57,11 +61,30 @@ struct FuelTrackingView: View {
         .confirmationDialog("Delete fuel entry?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let entry = entryToDelete {
-                    modelContext.delete(entry)
-                    try? modelContext.save()
+                    deleteEntry(entry)
                 }
             }
             Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    private var fuelIntroCard: some View {
+        SurfaceCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Fuel log")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+                    Spacer()
+                    Text("Optional but useful")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+
+                Text("Track fill-ups to see spending, consumption, and ownership cost over time. It becomes more useful with every entry.")
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
         }
     }
 
@@ -69,7 +92,7 @@ struct FuelTrackingView: View {
         let totalLiters = sortedEntries.reduce(0.0) { $0 + $1.liters }
         let totalCost = sortedEntries.reduce(0.0) { $0 + $1.totalCost }
         let avgPrice = totalLiters > 0 ? totalCost / totalLiters : 0
-        let consumption = averageConsumption()
+        let consumption = consumptionState()
 
         return VStack(alignment: .leading, spacing: 16) {
             Text("Statistics")
@@ -82,12 +105,16 @@ struct FuelTrackingView: View {
             }
             HStack(spacing: 12) {
                 statCard(title: "Avg Price/L", value: avgPrice > 0 ? String(format: "%.3f %@/L", avgPrice, vehicle.currencyCode) : "—")
-                statCard(title: "Avg Consumption", value: consumption.map { String(format: "%.1f L/100km", $0) } ?? "—")
+                statCard(
+                    title: "Avg Consumption",
+                    value: consumption.value.map { String(format: "%.1f L/100km", $0) } ?? "—",
+                    note: consumption.note
+                )
             }
         }
     }
 
-    private func statCard(title: String, value: String) -> some View {
+    private func statCard(title: String, value: String, note: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "fuelpump.fill")
@@ -102,6 +129,13 @@ struct FuelTrackingView: View {
                 .foregroundStyle(AppTheme.primaryText)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
+
+            if let note {
+                Text(note)
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
@@ -121,20 +155,13 @@ struct FuelTrackingView: View {
             }
 
             if sortedEntries.isEmpty {
-                SurfaceCard(padding: 32) {
-                    VStack(spacing: 12) {
-                        Image(systemName: "fuelpump")
-                            .font(.system(size: 48))
-                            .foregroundStyle(AppTheme.tertiaryText)
-                        Text("No fuel entries yet")
-                            .foregroundStyle(AppTheme.secondaryText)
-                        Button("Add First Fill-up") {
-                            showingAddFuel = true
-                        }
-                        .buttonStyle(SecondaryButtonStyle())
-                        .frame(maxWidth: 200)
-                    }
-                    .frame(maxWidth: .infinity)
+                EmptyStateCard(
+                    icon: "fuelpump.fill",
+                    title: "Log your first fill-up",
+                    message: "A few fuel entries reveal total cost, average consumption, and how the car behaves over time.",
+                    actionTitle: "Add Fuel"
+                ) {
+                    showingAddFuel = true
                 }
             } else {
                 VStack(spacing: 10) {
@@ -147,47 +174,75 @@ struct FuelTrackingView: View {
     }
 
     private func fuelRow(_ entry: FuelEntry) -> some View {
-        SurfaceCard(padding: 16) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        if entry.isFullTank {
-                            Image(systemName: "fuelpump.fill")
+        Button {
+            entryToEdit = entry
+        } label: {
+            SurfaceCard(padding: 16) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            if entry.isFullTank {
+                                Image(systemName: "fuelpump.fill")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(AppTheme.accent)
+                            } else {
+                                Image(systemName: "fuelpump")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(AppTheme.secondaryText)
+                            }
+                            Text(AppFormatters.mediumDate.string(from: entry.date))
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(AppTheme.primaryText)
+                        }
+                        Text(String(format: "%.2f L", entry.liters) + " • " + AppFormatters.mileage(entry.mileage))
+                            .font(.system(size: 13))
+                            .foregroundStyle(AppTheme.secondaryText)
+                        if !entry.station.isEmpty {
+                            Text(entry.station)
                                 .font(.system(size: 13))
-                                .foregroundStyle(AppTheme.accent)
-                        } else {
-                            Image(systemName: "fuelpump")
-                                .font(.system(size: 13))
+                                .foregroundStyle(AppTheme.tertiaryText)
+                        }
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 10) {
+                        Text(AppFormatters.currency(entry.totalCost, code: entry.currencyCode))
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(AppTheme.primaryText)
+                        if entry.pricePerLiter > 0 {
+                            Text(String(format: "%.3f/L", entry.pricePerLiter))
+                                .font(.system(size: 12))
                                 .foregroundStyle(AppTheme.secondaryText)
                         }
-                        Text(AppFormatters.mediumDate.string(from: entry.date))
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(AppTheme.primaryText)
-                    }
-                    Text(String(format: "%.2f L", entry.liters) + " • " + AppFormatters.mileage(entry.mileage))
-                        .font(.system(size: 13))
-                        .foregroundStyle(AppTheme.secondaryText)
-                    if !entry.station.isEmpty {
-                        Text(entry.station)
-                            .font(.system(size: 13))
-                            .foregroundStyle(AppTheme.tertiaryText)
-                    }
-                }
 
-                Spacer()
+                        HStack(spacing: 10) {
+                            Button {
+                                entryToEdit = entry
+                            } label: {
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(AppTheme.accent)
+                                    .padding(8)
+                                    .background(Circle().fill(AppTheme.surfaceSecondary))
+                            }
 
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(AppFormatters.currency(entry.totalCost, code: entry.currencyCode))
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(AppTheme.primaryText)
-                    if entry.pricePerLiter > 0 {
-                        Text(String(format: "%.3f/L", entry.pricePerLiter))
-                            .font(.system(size: 12))
-                            .foregroundStyle(AppTheme.secondaryText)
+                            Button(role: .destructive) {
+                                entryToDelete = entry
+                                showingDeleteConfirmation = true
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(AppTheme.secondaryText)
+                                    .padding(8)
+                                    .background(Circle().fill(AppTheme.surfaceSecondary))
+                            }
+                        }
                     }
                 }
             }
         }
+        .buttonStyle(.plain)
         .contextMenu {
             Button {
                 entryToEdit = entry
@@ -203,23 +258,47 @@ struct FuelTrackingView: View {
         }
     }
 
-    // L/100km based on consecutive full-tank fills with mileage
-    private func averageConsumption() -> Double? {
+    private func deleteEntry(_ entry: FuelEntry) {
+        modelContext.delete(entry)
+        recalculateVehicleMileage()
+        try? modelContext.save()
+        entryToDelete = nil
+        showingDeleteConfirmation = false
+    }
+
+    private func recalculateVehicleMileage() {
+        let fuelMileage = vehicle.fuelEntries.map(\.mileage).max() ?? 0
+        let serviceMileage = vehicle.serviceEntries.map(\.mileage).max() ?? 0
+        vehicle.currentMileage = max(fuelMileage, serviceMileage)
+        vehicle.updatedAt = .now
+    }
+
+    private func consumptionState() -> (value: Double?, note: String?) {
         let fullTanks = sortedEntries
             .filter { $0.isFullTank && $0.mileage > 0 }
             .sorted { $0.mileage < $1.mileage }
 
-        guard fullTanks.count >= 2 else { return nil }
+        guard fullTanks.count >= 2 else {
+            return (nil, "Need 2 full-tank entries")
+        }
 
         var consumptions: [Double] = []
+        var rawResults: [Double] = []
         for i in 1..<fullTanks.count {
             let kmDriven = fullTanks[i].mileage - fullTanks[i - 1].mileage
             guard kmDriven > 10 else { continue }
             let l100km = (fullTanks[i].liters / Double(kmDriven)) * 100
+            rawResults.append(l100km)
             if l100km > 2, l100km < 40 { consumptions.append(l100km) }
         }
 
-        guard !consumptions.isEmpty else { return nil }
-        return consumptions.reduce(0, +) / Double(consumptions.count)
+        guard !consumptions.isEmpty else {
+            if rawResults.isEmpty {
+                return (nil, "Need more km between fills")
+            }
+            return (nil, "Check mileage / full tank data")
+        }
+
+        return (consumptions.reduce(0, +) / Double(consumptions.count), nil)
     }
 }

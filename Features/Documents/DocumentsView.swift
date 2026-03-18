@@ -24,6 +24,8 @@ struct DocumentsView: View {
     @State private var showingComposer = false
     @State private var previewURL: URL?
     @State private var deleteTarget: AttachmentRecord?
+    @State private var pendingServiceDraft: ScannedReceiptDraft?
+    @State private var pendingServiceVehicle: Vehicle?
 
     private let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
@@ -47,6 +49,54 @@ struct DocumentsView: View {
         }
     }
 
+    private var vaultSummary: some View {
+        let documentsCount = filteredAttachments.count
+        let imagesCount = filteredAttachments.filter { $0.type == .image }.count
+        let pdfCount = filteredAttachments.filter { $0.type == .pdf }.count
+
+        return SurfaceCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Digital glovebox")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+                    Spacer()
+                    Text("\(documentsCount) saved")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+
+                HStack(spacing: 12) {
+                    documentStat(title: "Photos", value: "\(imagesCount)", icon: "photo.on.rectangle")
+                    documentStat(title: "PDFs", value: "\(pdfCount)", icon: "doc.richtext")
+                    documentStat(title: "Linked", value: String(filteredAttachments.filter { $0.serviceEntry != nil }.count), icon: "link")
+                }
+
+                Text("Store receipts, registration, insurance, and warranties where they belong. OCR and deeper document workflows are part of Pro.")
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+        }
+    }
+
+    private func documentStat(title: String, value: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppTheme.accent)
+                Text(title)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+
+            Text(value)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(AppTheme.primaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             AppTheme.background.ignoresSafeArea()
@@ -56,35 +106,31 @@ struct DocumentsView: View {
 
                 if filteredAttachments.isEmpty {
                     ScrollView(showsIndicators: false) {
-                        ContentUnavailableView {
-                            Label("No documents yet", systemImage: "doc.on.doc.fill")
-                        } description: {
-                            Text("Store receipt photos, PDFs and ownership files so they stay attached to the right vehicle.")
-                        } actions: {
-                            Button("Add Document") {
+                        VStack(spacing: 16) {
+                            vaultSummary
+
+                            EmptyStateCard(
+                                icon: "doc.on.doc.fill",
+                                title: "Your digital glovebox",
+                                message: "Save receipts, warranties, registration, and insurance files so the right paper is always attached to the right car.",
+                                actionTitle: "Add Document"
+                            ) {
                                 if entitlementStore.canUseDocumentVault() {
                                     showingComposer = true
                                 } else {
                                     paywallCoordinator.present(.documentVault)
                                 }
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(AppTheme.accentSecondary)
                             .disabled(vehicles.isEmpty)
                         }
-                        .frame(maxWidth: .infinity, alignment: .top)
+                        .padding(.horizontal, 24)
                         .padding(.top, 20)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 } else {
                     List {
                         ForEach(filteredAttachments) { attachment in
-                            Button {
-                                previewURL = AttachmentStorageService.fileURL(for: attachment.storageReference)
-                            } label: {
-                                documentRow(for: attachment)
-                            }
-                            .buttonStyle(.plain)
+                            documentRow(for: attachment)
                             .listRowBackground(Color.clear)
                             .contextMenu {
                                 Button(role: .destructive) {
@@ -129,7 +175,19 @@ struct DocumentsView: View {
         }
         .sheet(isPresented: $showingComposer) {
             NavigationStack {
-                DocumentComposerSheet(preselectedVehicle: appState.selectedVehicleID != nil ? vehicles.first(where: { $0.id == appState.selectedVehicleID }) : nil)
+                DocumentComposerSheet(preselectedVehicle: appState.selectedVehicleID != nil ? vehicles.first(where: { $0.id == appState.selectedVehicleID }) : nil) { vehicle, draft in
+                    pendingServiceVehicle = vehicle
+                    pendingServiceDraft = draft
+                }
+            }
+        }
+        .sheet(item: $pendingServiceDraft, onDismiss: {
+            pendingServiceVehicle = nil
+        }) { draft in
+            if let vehicle = pendingServiceVehicle {
+                NavigationStack {
+                    ServiceEntryFormView(vehicle: vehicle, autoStartOCR: false, ocrDraft: draft)
+                }
             }
         }
         .sheet(item: Binding(get: {
@@ -167,21 +225,14 @@ struct DocumentsView: View {
 
     private func documentRow(for attachment: AttachmentRecord) -> some View {
         HStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(AppTheme.surfaceSecondary)
-                .frame(width: 52, height: 52)
-                .overlay {
-                    Image(systemName: attachment.vaultCategory?.icon ?? attachment.type.icon)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(AppTheme.accentSecondary)
-                }
+            CompactAttachmentThumbnailView(attachment: attachment)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(attachment.filename)
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(AppTheme.primaryText)
                     .lineLimit(1)
-                
+
                 HStack(spacing: 6) {
                     if let category = attachment.vaultCategory {
                         Text(category.title)
@@ -194,13 +245,50 @@ struct DocumentsView: View {
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.secondaryText)
                 }
-                
+
                 Text("\(attachment.type.title) • \(AppFormatters.mediumDate.string(from: attachment.createdAt))")
                     .font(.caption)
                     .foregroundStyle(AppTheme.tertiaryText)
             }
 
             Spacer()
+
+            VStack(alignment: .trailing, spacing: 8) {
+                Button {
+                    previewURL = AttachmentStorageService.fileURL(for: attachment.storageReference)
+                } label: {
+                    Text("Open")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(AppTheme.surfaceSecondary))
+                }
+                .buttonStyle(.borderless)
+
+                Button {
+                    deleteTarget = attachment
+                } label: {
+                    Text("Delete")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.red.opacity(0.95))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(AppTheme.surfaceSecondary))
+                }
+                .buttonStyle(.borderless)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            previewURL = AttachmentStorageService.fileURL(for: attachment.storageReference)
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                deleteTarget = attachment
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
         }
     }
 }
@@ -208,9 +296,12 @@ struct DocumentsView: View {
 struct DocumentComposerSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var entitlementStore: EntitlementStore
+    @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
 
     let preselectedVehicle: Vehicle?
+    let onCreateServiceDraft: (Vehicle, ScannedReceiptDraft) -> Void
 
     @State private var selectedVehicleID: UUID?
     @State private var selectedServiceID: UUID?
@@ -219,9 +310,16 @@ struct DocumentComposerSheet: View {
     @State private var draftAttachments: [DraftAttachment] = []
     @State private var showingImporter = false
     @State private var showingCamera = false
+    @State private var showingOCRScanner = false
+    @State private var showingOCRFailureDialog = false
+    @State private var showingOCRChoiceDialog = false
+    @State private var scannedReceiptDraft: ScannedReceiptDraft?
+    @State private var pendingReceiptImageData: Data?
+    @State private var pendingReceiptFilename: String?
 
-    init(preselectedVehicle: Vehicle? = nil) {
+    init(preselectedVehicle: Vehicle? = nil, onCreateServiceDraft: @escaping (Vehicle, ScannedReceiptDraft) -> Void) {
         self.preselectedVehicle = preselectedVehicle
+        self.onCreateServiceDraft = onCreateServiceDraft
         _selectedVehicleID = State(initialValue: preselectedVehicle?.id)
     }
 
@@ -261,6 +359,16 @@ struct DocumentComposerSheet: View {
                         showingCamera = true
                     } label: {
                         Label("Take photo", systemImage: "camera")
+                    }
+
+                    Button {
+                        if entitlementStore.canUseOCR() {
+                            showingOCRScanner = true
+                        } else {
+                            paywallCoordinator.present(.ocrScan)
+                        }
+                    } label: {
+                        Label("Scan receipt", systemImage: "doc.viewfinder")
                     }
 
                     PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 8, matching: .images) {
@@ -310,6 +418,58 @@ struct DocumentComposerSheet: View {
                 }
             }
             .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showingOCRScanner) {
+            OCRImagePickerSheet { image in
+                guard let image else { return }
+                guard let imageData = image.jpegData(compressionQuality: 0.86) else {
+                    showingOCRFailureDialog = true
+                    return
+                }
+                pendingReceiptImageData = imageData
+                pendingReceiptFilename = "Receipt \(AppFormatters.receiptFilename.string(from: .now))"
+
+                Task {
+                    do {
+                        let result = try await OCRService.shared.scan(image: image)
+                        scannedReceiptDraft = ScannedReceiptDraft(
+                            imageData: imageData,
+                            filename: pendingReceiptFilename ?? "Receipt",
+                            result: result
+                        )
+                        showingOCRChoiceDialog = true
+                    } catch {
+                        showingOCRFailureDialog = true
+                    }
+                }
+            }
+        }
+        .confirmationDialog("What should we do with this receipt?", isPresented: $showingOCRChoiceDialog, titleVisibility: .visible) {
+            Button("Create Service Draft") {
+                guard let vehicle = selectedVehicle, let draft = scannedReceiptDraft else { return }
+                dismiss()
+                onCreateServiceDraft(vehicle, draft)
+            }
+            Button("Save as Document") {
+                Task { await saveScannedReceipt() }
+            }
+            Button("Scan Again") {
+                showingOCRScanner = true
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Use the scanned receipt to prefill a service entry or keep it as a document in the vault.")
+        }
+        .alert("Could not extract receipt details", isPresented: $showingOCRFailureDialog) {
+            Button("Save as Document") {
+                Task { await saveScannedReceipt() }
+            }
+            Button("Scan Again") {
+                showingOCRScanner = true
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The receipt image is still available. You can store it in Documents or try OCR again.")
         }
         .onChange(of: selectedPhotos) {
             Task {
@@ -367,6 +527,24 @@ struct DocumentComposerSheet: View {
 
             selectedVehicle.updatedAt = .now
             try? modelContext.save()
+            Haptics.success()
+            dismiss()
+        } catch {
+            Haptics.error()
+        }
+    }
+
+    private func saveScannedReceipt() async {
+        guard let selectedVehicle, let imageData = pendingReceiptImageData ?? scannedReceiptDraft?.imageData else { return }
+        let filename = pendingReceiptFilename ?? scannedReceiptDraft?.filename ?? "Receipt"
+
+        do {
+            try await ScannedReceiptStorageService.shared.saveReceipt(
+                imageData: imageData,
+                filename: filename,
+                vehicle: selectedVehicle,
+                in: modelContext
+            )
             Haptics.success()
             dismiss()
         } catch {
