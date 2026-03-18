@@ -15,6 +15,8 @@ enum PreviewData {
             Vehicle.self,
             ServiceEntry.self,
             AttachmentRecord.self,
+            DocumentRecord.self,
+            DocumentPageRecord.self,
             ReminderItem.self
         ])
 

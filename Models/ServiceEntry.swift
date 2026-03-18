@@ -23,6 +23,9 @@ final class ServiceEntry {
     @Relationship(deleteRule: .cascade, inverse: \AttachmentRecord.serviceEntry)
     var attachments: [AttachmentRecord] = []
 
+    @Relationship(deleteRule: .nullify, inverse: \DocumentRecord.serviceEntry)
+    var linkedDocuments: [DocumentRecord] = []
+
     @Relationship(deleteRule: .nullify, inverse: \ReminderItem.serviceEntry)
     var reminders: [ReminderItem] = []
 

@@ -6,13 +6,14 @@ struct BackupExportService {
 
     // MARK: - Export
 
-    func exportJSON(vehicles: [Vehicle], services: [ServiceEntry], reminders: [ReminderItem], attachments: [AttachmentRecord]) throws -> URL {
+    func exportJSON(vehicles: [Vehicle], services: [ServiceEntry], reminders: [ReminderItem], attachments: [AttachmentRecord], documents: [DocumentRecord]) throws -> URL {
         let snapshot = BackupSnapshot(
             exportedAt: .now,
             vehicles: vehicles.map(BackupVehicle.init),
             services: services.map(BackupService.init),
             reminders: reminders.map(BackupReminder.init),
-            attachments: attachments.map(BackupAttachment.init)
+            attachments: attachments.map(BackupAttachment.init),
+            documents: documents.map(BackupDocument.init)
         )
 
         let encoder = JSONEncoder()
@@ -25,13 +26,14 @@ struct BackupExportService {
     }
 
     /// Saves a timestamped backup to the app's Documents folder (accessible in Files app).
-    func saveToDocuments(vehicles: [Vehicle], services: [ServiceEntry], reminders: [ReminderItem], attachments: [AttachmentRecord]) throws {
+    func saveToDocuments(vehicles: [Vehicle], services: [ServiceEntry], reminders: [ReminderItem], attachments: [AttachmentRecord], documents: [DocumentRecord]) throws {
         let snapshot = BackupSnapshot(
             exportedAt: .now,
             vehicles: vehicles.map(BackupVehicle.init),
             services: services.map(BackupService.init),
             reminders: reminders.map(BackupReminder.init),
-            attachments: attachments.map(BackupAttachment.init)
+            attachments: attachments.map(BackupAttachment.init),
+            documents: documents.map(BackupDocument.init)
         )
 
         let encoder = JSONEncoder()
@@ -79,6 +81,7 @@ struct BackupExportService {
         let vehiclesImported: Int
         let servicesImported: Int
         let remindersImported: Int
+        let documentsImported: Int
     }
 
     /// Imports a JSON backup into the provided modelContext. Skips records with duplicate IDs.
@@ -103,6 +106,8 @@ struct BackupExportService {
         let existingVehicleIDs = Set((try? context.fetch(FetchDescriptor<Vehicle>()))?.map(\.id) ?? [])
         let existingServiceIDs = Set((try? context.fetch(FetchDescriptor<ServiceEntry>()))?.map(\.id) ?? [])
         let existingReminderIDs = Set((try? context.fetch(FetchDescriptor<ReminderItem>()))?.map(\.id) ?? [])
+        let existingDocumentIDs = Set((try? context.fetch(FetchDescriptor<DocumentRecord>()))?.map(\.id) ?? [])
+        let existingDocumentPageIDs = Set((try? context.fetch(FetchDescriptor<DocumentPageRecord>()))?.map(\.id) ?? [])
 
         var vehicleMap: [UUID: Vehicle] = [:]
         var vehiclesImported = 0
@@ -187,8 +192,44 @@ struct BackupExportService {
             remindersImported += 1
         }
 
+        var documentsImported = 0
+
+        for bd in snapshot.documents ?? [] where !existingDocumentIDs.contains(bd.id) {
+            guard let vehicle = bd.vehicleID.flatMap({ vehicleMap[$0] }) else { continue }
+            let serviceEntry = bd.serviceEntryID.flatMap { serviceMap[$0] }
+            let document = DocumentRecord(
+                id: bd.id,
+                vehicle: vehicle,
+                serviceEntry: serviceEntry,
+                title: bd.title,
+                category: DocumentVaultCategory(rawValue: bd.category) ?? .general,
+                documentDate: bd.documentDate,
+                notes: bd.notes,
+                createdAt: bd.createdAt,
+                updatedAt: bd.updatedAt
+            )
+            context.insert(document)
+
+            for pageSnapshot in bd.pages.sorted(by: { $0.orderIndex < $1.orderIndex }) where !existingDocumentPageIDs.contains(pageSnapshot.id) {
+                let page = DocumentPageRecord(
+                    id: pageSnapshot.id,
+                    document: document,
+                    orderIndex: pageSnapshot.orderIndex,
+                    type: AttachmentType(rawValue: pageSnapshot.type) ?? .image,
+                    filename: pageSnapshot.filename,
+                    storageReference: pageSnapshot.storageReference,
+                    thumbnailReference: pageSnapshot.thumbnailReference,
+                    createdAt: pageSnapshot.createdAt
+                )
+                context.insert(page)
+                document.pages.append(page)
+            }
+
+            documentsImported += 1
+        }
+
         try context.save()
-        return ImportResult(vehiclesImported: vehiclesImported, servicesImported: servicesImported, remindersImported: remindersImported)
+        return ImportResult(vehiclesImported: vehiclesImported, servicesImported: servicesImported, remindersImported: remindersImported, documentsImported: documentsImported)
     }
 }
 
@@ -200,6 +241,7 @@ struct BackupSnapshot: Codable {
     let services: [BackupService]
     let reminders: [BackupReminder]
     let attachments: [BackupAttachment]
+    let documents: [BackupDocument]?
 }
 
 struct BackupVehicle: Codable {
@@ -321,5 +363,53 @@ struct BackupAttachment: Codable {
         thumbnailReference = attachment.thumbnailReference
         metadata = attachment.metadata
         createdAt = attachment.createdAt
+    }
+}
+
+struct BackupDocument: Codable {
+    let id: UUID
+    let vehicleID: UUID?
+    let serviceEntryID: UUID?
+    let title: String
+    let category: String
+    let documentDate: Date
+    let notes: String
+    let createdAt: Date
+    let updatedAt: Date
+    let pages: [BackupDocumentPage]
+
+    init(document: DocumentRecord) {
+        id = document.id
+        vehicleID = document.vehicle?.id
+        serviceEntryID = document.serviceEntry?.id
+        title = document.title
+        category = document.categoryRaw
+        documentDate = document.documentDate
+        notes = document.notes
+        createdAt = document.createdAt
+        updatedAt = document.updatedAt
+        pages = document.sortedPages.map(BackupDocumentPage.init)
+    }
+}
+
+struct BackupDocumentPage: Codable {
+    let id: UUID
+    let documentID: UUID?
+    let orderIndex: Int
+    let type: String
+    let filename: String
+    let storageReference: String
+    let thumbnailReference: String?
+    let createdAt: Date
+
+    init(page: DocumentPageRecord) {
+        id = page.id
+        documentID = page.document?.id
+        orderIndex = page.orderIndex
+        type = page.typeRaw
+        filename = page.filename
+        storageReference = page.storageReference
+        thumbnailReference = page.thumbnailReference
+        createdAt = page.createdAt
     }
 }

@@ -24,6 +24,9 @@ final class Vehicle {
     @Relationship(deleteRule: .cascade, inverse: \AttachmentRecord.vehicle)
     var attachments: [AttachmentRecord] = []
 
+    @Relationship(deleteRule: .cascade, inverse: \DocumentRecord.vehicle)
+    var documents: [DocumentRecord] = []
+
     @Relationship(deleteRule: .cascade, inverse: \ReminderItem.vehicle)
     var reminders: [ReminderItem] = []
 
@@ -81,8 +84,12 @@ extension Vehicle {
         attachments.sorted { $0.createdAt > $1.createdAt }
     }
 
+    var sortedDocuments: [DocumentRecord] {
+        documents.sorted { $0.createdAt > $1.createdAt }
+    }
+
     var documentsCount: Int {
-        attachments.count
+        attachments.count + documents.count
     }
 
     var activeRemindersCount: Int {

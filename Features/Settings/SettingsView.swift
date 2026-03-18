@@ -14,6 +14,7 @@ struct SettingsView: View {
     @Query private var services: [ServiceEntry]
     @Query private var reminders: [ReminderItem]
     @Query private var attachments: [AttachmentRecord]
+    @Query private var documents: [DocumentRecord]
 
     @AppStorage("settings.autoBackup") private var autoBackupEnabled = false
 
@@ -245,7 +246,7 @@ struct SettingsView: View {
             if let err = importError {
                 Text(err)
             } else if let r = importResult {
-                Text("Imported \(r.vehiclesImported) vehicle(s), \(r.servicesImported) service(s), and \(r.remindersImported) reminder(s).")
+                Text("Imported \(r.vehiclesImported) vehicle(s), \(r.servicesImported) service(s), \(r.remindersImported) reminder(s), and \(r.documentsImported) document(s).")
             }
         }
     }
@@ -258,7 +259,7 @@ struct SettingsView: View {
 
     private func exportBackup() {
         do {
-            backupURL = try BackupExportService.shared.exportJSON(vehicles: vehicles, services: services, reminders: reminders, attachments: attachments)
+            backupURL = try BackupExportService.shared.exportJSON(vehicles: vehicles, services: services, reminders: reminders, attachments: attachments, documents: documents)
             Haptics.success()
         } catch {
             Haptics.error()
@@ -267,7 +268,7 @@ struct SettingsView: View {
 
     private func saveBackupToDocuments() {
         do {
-            try BackupExportService.shared.saveToDocuments(vehicles: vehicles, services: services, reminders: reminders, attachments: attachments)
+            try BackupExportService.shared.saveToDocuments(vehicles: vehicles, services: services, reminders: reminders, attachments: attachments, documents: documents)
             Haptics.success()
         } catch {
             Haptics.error()

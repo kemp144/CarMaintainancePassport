@@ -28,7 +28,7 @@ struct OCRImagePickerSheet: View {
                         .foregroundStyle(AppTheme.accent)
 
                     VStack(spacing: 8) {
-                        Text("Scan Receipt")
+                        Text("Scan Receipt (OCR)")
                             .font(.title2.bold())
                             .foregroundStyle(AppTheme.primaryText)
                         Text("Take a photo or pick one from your library.\nWe'll extract the date, cost, mileage, and workshop name.")

@@ -24,6 +24,7 @@ struct TimelineView: View {
     private struct TimelineEvent: Identifiable {
         enum Kind {
             case service(ServiceEntry)
+            case documentModern(DocumentRecord)
             case document(AttachmentRecord)
         }
 
@@ -43,6 +44,7 @@ struct TimelineView: View {
     }
 
     @Query(sort: \ServiceEntry.date, order: .reverse) private var services: [ServiceEntry]
+    @Query(sort: \DocumentRecord.createdAt, order: .reverse) private var documents: [DocumentRecord]
     @Query(sort: \AttachmentRecord.createdAt, order: .reverse) private var attachments: [AttachmentRecord]
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
 
@@ -60,6 +62,11 @@ struct TimelineView: View {
             guard let vehicleTitle = service.vehicle?.title else { return nil }
             return TimelineEvent(id: service.id, date: service.date, kind: .service(service), mileage: service.mileage, cost: service.price, vehicleTitle: vehicleTitle)
         }
+
+        combined.append(contentsOf: documents.compactMap { document in
+            guard let vehicleTitle = document.vehicle?.title else { return nil }
+            return TimelineEvent(id: document.id, date: document.documentDate, kind: .documentModern(document), mileage: 0, cost: 0, vehicleTitle: vehicleTitle)
+        })
 
         combined.append(contentsOf: attachments.filter { $0.serviceEntry == nil }.compactMap { attachment in
             guard let vehicleTitle = attachment.vehicle?.title else { return nil }
@@ -240,6 +247,19 @@ struct TimelineView: View {
                                                     }
                                                 }
                                                 .buttonStyle(.plain)
+                                            case .documentModern:
+                                                Button {
+                                                    if case .documentModern(let document) = event.kind {
+                                                        if let page = document.sortedPages.first {
+                                                            previewURL = AttachmentStorageService.fileURL(for: page.storageReference)
+                                                        }
+                                                    }
+                                                } label: {
+                                                    SurfaceCard {
+                                                        timelineListRow(for: event)
+                                                    }
+                                                }
+                                                .buttonStyle(.plain)
                                             case .document(let attachment):
                                                 Button {
                                                     previewURL = AttachmentStorageService.fileURL(for: attachment.storageReference)
@@ -290,6 +310,11 @@ struct TimelineView: View {
                         .font(.caption.weight(.medium))
                         .foregroundStyle(AppTheme.accentSecondary)
                         .padding(.top, 2)
+                } else if case .documentModern(let document) = event.kind, document.pageCount > 1 {
+                    Label("\(document.pageCount) pages", systemImage: "paperclip")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppTheme.accentSecondary)
+                        .padding(.top, 2)
                 }
             }
             Spacer()
@@ -311,6 +336,8 @@ struct TimelineView: View {
         switch event.kind {
         case .service(let entry):
             iconName = entry.serviceType.icon
+        case .documentModern(let document):
+            iconName = document.category.icon
         case .document(let attachment):
             iconName = attachment.type.icon
         }
@@ -328,6 +355,8 @@ struct TimelineView: View {
         switch event.kind {
         case .service(let entry):
             return entry.displayTitle
+        case .documentModern(let document):
+            return document.title
         case .document(let attachment):
             return attachment.filename
         }
@@ -338,6 +367,9 @@ struct TimelineView: View {
         case .service(let entry):
             let workshop = entry.workshopName.isEmpty ? "No workshop" : entry.workshopName
             return "\(AppFormatters.mileage(entry.mileage)) • \(workshop)"
+        case .documentModern(let document):
+            let linked = document.serviceEntry?.displayTitle ?? document.category.title
+            return linked
         case .document(let attachment):
             return attachment.serviceEntry?.displayTitle ?? "Vehicle document"
         }
@@ -347,6 +379,8 @@ struct TimelineView: View {
         switch event.kind {
         case .service(let entry):
             return entry.currencyCode
+        case .documentModern(let document):
+            return document.vehicle?.currencyCode ?? CurrencyPreset.eur.rawValue
         case .document(let attachment):
             return attachment.vehicle?.currencyCode ?? CurrencyPreset.eur.rawValue
         }
@@ -356,6 +390,8 @@ struct TimelineView: View {
         switch event.kind {
         case .service(let entry):
             return [entry.displayTitle, entry.workshopName, entry.notes, entry.vehicle?.title ?? ""].joined(separator: " ")
+        case .documentModern(let document):
+            return [document.title, document.notes, document.category.title, document.vehicle?.title ?? "", document.serviceEntry?.displayTitle ?? ""].joined(separator: " ")
         case .document(let attachment):
             return [attachment.filename, attachment.vehicle?.title ?? "", attachment.serviceEntry?.displayTitle ?? ""].joined(separator: " ")
         }
@@ -365,6 +401,8 @@ struct TimelineView: View {
         switch event.kind {
         case .service(let entry):
             return entry.vehicle?.id
+        case .documentModern(let document):
+            return document.vehicle?.id
         case .document(let attachment):
             return attachment.vehicle?.id
         }
@@ -382,7 +420,7 @@ struct TimelineView: View {
             return entry.category == .repair
         case .documents:
             switch event.kind {
-            case .document:
+            case .documentModern, .document:
                 return true
             case .service(let entry):
                 return !entry.attachments.isEmpty
@@ -403,6 +441,8 @@ struct TimelineView: View {
             switch event.kind {
             case .service(let entry):
                 return entry.currencyCode
+            case .documentModern(let document):
+                return document.vehicle?.currencyCode
             case .document(let attachment):
                 return attachment.vehicle?.currencyCode
             }

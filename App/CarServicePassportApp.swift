@@ -15,6 +15,8 @@ struct CarServicePassportApp: App {
             Vehicle.self,
             ServiceEntry.self,
             AttachmentRecord.self,
+            DocumentRecord.self,
+            DocumentPageRecord.self,
             ReminderItem.self,
             FuelEntry.self
         ])
@@ -65,11 +67,13 @@ struct CarServicePassportApp: App {
             let services = try context.fetch(FetchDescriptor<ServiceEntry>())
             let reminders = try context.fetch(FetchDescriptor<ReminderItem>())
             let attachments = try context.fetch(FetchDescriptor<AttachmentRecord>())
+            let documents = try context.fetch(FetchDescriptor<DocumentRecord>())
             try BackupExportService.shared.saveToDocuments(
                 vehicles: vehicles,
                 services: services,
                 reminders: reminders,
-                attachments: attachments
+                attachments: attachments,
+                documents: documents
             )
         } catch {
             // silent — auto backup failure should not interrupt the user

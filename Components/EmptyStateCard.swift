@@ -5,6 +5,7 @@ struct EmptyStateCard: View {
     let title: String
     let message: String
     let actionTitle: String
+    var verticalPadding: CGFloat = 64
     var action: () -> Void
 
     var body: some View {
@@ -48,7 +49,7 @@ struct EmptyStateCard: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 64) // py-16
+        .padding(.vertical, verticalPadding) // py-16
         .padding(.horizontal, 24) // px-6
         .frame(maxWidth: .infinity)
     }

@@ -29,22 +29,38 @@ struct OCRService {
 
     func scan(image: UIImage) async throws -> OCRResult {
         try await Task.detached(priority: .userInitiated) {
-            guard let cgImage = image.cgImage else { throw OCRError.invalidImage }
-
-            let request = VNRecognizeTextRequest()
-            request.recognitionLevel = .accurate
-            request.usesLanguageCorrection = true
-            request.recognitionLanguages = ["en-US", "de-DE", "fr-FR", "hr-HR"]
-
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            try handler.perform([request])
-
-            let lines = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
+            let lines = try OCRService.recognizedLines(from: image)
             return OCRService.parseLines(lines)
         }.value
     }
 
+    func scan(images: [UIImage]) async throws -> OCRResult {
+        try await Task.detached(priority: .userInitiated) {
+            let orderedLines = try images.enumerated().map { index, image in
+                (index, try OCRService.recognizedLines(from: image))
+            }
+            let combinedLines = orderedLines
+                .sorted { $0.0 < $1.0 }
+                .flatMap { $0.1 }
+            return OCRService.parseLines(combinedLines)
+        }.value
+    }
+
     // MARK: - Parsing
+
+    private static func recognizedLines(from image: UIImage) throws -> [String] {
+        guard let cgImage = image.cgImage else { throw OCRError.invalidImage }
+
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = true
+        request.recognitionLanguages = ["en-US", "de-DE", "fr-FR", "hr-HR"]
+
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        try handler.perform([request])
+
+        return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
+    }
 
     static func parseLines(_ lines: [String]) -> OCRResult {
         let rawText = lines.joined(separator: "\n")
