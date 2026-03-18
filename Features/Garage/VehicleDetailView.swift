@@ -41,8 +41,8 @@ struct VehicleDetailView: View {
                                 } else {
                                     LinearGradient(colors: [AppTheme.surfaceSecondary, AppTheme.surface], startPoint: .top, endPoint: .bottom)
                                     Image(systemName: "car.fill")
-                                        .font(.system(size: 52))
-                                        .foregroundStyle(AppTheme.tertiaryText.opacity(0.5))
+                                        .font(.system(size: 50))
+                                        .foregroundStyle(AppTheme.tertiaryText.opacity(0.42))
                                 }
                             }
                             .frame(width: proxy.size.width, height: height)
@@ -52,35 +52,35 @@ struct VehicleDetailView: View {
                         .frame(height: 224)
                     }
 
-                    VStack(spacing: 20) {
+                    VStack(spacing: 18) {
                         // Vehicle Info Card
                         SurfaceCard {
                             VStack(alignment: .leading, spacing: 0) {
                                 Text("\(vehicle.make) \(vehicle.model)")
                                     .font(.system(size: 22, weight: .bold))
                                     .foregroundStyle(AppTheme.primaryText)
-                                    .padding(.bottom, 4)
+                                    .padding(.bottom, 2)
 
                                 Text(vehicle.year > 0 ? String(vehicle.year) : "Unknown Year")
                                     .font(.system(size: 14))
                                     .foregroundStyle(AppTheme.secondaryText)
-                                    .padding(.bottom, 12)
+                                    .padding(.bottom, 10)
 
                                 HStack(spacing: 8) {
                                     if !vehicle.licensePlate.isEmpty {
                                         Text(vehicle.licensePlate)
                                             .font(.system(size: 11, design: .monospaced))
                                             .foregroundStyle(Color(hex: "CBD5E1"))
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 4)
+                                            .padding(.horizontal, 9)
+                                            .padding(.vertical, 3)
                                             .background(RoundedRectangle(cornerRadius: 6).fill(AppTheme.surfaceSecondary))
                                     }
                                     if !vehicle.vin.isEmpty {
-                                        Text("VIN · \(vehicle.vin)")
-                                            .font(.system(size: 11, design: .monospaced))
+                                        Text("VIN: \(vehicle.vin)")
+                                            .font(.system(size: 10.5, design: .monospaced))
                                             .foregroundStyle(AppTheme.secondaryText)
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 4)
+                                            .padding(.horizontal, 9)
+                                            .padding(.vertical, 3)
                                             .background(RoundedRectangle(cornerRadius: 6).fill(AppTheme.surfaceSecondary))
                                             .lineLimit(1)
                                     }
@@ -147,7 +147,7 @@ struct VehicleDetailView: View {
                         quickActions.padding(.horizontal, 24)
 
                         // Service History
-                        VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 12) {
                             HStack(alignment: .center) {
                                 Text("Service History")
                                     .font(.system(size: 17, weight: .semibold))
@@ -158,14 +158,14 @@ struct VehicleDetailView: View {
                                 } label: {
                                     HStack(spacing: 4) {
                                         Image(systemName: "plus")
-                                            .font(.system(size: 13, weight: .semibold))
+                                            .font(.system(size: 11.5, weight: .semibold))
                                         Text("Add Service")
-                                            .font(.system(size: 13, weight: .semibold))
+                                            .font(.system(size: 11.5, weight: .semibold))
                                     }
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 7)
-                                    .background(RoundedRectangle(cornerRadius: 8).fill(AppTheme.accent))
+                                    .foregroundStyle(Color.white.opacity(0.95))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(RoundedRectangle(cornerRadius: 8).fill(AppTheme.accent.opacity(0.88)))
                                 }
                             }
 
@@ -189,7 +189,7 @@ struct VehicleDetailView: View {
                                     .frame(maxWidth: .infinity)
                                 }
                             } else {
-                                VStack(spacing: 12) { // space-y-3
+                                VStack(spacing: 11) { // space-y-3
                                     ForEach(vehicle.sortedServices.prefix(5)) { entry in
                                         NavigationLink {
                                             ServiceDetailView(entry: entry)
@@ -197,7 +197,7 @@ struct VehicleDetailView: View {
                                             SurfaceCard(padding: 14) {
                                                 VStack(alignment: .leading, spacing: 0) {
                                                     HStack(alignment: .top) {
-                                                        VStack(alignment: .leading, spacing: 3) {
+                                                        VStack(alignment: .leading, spacing: 4) {
                                                             Text(entry.displayTitle)
                                                                 .font(.system(size: 15, weight: .semibold))
                                                                 .foregroundStyle(AppTheme.primaryText)
@@ -205,31 +205,31 @@ struct VehicleDetailView: View {
                                                                 Image(systemName: "calendar")
                                                                     .font(.system(size: 12))
                                                                 Text(AppFormatters.mediumDate.string(from: entry.date))
-                                                                    .font(.system(size: 13))
+                                                                    .font(.system(size: 13.5))
                                                             }
-                                                            .foregroundStyle(AppTheme.secondaryText)
+                                                            .foregroundStyle(AppTheme.secondaryText.opacity(0.95))
                                                         }
                                                         Spacer()
                                                         Text(AppFormatters.currency(entry.price, code: entry.currencyCode))
                                                             .font(.system(size: 15, weight: .semibold))
                                                             .foregroundStyle(AppTheme.primaryText)
                                                     }
-                                                    .padding(.bottom, 8)
+                                                    .padding(.bottom, 7)
 
                                                     HStack(spacing: 6) {
                                                         Image(systemName: "gauge.with.dots.needle.33percent")
                                                             .font(.system(size: 12))
                                                         Text("\(entry.mileage) km")
-                                                            .font(.system(size: 13))
+                                                            .font(.system(size: 13.5))
                                                     }
-                                                    .foregroundStyle(AppTheme.secondaryText)
+                                                    .foregroundStyle(AppTheme.secondaryText.opacity(0.95))
 
                                                     if !entry.notes.isEmpty {
                                                         Text(entry.notes)
-                                                            .font(.system(size: 13))
-                                                            .foregroundStyle(AppTheme.tertiaryText)
+                                                            .font(.system(size: 13.5))
+                                                            .foregroundStyle(AppTheme.tertiaryText.opacity(0.95))
                                                             .lineLimit(1)
-                                                            .padding(.top, 6)
+                                                            .padding(.top, 5)
                                                     }
                                                 }
                                             }
@@ -240,6 +240,7 @@ struct VehicleDetailView: View {
                             }
                         }
                         .padding(.horizontal, 24)
+                                .padding(.top, 1)
                         
                         // Reminders
                         VStack(alignment: .leading, spacing: 14) {
@@ -290,7 +291,7 @@ struct VehicleDetailView: View {
                         // Fuel section
                         fuelSection.padding(.horizontal, 24)
 
-                        Spacer().frame(height: 80)
+                        Spacer().frame(height: 164)
                     }
                 }
             }
@@ -400,10 +401,10 @@ struct VehicleDetailView: View {
         }
     }
 
-    private let quickActionColumns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
+    private let quickActionColumns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
 
     private var quickActions: some View {
-        LazyVGrid(columns: quickActionColumns, spacing: 10) {
+        LazyVGrid(columns: quickActionColumns, spacing: 12) {
             quickActionButton(title: "Reminder", icon: "bell.fill") {
                 showingReminderForm = true
             }
@@ -414,19 +415,28 @@ struct VehicleDetailView: View {
                     paywallCoordinator.present(.fuelTracking)
                 }
             }
-            quickActionButton(title: "Scan", icon: "doc.viewfinder") {
-                if entitlementStore.canUseOCR() {
-                    showingOCRServiceForm = true
-                } else {
-                    paywallCoordinator.present(.ocrScan)
+            Menu {
+                Button {
+                    if entitlementStore.canUseDocumentVault() {
+                        showingDocumentComposer = true
+                    } else {
+                        paywallCoordinator.present(.documentVault)
+                    }
+                } label: {
+                    Label("Add Document", systemImage: "doc.fill")
                 }
-            }
-            quickActionButton(title: "Documents", icon: "doc.fill") {
-                if entitlementStore.canUseDocumentVault() {
-                    showingDocumentComposer = true
-                } else {
-                    paywallCoordinator.present(.documentVault)
+
+                Button {
+                    if entitlementStore.canUseOCR() {
+                        showingOCRServiceForm = true
+                    } else {
+                        paywallCoordinator.present(.ocrScan)
+                    }
+                } label: {
+                    Label("Scan Receipt", systemImage: "doc.viewfinder")
                 }
+            } label: {
+                quickActionLabel(title: "Documents", icon: "doc.fill")
             }
             Menu {
                 Button {
@@ -535,16 +545,16 @@ struct VehicleDetailView: View {
     private func quickActionLabel(title: String, icon: String) -> some View {
         VStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 17))
+                .font(.system(size: 16.5, weight: .medium))
             Text(title)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11.5, weight: .medium))
                 .lineLimit(1)
         }
         .foregroundStyle(AppTheme.primaryText)
-        .frame(maxWidth: .infinity, minHeight: 56)
-        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, minHeight: 72)
+        .padding(.vertical, 11)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
                 .fill(AppTheme.surfaceSecondary)
         )
     }
