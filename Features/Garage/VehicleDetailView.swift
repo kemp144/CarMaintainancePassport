@@ -13,6 +13,7 @@ struct VehicleDetailView: View {
     @State private var showingServiceForm = false
     @State private var showingReminderForm = false
     @State private var showingDocumentComposer = false
+    @State private var showingAnalytics = false
     @State private var showingDeleteConfirmation = false
     @State private var exportURL: URL?
 
@@ -114,10 +115,11 @@ struct VehicleDetailView: View {
                             .buttonStyle(.plain)
                             
                             Button {
-                                appState.selectedVehicleID = vehicle.id
-                                appState.timelineCategory = "Expenses"
-                                appState.selectedTab = .timeline
-                                dismiss()
+                                if entitlementStore.canSeeAnalytics() {
+                                    showingAnalytics = true
+                                } else {
+                                    paywallCoordinator.present(.analytics)
+                                }
                             } label: {
                                 SurfaceCard(padding: 16) {
                                     VStack(alignment: .leading, spacing: 8) {
@@ -358,6 +360,16 @@ struct VehicleDetailView: View {
                 DocumentComposerSheet(preselectedVehicle: vehicle)
             }
         }
+        .sheet(isPresented: $showingAnalytics) {
+            NavigationStack {
+                VehicleAnalyticsView(vehicle: vehicle)
+            }
+        }
+        .sheet(isPresented: $showingEdit) {
+            NavigationStack {
+                VehicleFormView(vehicle: vehicle)
+            }
+        }
         .sheet(item: Binding(get: {
             exportURL.map(PreviewURL.init(url:))
         }, set: { item in
@@ -379,34 +391,54 @@ struct VehicleDetailView: View {
                 showingReminderForm = true
             }
             quickActionButton(title: "Add Document", icon: "doc.fill") {
-                showingDocumentComposer = true
+                if entitlementStore.canUseDocumentVault() {
+                    showingDocumentComposer = true
+                } else {
+                    paywallCoordinator.present(.documentVault)
+                }
             }
-            quickActionButton(title: "Export PDF", icon: "square.and.arrow.up.fill") {
-                exportTapped()
+            Menu {
+                Button {
+                    exportPDF()
+                } label: {
+                    Label("Export PDF Passport", systemImage: "doc.richtext.fill")
+                }
+                
+                Button {
+                    exportCSV()
+                } label: {
+                    Label("Export CSV Data", systemImage: "tablecells.fill")
+                }
+            } label: {
+                quickActionLabel(title: "Export", icon: "square.and.arrow.up.fill")
             }
         }
+    }
+
+    private func quickActionLabel(title: String, icon: String) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+            Text(title)
+                .font(.caption.weight(.medium))
+        }
+        .foregroundStyle(AppTheme.primaryText)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(AppTheme.surfaceSecondary)
+        )
     }
 
     private func quickActionButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                Text(title)
-                    .font(.caption.weight(.medium))
-            }
-            .foregroundStyle(AppTheme.primaryText)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(AppTheme.surfaceSecondary)
-            )
+            quickActionLabel(title: title, icon: icon)
         }
         .buttonStyle(.plain)
     }
 
-    private func exportTapped() {
+    private func exportPDF() {
         guard entitlementStore.canExportPDF() else {
             paywallCoordinator.present(.exportPDF)
             return
@@ -414,6 +446,20 @@ struct VehicleDetailView: View {
 
         do {
             exportURL = try PDFExportService.shared.exportPassport(for: vehicle)
+            Haptics.success()
+        } catch {
+            Haptics.error()
+        }
+    }
+
+    private func exportCSV() {
+        guard entitlementStore.canExportPDF() else {
+            paywallCoordinator.present(.exportPDF)
+            return
+        }
+
+        do {
+            exportURL = try PDFExportService.shared.exportCSV(for: vehicle)
             Haptics.success()
         } catch {
             Haptics.error()

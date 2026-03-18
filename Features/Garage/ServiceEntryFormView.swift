@@ -50,23 +50,22 @@ struct ServiceEntryFormView: View {
 
     var body: some View {
         ZStack {
-            PremiumScreenBackground()
+            AppTheme.background.ignoresSafeArea()
 
             Form {
-                Section("Vehicle") {
+                Section {
                     Picker("Vehicle", selection: $selectedVehicleID) {
                         ForEach(vehicles) { vehicle in
                             Text(vehicle.title).tag(Optional(vehicle.id))
                         }
                     }
                     .disabled(initialVehicle != nil)
+                } header: {
+                    Text("Vehicle").foregroundStyle(AppTheme.secondaryText)
                 }
+                .listRowBackground(AppTheme.surface)
 
-                Section("Service") {
-                    DatePicker("Date", selection: $date, displayedComponents: .date)
-                    TextField("Mileage", text: $mileage)
-                        .keyboardType(.numberPad)
-
+                Section {
                     Picker("Type", selection: Binding(
                         get: { serviceType },
                         set: { newType in
@@ -85,25 +84,39 @@ struct ServiceEntryFormView: View {
                         TextField("Custom service name", text: $customServiceTypeName)
                     }
 
+                    DatePicker("Date", selection: $date, displayedComponents: .date)
+                    
+                    TextField("Mileage (km)", text: $mileage)
+                        .keyboardType(.numberPad)
+
+                } header: {
+                    Text("Service Details").foregroundStyle(AppTheme.secondaryText)
+                }
+                .listRowBackground(AppTheme.surface)
+
+                Section {
+                    TextField("Cost ($)", text: $price)
+                        .keyboardType(.decimalPad)
+                    
                     Picker("Category", selection: $category) {
                         ForEach(EntryCategory.allCases) { category in
                             Text(category.title).tag(category)
                         }
                     }
-                }
-
-                Section("Details") {
-                    TextField("Price", text: $price)
-                        .keyboardType(.decimalPad)
+                    
                     TextField("Currency", text: $currencyCode)
                         .textInputAutocapitalization(.characters)
+                    
                     TextField("Workshop", text: $workshopName)
-                    TextField("Notes", text: $notes, axis: .vertical)
+                    
+                    TextField("Notes (Optional)", text: $notes, axis: .vertical)
                         .lineLimit(3...7)
-                    Toggle("Mark as important", isOn: $isImportant)
+                } header: {
+                    Text("Additional Info").foregroundStyle(AppTheme.secondaryText)
                 }
+                .listRowBackground(AppTheme.surface)
 
-                Section("Attachments") {
+                Section {
                     Button {
                         showingCamera = true
                     } label: {
@@ -139,11 +152,15 @@ struct ServiceEntryFormView: View {
                         Label(item.filename, systemImage: item.type.icon)
                             .foregroundStyle(AppTheme.secondaryText)
                     }
+                } header: {
+                    Text("Attachments (Optional)").foregroundStyle(AppTheme.secondaryText)
                 }
+                .listRowBackground(AppTheme.surface)
             }
             .scrollContentBackground(.hidden)
+            .foregroundStyle(AppTheme.primaryText)
         }
-        .navigationTitle(entry == nil ? "Quick Add Service" : "Edit Service")
+        .navigationTitle(entry == nil ? "Add Service" : "Edit Service")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {

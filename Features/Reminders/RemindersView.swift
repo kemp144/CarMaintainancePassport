@@ -34,16 +34,16 @@ struct RemindersView: View {
 
             VStack(spacing: 0) {
                 // Custom Header
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 8) {
                             Text("Reminders")
-                                .font(.system(size: 32, weight: .bold))
+                                .font(.system(size: 30, weight: .bold)) // text-3xl
                                 .foregroundStyle(AppTheme.primaryText)
                             
                             let count = grouped.reduce(0) { $0 + $1.1.count }
                             Text(count == 0 ? "No reminders yet" : "\(count) \(count == 1 ? "reminder" : "reminders")")
-                                .font(.subheadline)
+                                .font(.system(size: 16)) // text-base
                                 .foregroundStyle(AppTheme.secondaryText)
                         }
                         
@@ -51,8 +51,8 @@ struct RemindersView: View {
                     }
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, 24)
-                .padding(.bottom, 20)
+                .padding(.top, 48) // pt-12
+                .padding(.bottom, 32) // pb-8
                 .background(AppTheme.heroGradient)
 
                 VehicleFilterScrollView(vehicles: vehicles)

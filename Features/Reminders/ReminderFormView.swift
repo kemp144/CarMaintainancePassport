@@ -4,6 +4,8 @@ import SwiftUI
 struct ReminderFormView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var entitlementStore: EntitlementStore
+    @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
 
     private let reminder: ReminderItem?
@@ -39,30 +41,36 @@ struct ReminderFormView: View {
 
     var body: some View {
         ZStack {
-            PremiumScreenBackground()
+            AppTheme.background.ignoresSafeArea()
 
             Form {
-                Section("Vehicle") {
+                Section {
                     Picker("Vehicle", selection: $selectedVehicleID) {
                         ForEach(vehicles) { vehicle in
                             Text(vehicle.title).tag(Optional(vehicle.id))
                         }
                     }
                     .disabled(initialVehicle != nil)
+                } header: {
+                    Text("Vehicle").foregroundStyle(AppTheme.secondaryText)
                 }
+                .listRowBackground(AppTheme.surface)
 
-                Section("Reminder") {
+                Section {
                     Picker("Type", selection: $type) {
                         ForEach(ReminderType.allCases) { type in
                             Text(type.title).tag(type)
                         }
                     }
                     TextField("Title", text: $title)
-                    TextField("Notes", text: $notes, axis: .vertical)
+                    TextField("Notes (Optional)", text: $notes, axis: .vertical)
                         .lineLimit(3...5)
+                } header: {
+                    Text("Reminder Details").foregroundStyle(AppTheme.secondaryText)
                 }
+                .listRowBackground(AppTheme.surface)
 
-                Section("Due") {
+                Section {
                     Toggle("Set due date", isOn: $includesDate)
                     if includesDate {
                         DatePicker("Date", selection: $dateDue, displayedComponents: .date)
@@ -73,16 +81,29 @@ struct ReminderFormView: View {
                         }
                     }
 
-                    Toggle("Set mileage", isOn: $includesMileage)
+                    HStack {
+                        Toggle("Set mileage (Pro)", isOn: $includesMileage)
+                            .onChange(of: includesMileage) { newValue in
+                                if newValue && !entitlementStore.canUseAdvancedReminders() {
+                                    includesMileage = false
+                                    paywallCoordinator.present(.advancedReminders)
+                                }
+                            }
+                    }
+                    
                     if includesMileage {
                         TextField("Mileage due", text: $mileageDue)
                             .keyboardType(.numberPad)
                     }
 
                     Toggle("Enable reminder", isOn: $isEnabled)
+                } header: {
+                    Text("Triggers").foregroundStyle(AppTheme.secondaryText)
                 }
+                .listRowBackground(AppTheme.surface)
             }
             .scrollContentBackground(.hidden)
+            .foregroundStyle(AppTheme.primaryText)
         }
         .navigationTitle(reminder == nil ? "Add Reminder" : "Edit Reminder")
         .navigationBarTitleDisplayMode(.inline)

@@ -43,7 +43,7 @@ struct VehicleFormView: View {
 
     var body: some View {
         ZStack {
-            PremiumScreenBackground()
+            AppTheme.background.ignoresSafeArea()
 
             Form {
                 Section {
@@ -63,8 +63,9 @@ struct VehicleFormView: View {
                     }
                     .buttonStyle(.plain)
                 }
+                .listRowBackground(AppTheme.surface)
 
-                Section("Vehicle") {
+                Section {
                     TextField("Make", text: $make)
                     TextField("Model", text: $model)
                     Picker("Year", selection: $year) {
@@ -80,24 +81,44 @@ struct VehicleFormView: View {
                             Text(preset.rawValue).tag(preset.rawValue)
                         }
                     }
+                } header: {
+                    Text("Vehicle").foregroundStyle(AppTheme.secondaryText)
                 }
+                .listRowBackground(AppTheme.surface)
 
-                Section("Purchase") {
+                Section {
                     Toggle("Add purchase date", isOn: $hasPurchaseDate)
                     if hasPurchaseDate {
                         DatePicker("Purchase date", selection: $purchaseDate, displayedComponents: .date)
                     }
                     TextField("Purchase price", text: $purchasePrice)
                         .keyboardType(.decimalPad)
+                } header: {
+                    Text("Purchase Info").foregroundStyle(AppTheme.secondaryText)
                 }
+                .listRowBackground(AppTheme.surface)
 
-                Section("Additional") {
-                    TextField("VIN", text: $vin)
+                Section {
+                    HStack {
+                        TextField("VIN", text: $vin)
+                        
+                        if !vin.isEmpty {
+                            Button("Lookup") {
+                                lookupVIN()
+                            }
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(AppTheme.accent)
+                        }
+                    }
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(4...8)
+                } header: {
+                    Text("Additional").foregroundStyle(AppTheme.secondaryText)
                 }
+                .listRowBackground(AppTheme.surface)
             }
             .scrollContentBackground(.hidden)
+            .foregroundStyle(AppTheme.primaryText)
         }
         .navigationTitle(vehicle == nil ? "Add Vehicle" : "Edit Vehicle")
         .navigationBarTitleDisplayMode(.inline)
@@ -202,5 +223,12 @@ struct VehicleFormView: View {
 
         let result = try await AttachmentStorageService.shared.saveImageData(data, filename: "vehicle-cover")
         return result.storageReference
+    }
+
+    private func lookupVIN() {
+        Haptics.success()
+        if vin.count >= 3 {
+            notes = "VIN lookup simulation complete."
+        }
     }
 }

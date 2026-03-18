@@ -47,11 +47,19 @@ final class EntitlementStore: ObservableObject {
         hasProAccess || existingCount < 1
     }
 
-    func canAddService(existingCount: Int) -> Bool {
-        hasProAccess || existingCount < 15
-    }
-
     func canExportPDF() -> Bool {
+        hasProAccess
+    }
+    
+    func canUseAdvancedReminders() -> Bool {
+        hasProAccess
+    }
+    
+    func canUseDocumentVault() -> Bool {
+        hasProAccess
+    }
+    
+    func canSeeAnalytics() -> Bool {
         hasProAccess
     }
 

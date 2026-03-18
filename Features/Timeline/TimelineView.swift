@@ -90,15 +90,15 @@ struct TimelineView: View {
 
             VStack(spacing: 0) {
                 // Custom Header
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 8) {
                             Text("Timeline")
-                                .font(.system(size: 32, weight: .bold))
+                                .font(.system(size: 30, weight: .bold)) // text-3xl
                                 .foregroundStyle(AppTheme.primaryText)
                             
                             Text(events.isEmpty ? "No events yet" : "\(events.count) \(events.count == 1 ? "event" : "events")")
-                                .font(.subheadline)
+                                .font(.system(size: 16)) // text-base
                                 .foregroundStyle(AppTheme.secondaryText)
                         }
                         
@@ -132,12 +132,12 @@ struct TimelineView: View {
                     
                     if !events.isEmpty {
                         InlineSearchField(title: "Workshop, note or vehicle...", text: $searchText)
-                            .padding(.top, 12)
+                            .padding(.top, 16)
                     }
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, 24)
-                .padding(.bottom, 20)
+                .padding(.top, 48) // pt-12
+                .padding(.bottom, 32) // pb-8
                 .background(AppTheme.heroGradient)
 
                 VehicleFilterScrollView(vehicles: vehicles)

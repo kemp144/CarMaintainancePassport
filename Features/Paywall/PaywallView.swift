@@ -10,7 +10,7 @@ struct PaywallView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                PremiumScreenBackground()
+                AppTheme.background.ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 20) {
@@ -32,9 +32,9 @@ struct PaywallView: View {
                             PremiumSectionHeader(title: "Free vs Pro", subtitle: "One-time purchase. No subscription. No ads.")
 
                             comparisonRow(title: "Vehicles", free: "1", pro: "Unlimited")
-                            comparisonRow(title: "Service entries", free: "15 total", pro: "Unlimited")
-                            comparisonRow(title: "Reminders", free: "Basic", pro: "Unlimited")
-                            comparisonRow(title: "Documents", free: "Included", pro: "Unlimited")
+                            comparisonRow(title: "Service entries", free: "Unlimited", pro: "Unlimited")
+                            comparisonRow(title: "Reminders", free: "Basic", pro: "Advanced")
+                            comparisonRow(title: "Document Vault", free: "Locked", pro: "Included")
                             comparisonRow(title: "PDF export", free: "Locked", pro: "Included")
                         }
 

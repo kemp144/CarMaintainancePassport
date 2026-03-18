@@ -16,6 +16,9 @@ struct DocumentsView: View {
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
 
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var entitlementStore: EntitlementStore
+    @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
+    
     @State private var filter: Filter = .all
     @State private var searchText = ""
     @State private var showingComposer = false
@@ -46,7 +49,7 @@ struct DocumentsView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            PremiumScreenBackground()
+            AppTheme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 VehicleFilterScrollView(vehicles: vehicles)
@@ -59,7 +62,11 @@ struct DocumentsView: View {
                             Text("Store receipt photos, PDFs and ownership files so they stay attached to the right vehicle.")
                         } actions: {
                             Button("Add Document") {
-                                showingComposer = true
+                                if entitlementStore.canUseDocumentVault() {
+                                    showingComposer = true
+                                } else {
+                                    paywallCoordinator.present(.documentVault)
+                                }
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(AppTheme.accentSecondary)
@@ -109,7 +116,11 @@ struct DocumentsView: View {
                 }
 
                 Button {
-                    showingComposer = true
+                    if entitlementStore.canUseDocumentVault() {
+                        showingComposer = true
+                    } else {
+                        paywallCoordinator.present(.documentVault)
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -160,7 +171,7 @@ struct DocumentsView: View {
                 .fill(AppTheme.surfaceSecondary)
                 .frame(width: 52, height: 52)
                 .overlay {
-                    Image(systemName: attachment.type.icon)
+                    Image(systemName: attachment.vaultCategory?.icon ?? attachment.type.icon)
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(AppTheme.accentSecondary)
                 }
@@ -170,9 +181,20 @@ struct DocumentsView: View {
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(AppTheme.primaryText)
                     .lineLimit(1)
-                Text(attachment.vehicle?.title ?? "Unknown vehicle")
-                    .font(.subheadline)
-                    .foregroundStyle(AppTheme.secondaryText)
+                
+                HStack(spacing: 6) {
+                    if let category = attachment.vaultCategory {
+                        Text(category.title)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(AppTheme.accent)
+                        Text("•")
+                            .foregroundStyle(AppTheme.tertiaryText)
+                    }
+                    Text(attachment.vehicle?.title ?? "Unknown vehicle")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+                
                 Text("\(attachment.type.title) • \(AppFormatters.mediumDate.string(from: attachment.createdAt))")
                     .font(.caption)
                     .foregroundStyle(AppTheme.tertiaryText)
@@ -192,6 +214,7 @@ struct DocumentComposerSheet: View {
 
     @State private var selectedVehicleID: UUID?
     @State private var selectedServiceID: UUID?
+    @State private var selectedVaultCategory: DocumentVaultCategory = .general
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var draftAttachments: [DraftAttachment] = []
     @State private var showingImporter = false
@@ -203,10 +226,10 @@ struct DocumentComposerSheet: View {
 
     var body: some View {
         ZStack {
-            PremiumScreenBackground()
+            AppTheme.background.ignoresSafeArea()
 
             Form {
-                Section("Destination") {
+                Section {
                     Picker("Vehicle", selection: $selectedVehicleID) {
                         ForEach(vehicles) { vehicle in
                             Text(vehicle.title).tag(Optional(vehicle.id))
@@ -214,6 +237,12 @@ struct DocumentComposerSheet: View {
                     }
 
                     if let selectedVehicle {
+                        Picker("Category", selection: $selectedVaultCategory) {
+                            ForEach(DocumentVaultCategory.allCases) { category in
+                                Text(category.title).tag(category)
+                            }
+                        }
+                        
                         Picker("Linked service", selection: $selectedServiceID) {
                             Text("Vehicle document").tag(Optional<UUID>.none)
                             ForEach(selectedVehicle.sortedServices) { service in
@@ -221,9 +250,12 @@ struct DocumentComposerSheet: View {
                             }
                         }
                     }
+                } header: {
+                    Text("Destination").foregroundStyle(AppTheme.secondaryText)
                 }
+                .listRowBackground(AppTheme.surface)
 
-                Section("Files") {
+                Section {
                     PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 8, matching: .images) {
                         Label("Add photos", systemImage: "photo.on.rectangle")
                     }
@@ -237,9 +269,13 @@ struct DocumentComposerSheet: View {
                     ForEach(draftAttachments) { draft in
                         Label(draft.filename, systemImage: draft.type.icon)
                     }
+                } header: {
+                    Text("Files").foregroundStyle(AppTheme.secondaryText)
                 }
+                .listRowBackground(AppTheme.surface)
             }
             .scrollContentBackground(.hidden)
+            .foregroundStyle(AppTheme.primaryText)
         }
         .navigationTitle("Add Document")
         .navigationBarTitleDisplayMode(.inline)
@@ -293,6 +329,7 @@ struct DocumentComposerSheet: View {
                         vehicle: selectedVehicle,
                         serviceEntry: linkedService,
                         type: .image,
+                        vaultCategory: selectedVaultCategory,
                         filename: draft.filename,
                         storageReference: stored.storageReference,
                         thumbnailReference: stored.thumbnailReference
@@ -305,6 +342,7 @@ struct DocumentComposerSheet: View {
                         vehicle: selectedVehicle,
                         serviceEntry: linkedService,
                         type: .pdf,
+                        vaultCategory: selectedVaultCategory,
                         filename: draft.filename,
                         storageReference: reference
                     )

@@ -10,6 +10,7 @@ final class AttachmentRecord {
     var serviceEntry: ServiceEntry?
 
     var typeRaw: String
+    var vaultCategoryRaw: String?
     var filename: String
     var storageReference: String
     var thumbnailReference: String?
@@ -21,6 +22,7 @@ final class AttachmentRecord {
         vehicle: Vehicle,
         serviceEntry: ServiceEntry? = nil,
         type: AttachmentType,
+        vaultCategory: DocumentVaultCategory? = nil,
         filename: String,
         storageReference: String,
         thumbnailReference: String? = nil,
@@ -31,6 +33,7 @@ final class AttachmentRecord {
         self.vehicle = vehicle
         self.serviceEntry = serviceEntry
         self.typeRaw = type.rawValue
+        self.vaultCategoryRaw = vaultCategory?.rawValue
         self.filename = filename
         self.storageReference = storageReference
         self.thumbnailReference = thumbnailReference
@@ -43,5 +46,10 @@ extension AttachmentRecord {
     var type: AttachmentType {
         get { AttachmentType(rawValue: typeRaw) ?? .pdf }
         set { typeRaw = newValue.rawValue }
+    }
+    
+    var vaultCategory: DocumentVaultCategory? {
+        get { vaultCategoryRaw.flatMap { DocumentVaultCategory(rawValue: $0) } }
+        set { vaultCategoryRaw = newValue?.rawValue }
     }
 }

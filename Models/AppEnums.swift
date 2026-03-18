@@ -108,6 +108,42 @@ enum AttachmentType: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+enum DocumentVaultCategory: String, Codable, CaseIterable, Identifiable {
+    case general
+    case insurance
+    case registration
+    case warranty
+    case inspection
+    case title
+    case roadside
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general: return "General"
+        case .insurance: return "Insurance"
+        case .registration: return "Registration"
+        case .warranty: return "Warranty"
+        case .inspection: return "Inspection"
+        case .title: return "Vehicle Title"
+        case .roadside: return "Roadside Assistance"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .general: return "doc.fill"
+        case .insurance: return "shield.fill"
+        case .registration: return "text.book.closed.fill"
+        case .warranty: return "checkmark.seal.fill"
+        case .inspection: return "magnifyingglass.circle.fill"
+        case .title: return "star.fill"
+        case .roadside: return "lifepreserver.fill"
+        }
+    }
+}
+
 enum ReminderType: String, Codable, CaseIterable, Identifiable {
     case oilChange
     case inspection

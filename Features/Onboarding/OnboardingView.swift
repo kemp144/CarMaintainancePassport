@@ -13,7 +13,7 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            PremiumScreenBackground()
+            AppTheme.background.ignoresSafeArea()
 
             VStack(spacing: 28) {
                 TabView(selection: $page) {
