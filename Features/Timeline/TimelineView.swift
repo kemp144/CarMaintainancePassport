@@ -219,6 +219,7 @@ struct TimelineView: View {
                         }
                         .padding(.horizontal, AppTheme.Spacing.pageEdge)
                         .padding(.top, AppTheme.Spacing.filterToContent)
+                        .padding(.bottom, AppTheme.Spacing.bottomSafeArea)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 } else {

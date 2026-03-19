@@ -119,40 +119,37 @@ struct DocumentsView: View {
     }
 
     private var documentTopControls: some View {
-        HStack(spacing: 12) {
-            Menu {
-                Picker("Type", selection: $filter) {
-                    ForEach(Filter.allCases) { filter in
-                        Text(filter.rawValue).tag(filter)
-                    }
+        HStack(spacing: 8) {
+            ForEach(Filter.allCases) { f in
+                Button {
+                    filter = f
+                } label: {
+                    FilterPill(title: f.rawValue, isSelected: filter == f, compact: true)
                 }
-            } label: {
-                FilterPill(title: filter.rawValue, isSelected: true, compact: true)
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
             Spacer(minLength: 0)
 
             Button {
                 presentAddFiles()
             } label: {
-                ZStack {
-                    Circle()
-                        .fill(AppTheme.surfaceSecondary)
-                        .overlay {
-                            Circle()
-                                .strokeBorder(AppTheme.separator, lineWidth: 1)
-                        }
-
+                HStack(spacing: 5) {
                     Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(AppTheme.primaryText)
+                        .font(.system(size: 12, weight: .bold))
+                    Text("Add")
+                        .font(.caption.weight(.semibold))
                 }
-                .frame(width: 38, height: 38)
+                .foregroundStyle(vehicles.isEmpty || hasReachedFreeDocumentLimit ? AppTheme.tertiaryText : AppTheme.accent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(AppTheme.accent.opacity(vehicles.isEmpty || hasReachedFreeDocumentLimit ? 0.05 : 0.12))
+                )
             }
             .buttonStyle(.plain)
             .disabled(vehicles.isEmpty || hasReachedFreeDocumentLimit)
-            .opacity((vehicles.isEmpty || hasReachedFreeDocumentLimit) ? 0.45 : 1)
         }
     }
 
@@ -173,7 +170,7 @@ struct DocumentsView: View {
                             .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
                     }
 
-                    Text("Free keeps your first saved documents local and accessible. Pro adds unlimited storage and OCR-based receipt capture.")
+                    Text("Pro adds unlimited storage and OCR receipt capture.")
                         .font(.caption)
                         .foregroundStyle(AppTheme.secondaryText)
                 }
@@ -213,10 +210,10 @@ struct DocumentsView: View {
                                     icon: "doc.on.doc.fill",
                                     title: "Keep paperwork together",
                                     message: entitlementStore.canUseDocumentOCR()
-                                        ? "Scan a receipt for a service draft, or add photos and PDFs to keep paperwork together."
-                                        : "Add photos and PDFs to keep receipts, paperwork, and ownership records together.",
+                                        ? "Scan a receipt, or add photos and PDFs."
+                                        : "Add photos and PDFs to keep receipts and records together.",
                                     actionTitle: "Add Files",
-                                    verticalPadding: 40
+                                    verticalPadding: 28
                                 ) {
                                     presentAddFiles()
                                 }

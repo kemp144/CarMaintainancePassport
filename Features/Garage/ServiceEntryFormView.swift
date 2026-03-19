@@ -127,15 +127,10 @@ struct ServiceEntryFormView: View {
                                 paywallCoordinator.present(.ocrScan)
                             }
                         } label: {
-                            Label("Scan receipt", systemImage: "doc.viewfinder")
+                            Label("Scan receipt to prefill", systemImage: "doc.viewfinder")
                                 .foregroundStyle(AppTheme.accent)
                         }
                     }
-                } header: {
-                    Text("Smart Scan").foregroundStyle(AppTheme.secondaryText)
-                } footer: {
-                    Text("Scan a receipt to prefill the draft, then confirm the details before saving.")
-                        .foregroundStyle(AppTheme.tertiaryText)
                 }
                 .listRowBackground(AppTheme.surface)
 
@@ -158,35 +153,39 @@ struct ServiceEntryFormView: View {
                         TextField("Custom service name", text: $customServiceTypeName)
                     }
 
-                    DatePicker("Date", selection: $date, displayedComponents: .date)
-                    
-                    TextField("Mileage (\(UnitSettings.currentDistanceUnit.shortTitle))", text: $mileage)
-                        .keyboardType(.numberPad)
-
-                } header: {
-                    Text("Service Details").foregroundStyle(AppTheme.secondaryText)
-                }
-                .listRowBackground(AppTheme.surface)
-
-                Section {
-                    TextField("Cost ($)", text: $price)
-                        .keyboardType(.decimalPad)
-                    
                     Picker("Category", selection: $category) {
                         ForEach(EntryCategory.allCases) { category in
                             Text(category.title).tag(category)
                         }
                     }
-                    
+
+                    DatePicker("Date", selection: $date, displayedComponents: .date)
+
+                    TextField("Mileage (\(UnitSettings.currentDistanceUnit.shortTitle))", text: $mileage)
+                        .keyboardType(.numberPad)
+                } header: {
+                    Text("Service").foregroundStyle(AppTheme.secondaryText)
+                }
+                .listRowBackground(AppTheme.surface)
+
+                Section {
+                    TextField("Cost", text: $price)
+                        .keyboardType(.decimalPad)
+
                     TextField("Currency", text: $currencyCode)
                         .textInputAutocapitalization(.characters)
-                    
+                } header: {
+                    Text("Cost").foregroundStyle(AppTheme.secondaryText)
+                }
+                .listRowBackground(AppTheme.surface)
+
+                Section {
                     TextField("Workshop", text: $workshopName)
-                    
-                    TextField("Notes (Optional)", text: $notes, axis: .vertical)
+
+                    TextField("Notes (optional)", text: $notes, axis: .vertical)
                         .lineLimit(3...7)
                 } header: {
-                    Text("Additional Info").foregroundStyle(AppTheme.secondaryText)
+                    Text("Details").foregroundStyle(AppTheme.secondaryText)
                 }
                 .listRowBackground(AppTheme.surface)
 

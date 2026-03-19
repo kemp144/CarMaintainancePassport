@@ -288,9 +288,9 @@ struct FuelTrackingView: View {
             }
 
             LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ], spacing: 12) {
+                GridItem(.flexible(), spacing: 10),
+                GridItem(.flexible(), spacing: 10)
+            ], spacing: 10) {
                 fuelStatCard(
                     title: "Avg Price / \(UnitSettings.currentFuelVolumeUnit.shortTitle)",
                     value: analysis.insights.averagePricePerLiter.map { UnitFormatter.costPerFuelUnitCurrency($0, currencyCode: vehicle.currencyCode) } ?? "—",
@@ -332,32 +332,31 @@ struct FuelTrackingView: View {
         let isPrimary = emphasis == .primary
 
         return SurfaceCard(tier: isPrimary ? .secondary : .compact) {
-            VStack(alignment: .leading, spacing: isPrimary ? 8 : 6) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: isPrimary ? 6 : 4) {
+                HStack(spacing: 5) {
                     Image(systemName: icon)
-                        .font(.system(size: isPrimary ? 11 : 10, weight: .semibold))
+                        .font(.system(size: isPrimary ? 10 : 9, weight: .semibold))
                         .foregroundStyle(AppTheme.accent)
                     Text(title)
                         .font(isPrimary ? .caption.weight(.semibold) : .caption2.weight(.semibold))
                         .foregroundStyle(AppTheme.secondaryText)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.9)
+                        .minimumScaleFactor(0.85)
                 }
 
                 Text(value)
-                    .font(.system(size: isPrimary ? 18 : 15, weight: .bold))
+                    .font(.system(size: isPrimary ? 17 : 14, weight: .bold))
                     .foregroundStyle(AppTheme.primaryText)
-                    .lineLimit(isPrimary ? 2 : 1)
-                    .minimumScaleFactor(0.9)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
 
                 if let note {
                     Text(note)
                         .font(.caption2)
                         .foregroundStyle(AppTheme.tertiaryText)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(2)
                 }
             }
-            .frame(minHeight: isPrimary ? 84 : 64, alignment: .topLeading)
         }
     }
 

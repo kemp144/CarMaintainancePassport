@@ -829,30 +829,30 @@ struct VehicleDetailView: View {
 
     private func summaryActionCard(title: String, value: String, icon: String, helperText: String, trailingBadge: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            SurfaceCard(padding: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 6) {
+            SurfaceCard(padding: 12) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 5) {
                         Image(systemName: icon)
-                            .font(.system(size: 13))
+                            .font(.system(size: 11))
                             .foregroundStyle(AppTheme.accent)
                         Text(title)
-                            .font(.system(size: 11))
+                            .font(.system(size: 10.5, weight: .medium))
                             .foregroundStyle(AppTheme.secondaryText)
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(AppTheme.tertiaryText)
                     }
 
                     Text(value)
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(AppTheme.primaryText)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
 
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         Text(helperText)
-                            .font(.caption)
+                            .font(.caption2)
                             .foregroundStyle(AppTheme.secondaryText)
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
@@ -861,13 +861,13 @@ struct VehicleDetailView: View {
                             Text(trailingBadge)
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(AppTheme.accent)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
                                 .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         }
         .buttonStyle(.plain)

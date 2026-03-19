@@ -106,6 +106,7 @@ struct RemindersView: View {
                         }
                         .padding(.horizontal, AppTheme.Spacing.pageEdge)
                         .padding(.top, AppTheme.Spacing.filterToContent)
+                        .padding(.bottom, 120)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 } else {

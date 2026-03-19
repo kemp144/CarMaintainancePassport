@@ -236,19 +236,36 @@ struct FloatingAddButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
-                .background(
-                    Circle()
-                        .fill(AppTheme.accent)
-                        .shadow(color: AppTheme.accent.opacity(0.25), radius: 12, x: 0, y: 4)
-                )
+        VStack(spacing: 0) {
+            Spacer()
+            HStack {
+                Spacer()
+                Button(action: action) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 56, height: 56)
+                        .background(
+                            Circle()
+                                .fill(AppTheme.accent)
+                                .shadow(color: AppTheme.accent.opacity(0.25), radius: 12, x: 0, y: 4)
+                        )
+                }
+                .padding(.trailing, AppTheme.Spacing.fabTrailing)
+                .padding(.bottom, 16)
+            }
         }
-        .padding(.trailing, AppTheme.Spacing.fabTrailing)
-        .padding(.bottom, AppTheme.Spacing.fabBottom)
+        .padding(.bottom, 80) // tab bar height
+        .background(alignment: .bottom) {
+            LinearGradient(
+                colors: [AppTheme.background.opacity(0), AppTheme.background.opacity(0.9)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 120)
+            .allowsHitTesting(false)
+        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }
 
