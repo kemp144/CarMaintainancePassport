@@ -68,16 +68,24 @@ struct GarageView: View {
 
                         Spacer()
 
-                        Menu {
-                            Picker("Sort", selection: $sortOption) {
-                                ForForEach(SortOption.allCases) { option in
-                                    Text(option.rawValue).tag(option)
+                        HStack(spacing: 10) {
+                            if !entitlementStore.hasProAccess {
+                                SubtleUpgradeButton(title: "Pro") {
+                                    paywallCoordinator.present(.settings)
                                 }
                             }
-                        } label: {
-                            Image(systemName: "arrow.up.arrow.down.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(AppTheme.tertiaryText)
+
+                            Menu {
+                                Picker("Sort", selection: $sortOption) {
+                                    ForForEach(SortOption.allCases) { option in
+                                        Text(option.rawValue).tag(option)
+                                    }
+                                }
+                            } label: {
+                                Image(systemName: "arrow.up.arrow.down.circle.fill")
+                                    .font(.title2)
+                                    .foregroundStyle(AppTheme.tertiaryText)
+                            }
                         }
                     }
 

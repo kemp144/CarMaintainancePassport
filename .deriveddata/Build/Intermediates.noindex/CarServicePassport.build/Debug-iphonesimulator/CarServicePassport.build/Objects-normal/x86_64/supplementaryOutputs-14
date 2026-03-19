@@ -1,0 +1,44 @@
+{
+  "/Users/robertengel/GIT/CarMaintainancePassport/Features/Garage/ServiceDetailView.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceDetailView.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceDetailView.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceDetailView.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceDetailView.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceDetailView.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Features/Garage/ServiceEntryFormView.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceEntryFormView.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceEntryFormView.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceEntryFormView.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceEntryFormView.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceEntryFormView.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Helpers/SampleData.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/SampleData.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/SampleData.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/SampleData.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/SampleData.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/SampleData.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Helpers/ScannedReceiptDraft.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ScannedReceiptDraft.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ScannedReceiptDraft.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ScannedReceiptDraft.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ScannedReceiptDraft.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ScannedReceiptDraft.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Models/ServiceEntry.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceEntry.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceEntry.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceEntry.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceEntry.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ServiceEntry.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Services/ScannedReceiptStorageService.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ScannedReceiptStorageService.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ScannedReceiptStorageService.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ScannedReceiptStorageService.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ScannedReceiptStorageService.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/ScannedReceiptStorageService.swiftdeps"
+  }
+}

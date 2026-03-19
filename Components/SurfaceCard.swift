@@ -230,6 +230,132 @@ struct SecondaryButtonStyle: ButtonStyle {
     }
 }
 
+struct LockedInsightCard: View {
+    let title: String
+    let message: String
+    let highlights: [String]
+    let ctaTitle: String
+    var previewText: String?
+    var accent: Color = AppTheme.accent
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            SurfaceCard(tier: .primary, padding: 16) {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            if let previewText {
+                                Text(previewText)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color.white.opacity(0.82))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        Capsule(style: .continuous)
+                                            .fill(Color.white.opacity(0.06))
+                                    )
+                            }
+
+                            Text(title)
+                                .font(.headline.weight(.semibold))
+                                .foregroundStyle(AppTheme.primaryText)
+
+                            Text(message)
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Spacer(minLength: 8)
+
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(accent)
+                            .padding(10)
+                            .background(
+                                Circle()
+                                    .fill(accent.opacity(0.14))
+                            )
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(highlights, id: \.self) { highlight in
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "sparkles")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(accent.opacity(0.92))
+                                    .padding(.top, 2)
+
+                                Text(highlight)
+                                    .font(.footnote)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 8) {
+                        Text(ctaTitle)
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(accent)
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(accent)
+                    }
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.02),
+                                accent.opacity(0.06),
+                                Color.clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .blur(radius: 18)
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
+                    .allowsHitTesting(false)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct SubtleUpgradeButton: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: "crown.fill")
+                    .font(.caption.weight(.semibold))
+                Text(title)
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(AppTheme.accent)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(AppTheme.accent.opacity(0.12))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .strokeBorder(AppTheme.accent.opacity(0.24), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Floating Add Button
 
 struct FloatingAddButton: View {

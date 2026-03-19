@@ -1,0 +1,37 @@
+{
+  "/Users/robertengel/GIT/CarMaintainancePassport/Components/ServiceTypeChip.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceTypeChip.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceTypeChip.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceTypeChip.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceTypeChip.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceTypeChip.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Features/Garage/ServiceDetailView.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceDetailView.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceDetailView.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceDetailView.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceDetailView.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceDetailView.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Features/Garage/ServiceEntryFormView.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceEntryFormView.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceEntryFormView.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceEntryFormView.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceEntryFormView.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceEntryFormView.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Features/Settings/SettingsView.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/SettingsView.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/SettingsView.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/SettingsView.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/SettingsView.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Models/ServiceEntry.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceEntry.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceEntry.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceEntry.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceEntry.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/arm64/ServiceEntry.swiftdeps"
+  }
+}

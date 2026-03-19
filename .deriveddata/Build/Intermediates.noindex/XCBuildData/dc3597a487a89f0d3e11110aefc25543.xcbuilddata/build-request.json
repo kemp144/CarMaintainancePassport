@@ -1,0 +1,62 @@
+{
+  "buildCommand" : {
+    "command" : "build",
+    "skipDependencies" : false,
+    "style" : "buildOnly"
+  },
+  "configuredTargets" : [
+    {
+      "guid" : "fbf5bf069751ebb24afc57b6445909b6336d5809759aaf7f4c4d6f0b75e02721"
+    }
+  ],
+  "containerPath" : "/Users/robertengel/GIT/CarMaintainancePassport/CarServicePassport.xcodeproj",
+  "continueBuildingAfterErrors" : false,
+  "dependencyScope" : "workspace",
+  "enableIndexBuildArena" : false,
+  "hideShellScriptEnvironment" : false,
+  "parameters" : {
+    "action" : "build",
+    "activeArchitecture" : "undefined_arch",
+    "activeRunDestination" : {
+      "disableOnlyActiveArch" : true,
+      "platform" : "iphonesimulator",
+      "sdk" : "iphonesimulator26.2",
+      "sdkVariant" : "iphonesimulator",
+      "supportedArchitectures" : [
+        "i386",
+        "x86_64"
+      ],
+      "targetArchitecture" : "undefined_arch"
+    },
+    "arenaInfo" : {
+      "buildIntermediatesPath" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex",
+      "buildProductsPath" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Products",
+      "derivedDataPath" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata",
+      "indexDataStoreFolderPath" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Index.noindex/DataStore",
+      "indexEnableDataStore" : true,
+      "indexPCHPath" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Index.noindex/PrecompiledHeaders",
+      "pchPath" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/PrecompiledHeaders"
+    },
+    "configurationName" : "Debug",
+    "overrides" : {
+      "commandLine" : {
+        "table" : {
+
+        }
+      },
+      "synthesized" : {
+        "table" : {
+          "ACTION" : "build",
+          "ENABLE_PREVIEWS" : "NO",
+          "ENABLE_XOJIT_PREVIEWS" : "YES"
+        }
+      }
+    }
+  },
+  "schemeCommand" : "launch",
+  "showNonLoggedProgress" : true,
+  "useDryRun" : false,
+  "useImplicitDependencies" : true,
+  "useLegacyBuildLocations" : false,
+  "useParallelTargets" : true
+}

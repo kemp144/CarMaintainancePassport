@@ -1,0 +1,51 @@
+{
+  "/Users/robertengel/GIT/CarMaintainancePassport/Features/Fuel/FuelTrackingView.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelTrackingView.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelTrackingView.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelTrackingView.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelTrackingView.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelTrackingView.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Features/Garage/GarageView.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/GarageView.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/GarageView.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/GarageView.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/GarageView.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/GarageView.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Features/OCR/OCRImagePickerSheet.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/OCRImagePickerSheet.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/OCRImagePickerSheet.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/OCRImagePickerSheet.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/OCRImagePickerSheet.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/OCRImagePickerSheet.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Helpers/Haptics.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/Haptics.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/Haptics.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/Haptics.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/Haptics.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/Haptics.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Services/FuelEntryValidator.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelEntryValidator.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelEntryValidator.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelEntryValidator.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelEntryValidator.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelEntryValidator.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Services/FuelLogEngine.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelLogEngine.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelLogEngine.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelLogEngine.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelLogEngine.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/FuelLogEngine.swiftdeps"
+  },
+  "/Users/robertengel/GIT/CarMaintainancePassport/Services/NotificationService.swift" : {
+    "const-values" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/NotificationService.swiftconstvalues",
+    "dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/NotificationService.d",
+    "diagnostics" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/NotificationService.dia",
+    "object" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/NotificationService.o",
+    "swift-dependencies" : "/Users/robertengel/GIT/CarMaintainancePassport/.deriveddata/Build/Intermediates.noindex/CarServicePassport.build/Debug-iphonesimulator/CarServicePassport.build/Objects-normal/x86_64/NotificationService.swiftdeps"
+  }
+}

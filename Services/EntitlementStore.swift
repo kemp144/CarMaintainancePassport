@@ -119,7 +119,7 @@ final class EntitlementStore: ObservableObject {
     }
     
     func canSeeAnalytics() -> Bool {
-        hasProAccess
+        true
     }
 
     func canViewAdvancedInsights() -> Bool {

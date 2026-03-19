@@ -81,7 +81,7 @@ struct PaywallView: View {
                             .fill(Color.white.opacity(0.06))
                     )
 
-                Text("Pro Upgrade")
+                Text("Pro")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.white.opacity(0.8))
                     .padding(.horizontal, 10)
@@ -95,17 +95,17 @@ struct PaywallView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Unlock Pro")
+                Text(reason.title)
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(2)
 
-                Text("Keep every car organized with smarter reminders, detailed fuel tracking, documents, and export tools.")
+                Text(reason.message)
                     .font(.body)
                     .foregroundStyle(Color.white.opacity(0.82))
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("No ads. Choose monthly, yearly, or lifetime when it fits.")
+                Text("No ads. No clutter. Choose monthly, yearly, or lifetime when it fits.")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(AppTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -163,34 +163,18 @@ struct PaywallView: View {
     private var benefitsSection: some View {
         SurfaceCard {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Why Pro")
+                Text("What You Unlock")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(AppTheme.primaryText)
 
                 VStack(spacing: 10) {
-                    benefitRow(
-                        icon: "car.2.fill",
-                        title: "Unlimited vehicles",
-                        message: "Track your whole garage, not just one car."
-                    )
-
-                    benefitRow(
-                        icon: "bell.badge.fill",
-                        title: "Smart reminders",
-                        message: "Get reminders by date, mileage, or both."
-                    )
-
-                    benefitRow(
-                        icon: "fuelpump.fill",
-                        title: "Detailed fuel tracking",
-                        message: "Unlock consumption, charts, filters, and deeper fuel insights."
-                    )
-
-                    benefitRow(
-                        icon: "doc.richtext.fill",
-                        title: "Documents and resale exports",
-                        message: "Keep receipts organized and export buyer-ready history when it matters."
-                    )
+                    ForEach(paywallBenefits) { benefit in
+                        benefitRow(
+                            icon: benefit.icon,
+                            title: benefit.title,
+                            message: benefit.message
+                        )
+                    }
                 }
             }
         }
@@ -502,13 +486,46 @@ struct PaywallView: View {
             ComparisonFeature(title: "Service logging", free: "Included", pro: "Included", highlightPro: false),
             ComparisonFeature(title: "Reminders", free: "By date", pro: "Date + mileage", highlightPro: true),
             ComparisonFeature(title: "Fuel history", free: "Logs + totals", pro: "Logs + totals", highlightPro: false),
-            ComparisonFeature(title: "Fuel analytics", free: "Not included", pro: "Detailed tracking", highlightPro: true),
-            ComparisonFeature(title: "OCR receipts", free: "Not included", pro: "Included", highlightPro: true),
+            ComparisonFeature(title: "Fuel insights", free: "Basic averages", pro: "Long-term trends", highlightPro: true),
+            ComparisonFeature(title: "OCR receipts", free: "Manual entry", pro: "Auto-filled", highlightPro: true),
             ComparisonFeature(title: "Documents", free: "Up to 10 saved", pro: "Unlimited", highlightPro: true),
             ComparisonFeature(title: "Backup & restore", free: "Included", pro: "Included", highlightPro: false),
-            ComparisonFeature(title: "Premium reports", free: "Not included", pro: "PDF + CSV + resale", highlightPro: true),
-            ComparisonFeature(title: "Insights", free: "Basic totals", pro: "Cost insights", highlightPro: true)
+            ComparisonFeature(title: "Reports", free: "Basic history", pro: "PDF + CSV + resale", highlightPro: true),
+            ComparisonFeature(title: "Ownership insights", free: "Core summary", pro: "Deep breakdowns", highlightPro: true)
         ]
+    }
+
+    private var paywallBenefits: [PaywallBenefit] {
+        switch reason {
+        case .analytics:
+            return [
+                PaywallBenefit(icon: "chart.pie.fill", title: "Full cost breakdown", message: "See where your money really goes."),
+                PaywallBenefit(icon: "fuelpump.fill", title: "Fuel efficiency tracking", message: "Spot long-term consumption trends, not just single fill-ups."),
+                PaywallBenefit(icon: "wrench.and.screwdriver.fill", title: "Smarter maintenance insights", message: "Catch patterns before service costs creep up."),
+                PaywallBenefit(icon: "doc.richtext.fill", title: "Resale and export tools", message: "Share a cleaner, buyer-ready ownership story.")
+            ]
+        case .fuelTracking:
+            return [
+                PaywallBenefit(icon: "gauge.with.dots.needle.33percent", title: "Real fuel efficiency", message: "Track the averages that matter over time."),
+                PaywallBenefit(icon: "chart.xyaxis.line", title: "Trend charts", message: "See spend, prices, and consumption visually."),
+                PaywallBenefit(icon: "line.3.horizontal.decrease.circle.fill", title: "Flexible filtering", message: "Focus on recent periods or your full history."),
+                PaywallBenefit(icon: "doc.text.viewfinder", title: "Receipt OCR", message: "Capture fill-ups faster with less manual entry.")
+            ]
+        case .secondVehicle:
+            return [
+                PaywallBenefit(icon: "car.2.fill", title: "Unlimited vehicles", message: "Track your whole garage in one place."),
+                PaywallBenefit(icon: "rectangle.split.3x1.fill", title: "Garage comparisons", message: "See which vehicle costs the most to own."),
+                PaywallBenefit(icon: "chart.bar.fill", title: "Garage-wide insights", message: "Compare spend and running costs side by side."),
+                PaywallBenefit(icon: "doc.plaintext.fill", title: "Cleaner records", message: "Keep every history ready when you need it.")
+            ]
+        default:
+            return [
+                PaywallBenefit(icon: "car.2.fill", title: "Unlimited vehicles", message: "Track your whole garage, not just one car."),
+                PaywallBenefit(icon: "bell.badge.fill", title: "Smart reminders", message: "Get reminders by date, mileage, or both."),
+                PaywallBenefit(icon: "fuelpump.fill", title: "Fuel efficiency insights", message: "Unlock consumption, charts, filters, and deeper fuel trends."),
+                PaywallBenefit(icon: "doc.richtext.fill", title: "Reports and resale tools", message: "Keep receipts organized and export buyer-ready history.")
+            ]
+        }
     }
 }
 
@@ -526,6 +543,13 @@ private struct ComparisonFeature: Identifiable {
     let free: String
     let pro: String
     let highlightPro: Bool
+}
+
+private struct PaywallBenefit: Identifiable {
+    let id = UUID()
+    let icon: String
+    let title: String
+    let message: String
 }
 
 

@@ -119,8 +119,7 @@ struct VehicleDetailView: View {
                                 title: "Total Cost",
                                 value: AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode),
                                 icon: "dollarsign.circle.fill",
-                                helperText: "See insights",
-                                trailingBadge: entitlementStore.canSeeAnalytics() ? nil : "Pro"
+                                helperText: "Explore insights"
                             ) {
                                 openAnalytics()
                             }
@@ -946,11 +945,7 @@ struct VehicleDetailView: View {
     }
 
     private func openAnalytics() {
-        if entitlementStore.canSeeAnalytics() {
-            showingAnalytics = true
-        } else {
-            paywallCoordinator.present(.analytics)
-        }
+        showingAnalytics = true
     }
 
     private func exportPDF() {

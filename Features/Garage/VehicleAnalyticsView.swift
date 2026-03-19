@@ -42,6 +42,8 @@ enum MaintenanceComponent: String, CaseIterable, Identifiable {
 struct VehicleAnalyticsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var entitlementStore: EntitlementStore
+    @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
     let vehicle: Vehicle
     
     @Query private var allVehicles: [Vehicle]
@@ -61,6 +63,10 @@ struct VehicleAnalyticsView: View {
     init(vehicle: Vehicle) {
         self.vehicle = vehicle
         self._viewModel = StateObject(wrappedValue: VehicleIntelligenceViewModel(vehicle: vehicle))
+    }
+
+    private var hasAdvancedInsights: Bool {
+        entitlementStore.canViewAdvancedInsights()
     }
 
     var body: some View {
@@ -130,30 +136,7 @@ struct VehicleAnalyticsView: View {
                 InsightTile(title: "This Year", state: .ready(AppFormatters.currency(viewModel.thisYearSpend, code: vehicle.currencyCode)), icon: "calendar")
                 InsightTile(title: "Last 12 Months", state: .ready(AppFormatters.currency(viewModel.last12MonthsSpend, code: vehicle.currencyCode)), icon: "clock.arrow.circlepath")
             }
-            
-            SurfaceCard {
-                HStack(alignment: .top, spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill(AppTheme.surfaceSecondary)
-                            .frame(width: 40, height: 40)
-                        Image(systemName: viewModel.spendTrend90Days > 0 ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis")
-                            .foregroundStyle(viewModel.spendTrend90Days > 0 ? Color.orange : AppTheme.accent)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("90-Day Trend")
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(AppTheme.primaryText)
-                        
-                        Text(viewModel.financialSpendTrendText)
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.secondaryText)
-                    }
-                    Spacer()
-                }
-            }
-            
+
             SurfaceCard(tier: .primary) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Ownership Forecast")
@@ -194,86 +177,125 @@ struct VehicleAnalyticsView: View {
                 }
             }
 
-            SurfaceCard(tier: .primary) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Spending by Year")
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(AppTheme.primaryText)
-
-                    if viewModel.spendingByYear.isEmpty {
-                        Text("Not enough history")
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.secondaryText)
-                            .frame(height: 180)
-                    } else {
-                        Chart {
-                            ForEach(viewModel.spendingByYear, id: \.year) { item in
-                                BarMark(
-                                    x: .value("Year", String(item.year)),
-                                    y: .value("Amount", item.amount)
-                                )
-                                .foregroundStyle(AppTheme.accent.gradient)
-                                .cornerRadius(4)
-                            }
+            if hasAdvancedInsights {
+                SurfaceCard {
+                    HStack(alignment: .top, spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(AppTheme.surfaceSecondary)
+                                .frame(width: 40, height: 40)
+                            Image(systemName: viewModel.spendTrend90Days > 0 ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis")
+                                .foregroundStyle(viewModel.spendTrend90Days > 0 ? Color.orange : AppTheme.accent)
                         }
-                        .frame(height: 180)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("90-Day Trend")
+                                .font(.headline.weight(.semibold))
+                                .foregroundStyle(AppTheme.primaryText)
+
+                            Text(viewModel.financialSpendTrendText)
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+                        Spacer()
                     }
                 }
-            }
 
-            SurfaceCard(tier: .primary) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Breakdown by Category")
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(AppTheme.primaryText)
+                SurfaceCard(tier: .primary) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Spending by Year")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(AppTheme.primaryText)
 
-                    if viewModel.spendingByCategory.isEmpty {
-                        Text("No data to display")
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.secondaryText)
-                            .frame(height: 200)
-                    } else {
-                        Chart {
-                            ForEach(viewModel.spendingByCategory, id: \.category.id) { item in
-                                SectorMark(
-                                    angle: .value("Amount", item.amount),
-                                    innerRadius: .ratio(0.618),
-                                    angularInset: 1.5
-                                )
-                                .foregroundStyle(by: .value("Category", item.category.title))
-                                .cornerRadius(4)
-                            }
-                        }
-                        .frame(height: 200)
-                        .chartLegend(position: .bottom, spacing: 12)
-                        
-                        VStack(spacing: 0) {
-                            ForEach(Array(viewModel.spendingByCategory.enumerated()), id: \.element.category.id) { index, item in
-                                HStack {
-                                    Text(item.category.title)
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundStyle(AppTheme.primaryText)
-                                    Spacer()
-                                    Text(AppFormatters.currency(item.amount, code: vehicle.currencyCode))
-                                        .font(.subheadline.weight(.bold))
-                                        .foregroundStyle(AppTheme.primaryText)
-                                }
-                                .padding(.vertical, 8)
-
-                                if index < viewModel.spendingByCategory.count - 1 {
-                                    Divider().overlay(AppTheme.separator)
+                        if viewModel.spendingByYear.isEmpty {
+                            Text("Not enough history")
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondaryText)
+                                .frame(height: 180)
+                        } else {
+                            Chart {
+                                ForEach(viewModel.spendingByYear, id: \.year) { item in
+                                    BarMark(
+                                        x: .value("Year", String(item.year)),
+                                        y: .value("Amount", item.amount)
+                                    )
+                                    .foregroundStyle(AppTheme.accent.gradient)
+                                    .cornerRadius(4)
                                 }
                             }
-                        }
-                        .padding(.top, 8)
-                        
-                        if let insight = viewModel.financialCategoryInsight {
-                            Text(insight)
-                                .font(.footnote)
-                                .foregroundStyle(AppTheme.tertiaryText)
-                                .padding(.top, 4)
+                            .frame(height: 180)
                         }
                     }
+                }
+
+                SurfaceCard(tier: .primary) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Breakdown by Category")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(AppTheme.primaryText)
+
+                        if viewModel.spendingByCategory.isEmpty {
+                            Text("No data to display")
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondaryText)
+                                .frame(height: 200)
+                        } else {
+                            Chart {
+                                ForEach(viewModel.spendingByCategory, id: \.category.id) { item in
+                                    SectorMark(
+                                        angle: .value("Amount", item.amount),
+                                        innerRadius: .ratio(0.618),
+                                        angularInset: 1.5
+                                    )
+                                    .foregroundStyle(by: .value("Category", item.category.title))
+                                    .cornerRadius(4)
+                                }
+                            }
+                            .frame(height: 200)
+                            .chartLegend(position: .bottom, spacing: 12)
+
+                            VStack(spacing: 0) {
+                                ForEach(Array(viewModel.spendingByCategory.enumerated()), id: \.element.category.id) { index, item in
+                                    HStack {
+                                        Text(item.category.title)
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(AppTheme.primaryText)
+                                        Spacer()
+                                        Text(AppFormatters.currency(item.amount, code: vehicle.currencyCode))
+                                            .font(.subheadline.weight(.bold))
+                                            .foregroundStyle(AppTheme.primaryText)
+                                    }
+                                    .padding(.vertical, 8)
+
+                                    if index < viewModel.spendingByCategory.count - 1 {
+                                        Divider().overlay(AppTheme.separator)
+                                    }
+                                }
+                            }
+                            .padding(.top, 8)
+
+                            if let insight = viewModel.financialCategoryInsight {
+                                Text(insight)
+                                    .font(.footnote)
+                                    .foregroundStyle(AppTheme.tertiaryText)
+                                    .padding(.top, 4)
+                            }
+                        }
+                    }
+                }
+            } else {
+                LockedInsightCard(
+                    title: "Full cost breakdown",
+                    message: "Understand where your money goes and spot the patterns that quietly raise ownership costs.",
+                    highlights: [
+                        "Spending trends over time",
+                        "Category-by-category totals",
+                        "Hidden cost detection"
+                    ],
+                    ctaTitle: "Unlock full insights",
+                    previewText: financePreviewText
+                ) {
+                    paywallCoordinator.present(.analytics)
                 }
             }
         }
@@ -304,41 +326,81 @@ struct VehicleAnalyticsView: View {
                     Spacer()
                 }
             }
-            
-            HStack(spacing: 12) {
-                InsightTile(title: "Average Interval", state: viewModel.averageServiceIntervalDays, icon: "clock.arrow.2.circlepath")
-                InsightTile(title: "Highest Cost Category", state: viewModel.mostExpensiveMaintenanceCategory, icon: "exclamationmark.triangle.fill")
-            }
-            
-            SurfaceCard(tier: .primary) {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Maintenance Tracking")
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(AppTheme.primaryText)
 
-                    Text("Health is based on mileage or time since the last service for each item. Healthy means you are still under the typical interval, Due soon means you are close, and Overdue means you have passed it.")
-                        .font(.footnote)
-                        .foregroundStyle(AppTheme.tertiaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                    
-                    VStack(spacing: 12) {
-                        AnalyticsRow(title: "Oil Change", state: viewModel.daysSinceLastOilChange)
-                        Divider().overlay(AppTheme.separator)
-                        AnalyticsRow(title: "Brakes", state: viewModel.distanceSinceLastBrakes)
-                        Divider().overlay(AppTheme.separator)
-                        AnalyticsRow(title: "Tires", state: viewModel.distanceSinceLastTires)
-                        Divider().overlay(AppTheme.separator)
-                        AnalyticsRow(title: "Battery", state: viewModel.distanceSinceLastBattery)
+            if hasAdvancedInsights {
+                HStack(spacing: 12) {
+                    InsightTile(title: "Average Interval", state: viewModel.averageServiceIntervalDays, icon: "clock.arrow.2.circlepath")
+                    InsightTile(title: "Highest Cost Category", state: viewModel.mostExpensiveMaintenanceCategory, icon: "exclamationmark.triangle.fill")
+                }
+
+                SurfaceCard(tier: .primary) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Maintenance Tracking")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(AppTheme.primaryText)
+
+                        Text("Health is based on mileage or time since the last service for each item. Healthy means you are still under the typical interval, Due soon means you are close, and Overdue means you have passed it.")
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.tertiaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
+                        VStack(spacing: 12) {
+                            AnalyticsRow(title: "Oil Change", state: viewModel.daysSinceLastOilChange)
+                            Divider().overlay(AppTheme.separator)
+                            AnalyticsRow(title: "Brakes", state: viewModel.distanceSinceLastBrakes)
+                            Divider().overlay(AppTheme.separator)
+                            AnalyticsRow(title: "Tires", state: viewModel.distanceSinceLastTires)
+                            Divider().overlay(AppTheme.separator)
+                            AnalyticsRow(title: "Battery", state: viewModel.distanceSinceLastBattery)
+                        }
                     }
                 }
+
+                Text(viewModel.maintenanceInsightText)
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.tertiaryText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+            } else {
+                HStack(spacing: 12) {
+                    InsightTile(title: "Due Soon", state: .ready("\(viewModel.upcomingMaintenanceCount)"), icon: "clock.badge.exclamationmark.fill")
+                    InsightTile(title: "Overdue", state: .ready("\(viewModel.overdueMaintenanceCount)"), icon: "exclamationmark.circle.fill")
+                }
+
+                SurfaceCard(tier: .primary) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Basic Tracking")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(AppTheme.primaryText)
+
+                        Text("Keep an eye on the essentials. Pro adds predictions, patterns, and smarter due-soon guidance as your history grows.")
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.tertiaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        VStack(spacing: 12) {
+                            AnalyticsRow(title: "Oil Change", state: viewModel.daysSinceLastOilChange)
+                            Divider().overlay(AppTheme.separator)
+                            AnalyticsRow(title: "Brakes", state: viewModel.distanceSinceLastBrakes)
+                        }
+                    }
+                }
+
+                LockedInsightCard(
+                    title: "Smarter maintenance tracking",
+                    message: "Know what is likely due next before a routine service turns into an expensive surprise.",
+                    highlights: [
+                        "Replacement predictions",
+                        "Smart due-soon insights",
+                        "Maintenance trends over time"
+                    ],
+                    ctaTitle: "Unlock smarter maintenance tracking",
+                    previewText: maintenancePreviewText
+                ) {
+                    paywallCoordinator.present(.analytics)
+                }
             }
-            
-            Text(viewModel.maintenanceInsightText)
-                .font(.footnote)
-                .foregroundStyle(AppTheme.tertiaryText)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 16)
-                .padding(.top, 4)
         }
     }
     
@@ -369,15 +431,10 @@ struct VehicleAnalyticsView: View {
             }
             
             HStack(spacing: 12) {
-                InsightTile(title: UnitFormatter.costRateTitle(), state: viewModel.costPer100Km, icon: "road.lanes")
                 InsightTile(title: "Avg Price", state: viewModel.averageFuelPrice, icon: "dollarsign.circle")
-            }
-            
-            HStack(spacing: 12) {
                 InsightTile(title: "3-Tank Avg", state: viewModel.threeTankAverageConsumption, icon: "gauge.medium")
-                InsightTile(title: "6-Tank Avg", state: viewModel.sixTankAverageConsumption, icon: "gauge.high")
             }
-            
+
             if let last = viewModel.lastValidTank {
                 SurfaceCard(tier: .primary) {
                     VStack(alignment: .leading, spacing: 12) {
@@ -411,6 +468,27 @@ struct VehicleAnalyticsView: View {
                             }
                         }
                     }
+                }
+            }
+
+            if hasAdvancedInsights {
+                HStack(spacing: 12) {
+                    InsightTile(title: UnitFormatter.costRateTitle(), state: viewModel.costPer100Km, icon: "road.lanes")
+                    InsightTile(title: "6-Tank Avg", state: viewModel.sixTankAverageConsumption, icon: "gauge.high")
+                }
+            } else {
+                LockedInsightCard(
+                    title: "See your real fuel efficiency",
+                    message: "Start with the basics for free, then track the long-term patterns that actually reveal how your car is performing.",
+                    highlights: [
+                        "Long-term average consumption",
+                        "Trend chart across fill-ups",
+                        "Efficiency score"
+                    ],
+                    ctaTitle: "Unlock Pro",
+                    previewText: fuelPreviewText
+                ) {
+                    paywallCoordinator.present(.fuelTracking)
                 }
             }
         }
@@ -471,6 +549,22 @@ struct VehicleAnalyticsView: View {
                     ChecklistItem(title: "Registration or documents in Vault", isComplete: vehicle.documents.count > 0)
                 }
             }
+
+            if !hasAdvancedInsights {
+                LockedInsightCard(
+                    title: "Resale insights",
+                    message: "Know what strengthens buyer confidence before you decide to sell.",
+                    highlights: [
+                        "Estimated market value",
+                        "Buyer-ready PDF report",
+                        "What reduces your resale price"
+                    ],
+                    ctaTitle: "Unlock resale insights",
+                    previewText: resalePreviewText
+                ) {
+                    paywallCoordinator.present(.analytics)
+                }
+            }
         }
     }
     
@@ -499,77 +593,142 @@ struct VehicleAnalyticsView: View {
                     Spacer()
                 }
             }
-            
-            if !viewModel.garageSpendByVehicle.isEmpty {
-                SurfaceCard(tier: .primary) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Total Spend by Vehicle")
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(AppTheme.primaryText)
-                        
-                        Chart {
-                            ForEach(viewModel.garageSpendByVehicle, id: \.title) { item in
-                                BarMark(
-                                    x: .value("Amount", item.amount),
-                                    y: .value("Vehicle", item.title)
-                                )
-                                .foregroundStyle(AppTheme.accent.gradient)
-                                .cornerRadius(4)
-                            }
-                        }
-                        .frame(height: max(100, CGFloat(viewModel.garageSpendByVehicle.count * 40)))
-                    }
-                }
-            }
-            
-            if !viewModel.costPerKmByVehicle.isEmpty {
-                SurfaceCard(tier: .primary) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Cost Per Distance")
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(AppTheme.primaryText)
-                            
-                        VStack(spacing: 0) {
-                            ForEach(Array(viewModel.costPerKmByVehicle.enumerated()), id: \.element.title) { index, item in
-                                HStack {
-                                    Text(item.title)
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundStyle(AppTheme.primaryText)
-                                        .lineLimit(1)
-                                        .truncationMode(.tail)
-                                    Spacer()
-                                    Text(UnitFormatter.costPerDistanceCurrency(item.cost, currencyCode: vehicle.currencyCode))
-                                        .font(.subheadline.weight(.bold))
-                                        .foregroundStyle(AppTheme.primaryText)
-                                }
-                                .padding(.vertical, 8)
 
-                                if index < viewModel.costPerKmByVehicle.count - 1 {
-                                    Divider().overlay(AppTheme.separator)
+            if hasAdvancedInsights {
+                if !viewModel.garageSpendByVehicle.isEmpty {
+                    SurfaceCard(tier: .primary) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Total Spend by Vehicle")
+                                .font(.headline.weight(.semibold))
+                                .foregroundStyle(AppTheme.primaryText)
+
+                            Chart {
+                                ForEach(viewModel.garageSpendByVehicle, id: \.title) { item in
+                                    BarMark(
+                                        x: .value("Amount", item.amount),
+                                        y: .value("Vehicle", item.title)
+                                    )
+                                    .foregroundStyle(AppTheme.accent.gradient)
+                                    .cornerRadius(4)
+                                }
+                            }
+                            .frame(height: max(100, CGFloat(viewModel.garageSpendByVehicle.count * 40)))
+                        }
+                    }
+                }
+
+                if !viewModel.costPerKmByVehicle.isEmpty {
+                    SurfaceCard(tier: .primary) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Cost Per Distance")
+                                .font(.headline.weight(.semibold))
+                                .foregroundStyle(AppTheme.primaryText)
+
+                            VStack(spacing: 0) {
+                                ForEach(Array(viewModel.costPerKmByVehicle.enumerated()), id: \.element.title) { index, item in
+                                    HStack {
+                                        Text(item.title)
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(AppTheme.primaryText)
+                                            .lineLimit(1)
+                                            .truncationMode(.tail)
+                                        Spacer()
+                                        Text(UnitFormatter.costPerDistanceCurrency(item.cost, currencyCode: vehicle.currencyCode))
+                                            .font(.subheadline.weight(.bold))
+                                            .foregroundStyle(AppTheme.primaryText)
+                                    }
+                                    .padding(.vertical, 8)
+
+                                    if index < viewModel.costPerKmByVehicle.count - 1 {
+                                        Divider().overlay(AppTheme.separator)
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            } else if allVehicles.count > 0 {
-                SurfaceCard(tier: .primary) {
-                    VStack(alignment: .center, spacing: 8) {
-                        Image(systemName: "road.lanes")
-                            .font(.system(size: 24))
-                            .foregroundStyle(AppTheme.tertiaryText)
-                        Text("Not enough distance data")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(AppTheme.primaryText)
-                        Text("Log more fuel and service entries with accurate mileage across your garage to unlock cost-per-distance insights.")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.secondaryText)
-                            .multilineTextAlignment(.center)
+                } else if allVehicles.count > 0 {
+                    SurfaceCard(tier: .primary) {
+                        VStack(alignment: .center, spacing: 8) {
+                            Image(systemName: "road.lanes")
+                                .font(.system(size: 24))
+                                .foregroundStyle(AppTheme.tertiaryText)
+                            Text("Not enough distance data")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(AppTheme.primaryText)
+                            Text("Log more fuel and service entries with accurate mileage across your garage to unlock cost-per-distance insights.")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.secondaryText)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+                }
+            } else {
+                LockedInsightCard(
+                    title: "Compare your garage side by side",
+                    message: "Track every car in one calm place and instantly see which vehicle costs the most to own.",
+                    highlights: [
+                        "Spend by vehicle",
+                        "Cost per distance across the garage",
+                        "Multi-car ownership comparisons"
+                    ],
+                    ctaTitle: "Unlock garage comparisons",
+                    previewText: garagePreviewText
+                ) {
+                    paywallCoordinator.present(.secondVehicle)
                 }
             }
         }
+    }
+
+    private var financePreviewText: String? {
+        if let insight = viewModel.financialCategoryInsight {
+            return insight
+        }
+
+        guard viewModel.totalLifetimeSpend > 0 else { return nil }
+        return "You have logged \(AppFormatters.currency(viewModel.totalLifetimeSpend, code: vehicle.currencyCode)) so far."
+    }
+
+    private var maintenancePreviewText: String? {
+        if viewModel.overdueMaintenanceCount > 0 || viewModel.upcomingMaintenanceCount > 0 {
+            return viewModel.maintenanceHealthText
+        }
+
+        if let category = viewModel.mostExpensiveMaintenanceCategory.readyValue {
+            return "Highest service cost so far: \(category)"
+        }
+
+        return viewModel.maintenanceInsightText
+    }
+
+    private var fuelPreviewText: String? {
+        if let average = viewModel.threeTankAverageConsumption.readyValue {
+            return "Current average: \(average)"
+        }
+
+        if let note = viewModel.threeTankAverageConsumption.placeholderText {
+            return note
+        }
+
+        return nil
+    }
+
+    private var resalePreviewText: String? {
+        if viewModel.resaleReadinessScore > 0 {
+            return "\(viewModel.resaleReadinessScore)% buyer-ready today."
+        }
+
+        return viewModel.resaleNextStepGuidance
+    }
+
+    private var garagePreviewText: String? {
+        if allVehicles.count > 1 {
+            return viewModel.garageIntelligenceText
+        }
+
+        return "Your first vehicle is ready. Add another to compare ownership costs side by side."
     }
 }
 
@@ -674,6 +833,26 @@ struct ChecklistItem: View {
                 .foregroundStyle(isComplete ? AppTheme.primaryText : AppTheme.secondaryText)
                 
             Spacer()
+        }
+    }
+}
+
+private extension MetricState where T == String {
+    var readyValue: String? {
+        guard case .ready(let value) = self else { return nil }
+        return value
+    }
+
+    var placeholderText: String? {
+        switch self {
+        case .notEnoughHistory(let message):
+            return message
+        case .neverRecorded:
+            return "No data yet."
+        case .incompleteRecord:
+            return "Complete a little more history to reveal this."
+        case .ready:
+            return nil
         }
     }
 }

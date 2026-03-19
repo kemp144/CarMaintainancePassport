@@ -24,17 +24,17 @@ enum PaywallReason: String, Identifiable {
     var title: String {
         switch self {
         case .secondVehicle:
-            return "Unlock an unlimited garage"
+            return "Keep every car in one place"
         case .exportPDF:
-            return "Export a polished passport"
+            return "Create a buyer-ready history"
         case .advancedReminders:
-            return "Unlock smarter reminders"
+            return "Stay ahead of maintenance"
         case .documentVault:
-            return "Unlock a smarter glovebox"
+            return "Keep your paperwork organized"
         case .analytics:
-            return "See your ownership costs clearly"
+            return "See your real cost of ownership"
         case .fuelTracking:
-            return "Unlock detailed fuel tracking"
+            return "See your real fuel efficiency"
         case .ocrScan:
             return "Scan receipts automatically"
         case .vinLookup:
@@ -49,17 +49,17 @@ enum PaywallReason: String, Identifiable {
     var message: String {
         switch self {
         case .secondVehicle:
-            return "Free stays useful for one car. Pro lets you keep every vehicle in one organized garage."
+            return "Free stays useful for one car. Pro lets you compare vehicles, track the full garage, and keep every history together."
         case .exportPDF:
-            return "Create a polished, resale-ready PDF passport whenever you need to share the full history."
+            return "Export a polished service passport, a buyer-ready resale report, and clean records whenever you need to share the full story."
         case .advancedReminders:
-            return "Add mileage-based reminders so maintenance follows how much you actually drive."
+            return "Add mileage-based reminders and due-soon guidance so maintenance follows how much you actually drive."
         case .documentVault:
-            return "Keep more documents in one place, unlock OCR receipt capture, and organize paperwork with a richer glovebox workflow."
+            return "Keep more documents in one place, capture receipts faster with OCR, and build a cleaner ownership record."
         case .analytics:
-            return "See where ownership costs go and spot the patterns that matter."
+            return "Start with the essentials for free, then unlock deeper cost breakdowns, fuel trends, maintenance insights, and resale tools."
         case .fuelTracking:
-            return "Log fuel for free, then unlock consumption, charts, filters, OCR, and deeper fuel insights with Pro."
+            return "Log fuel for free, then unlock long-term averages, trend charts, efficiency insights, and cleaner receipt capture with Pro."
         case .ocrScan:
             return "Let the app extract receipt details so service entries take less time."
         case .vinLookup:
@@ -67,7 +67,7 @@ enum PaywallReason: String, Identifiable {
         case .importData:
             return "Bring your existing records into Car Service Passport in one step."
         case .settings:
-            return "Unlock unlimited vehicles, fuel insights, OCR, premium exports, and smarter reminder controls."
+            return "Unlock full cost breakdowns, fuel efficiency tracking, smarter maintenance insights, resale tools, polished exports, and an unlimited garage."
         }
     }
 }

@@ -50,8 +50,8 @@ struct FuelTrackingView: View {
 
                     if hasDetailedFuelAccess {
                         periodSelector
-                    } else {
-                        fuelProTeaser
+                    } else if !vehicle.fuelEntries.isEmpty {
+                        freeFuelSnapshotSection
                     }
 
                     if vehicle.fuelEntries.isEmpty {
@@ -66,6 +66,8 @@ struct FuelTrackingView: View {
                         if hasDetailedFuelAccess {
                             statsSection
                             chartSection
+                        } else {
+                            fuelProTeaser
                         }
                         entriesSection
                     }
@@ -150,34 +152,43 @@ struct FuelTrackingView: View {
     }
 
     private var fuelProTeaser: some View {
-        SurfaceCard(padding: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Text("Detailed Fuel Tracking")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(AppTheme.primaryText)
+        LockedInsightCard(
+            title: "See your real fuel efficiency",
+            message: "Your history is already useful. Pro adds the long-term view that makes fuel costs easier to understand.",
+            highlights: [
+                "Long-term average consumption",
+                "Trend charts and period filters",
+                "Efficiency insights and OCR receipts"
+            ],
+            ctaTitle: "Unlock Pro",
+            previewText: fuelPreviewText
+        ) {
+            paywallCoordinator.present(.fuelTracking)
+        }
+    }
 
-                        Text("Pro")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(AppTheme.accent)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
-                    }
+    private var freeFuelSnapshotSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            PremiumSectionHeader(
+                title: "Free Snapshot",
+                subtitle: "Useful day-to-day fuel context, with deeper analysis ready when you want it."
+            )
 
-                    Text("Unlock consumption, charts, advanced filters, OCR receipts, and deeper fuel insights.")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.secondaryText)
-                }
-
-                Spacer(minLength: 12)
-
-                Button("Upgrade") {
-                    paywallCoordinator.present(.fuelTracking)
-                }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(AppTheme.accent)
+            HStack(spacing: 12) {
+                fuelStatCard(
+                    title: "Current Average",
+                    value: analysis.insights.lastValidConsumption.value.map { AppFormatters.consumption($0) } ?? "—",
+                    note: analysis.insights.lastValidConsumption.note,
+                    icon: "gauge.medium",
+                    emphasis: .primary
+                )
+                fuelStatCard(
+                    title: "Avg Price / \(UnitSettings.currentFuelVolumeUnit.shortTitle)",
+                    value: analysis.insights.averagePricePerLiter.map { UnitFormatter.costPerFuelUnitCurrency($0, currencyCode: vehicle.currencyCode) } ?? "—",
+                    note: analysis.insights.averagePricePerLiter == nil ? "Add more fill-ups to refine this." : nil,
+                    icon: "eurosign.circle.fill",
+                    emphasis: .primary
+                )
             }
         }
     }
@@ -646,6 +657,14 @@ struct FuelTrackingView: View {
         try? modelContext.save()
         entryToDelete = nil
         showingDeleteConfirmation = false
+    }
+
+    private var fuelPreviewText: String? {
+        if let consumption = analysis.insights.lastValidConsumption.value {
+            return "Current average: \(AppFormatters.consumption(consumption))"
+        }
+
+        return analysis.insights.lastValidConsumption.note
     }
 
     private func recalculateVehicleMileage() {
