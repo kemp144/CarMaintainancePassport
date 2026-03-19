@@ -45,7 +45,7 @@ struct FuelTrackingView: View {
             AppTheme.background.ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
+                VStack(spacing: 14) {
                     headerSection
 
                     if hasDetailedFuelAccess {
@@ -108,24 +108,24 @@ struct FuelTrackingView: View {
     }
 
     private var headerSection: some View {
-        SurfaceCard(padding: 20) {
-            VStack(alignment: .leading, spacing: 14) {
+        SurfaceCard(tier: .primary) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text("Overview")
-                            .font(.system(size: 24, weight: .bold))
+                            .font(.system(size: 20, weight: .bold))
                             .foregroundStyle(AppTheme.primaryText)
                         Text(hasDetailedFuelAccess ? "Selected-period summary with only valid fuel data." : "Basic totals, recent fill-up, and full history.")
-                            .font(.subheadline)
+                            .font(.caption)
                             .foregroundStyle(AppTheme.secondaryText)
                     }
 
                     Spacer()
 
                     Image(systemName: "fuelpump.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(AppTheme.accent)
-                        .padding(10)
+                        .padding(8)
                         .background(Circle().fill(AppTheme.surfaceSecondary))
                 }
 
@@ -264,7 +264,7 @@ struct FuelTrackingView: View {
     }
 
     private var statsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             PremiumSectionHeader(
                 title: "Highlights",
                 subtitle: "Everything here follows the selected period."
@@ -331,11 +331,11 @@ struct FuelTrackingView: View {
     private func fuelStatCard(title: String, value: String, note: String?, icon: String, emphasis: FuelStatCardEmphasis) -> some View {
         let isPrimary = emphasis == .primary
 
-        return SurfaceCard(padding: isPrimary ? 16 : 14) {
-            VStack(alignment: .leading, spacing: isPrimary ? 10 : 8) {
-                HStack(spacing: 8) {
+        return SurfaceCard(tier: isPrimary ? .secondary : .compact) {
+            VStack(alignment: .leading, spacing: isPrimary ? 8 : 6) {
+                HStack(spacing: 6) {
                     Image(systemName: icon)
-                        .font(.system(size: isPrimary ? 12 : 11, weight: .semibold))
+                        .font(.system(size: isPrimary ? 11 : 10, weight: .semibold))
                         .foregroundStyle(AppTheme.accent)
                     Text(title)
                         .font(isPrimary ? .caption.weight(.semibold) : .caption2.weight(.semibold))
@@ -345,32 +345,32 @@ struct FuelTrackingView: View {
                 }
 
                 Text(value)
-                    .font(.system(size: isPrimary ? 19 : 16, weight: .bold))
+                    .font(.system(size: isPrimary ? 18 : 15, weight: .bold))
                     .foregroundStyle(AppTheme.primaryText)
                     .lineLimit(isPrimary ? 2 : 1)
                     .minimumScaleFactor(0.9)
 
                 if let note {
                     Text(note)
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundStyle(AppTheme.tertiaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .frame(minHeight: isPrimary ? 110 : 88, alignment: .topLeading)
+            .frame(minHeight: isPrimary ? 84 : 64, alignment: .topLeading)
         }
     }
 
     private var chartSection: some View {
         SurfaceCard {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text("Trend")
                             .font(.headline.weight(.semibold))
                             .foregroundStyle(AppTheme.primaryText)
-                        Text("A quick read on spend, consumption, or pump prices.")
-                            .font(.footnote)
+                        Text("Spend, consumption, or pump prices.")
+                            .font(.caption)
                             .foregroundStyle(AppTheme.secondaryText)
                     }
                     Spacer()
@@ -427,7 +427,7 @@ struct FuelTrackingView: View {
                             }
                         }
                     }
-                    .frame(height: 210)
+                    .frame(height: 180)
                     .chartXAxis {
                         AxisMarks(values: .automatic(desiredCount: min(chartPoints.count, 4))) {
                             AxisValueLabel(format: .dateTime.month().day())
@@ -443,7 +443,7 @@ struct FuelTrackingView: View {
     }
 
     private var entriesSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             PremiumSectionHeader(
                 title: "History",
                 subtitle: "\(displayedEntries.count) entries • \(hasDetailedFuelAccess ? selectedPeriod.title : FuelLogPeriod.allTime.title)"

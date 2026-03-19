@@ -11,7 +11,7 @@ enum AppTheme {
     static let success = Color(hex: "22C55E") // green-500
     static let warning = Color(hex: "F59E0B") // amber-500
     static let error = Color(hex: "EF4444") // red-500
-    
+
     static let primaryText = Color.white
     static let secondaryText = Color(hex: "94A3B8") // slate-400
     static let tertiaryText = Color(hex: "64748B") // slate-500
@@ -22,6 +22,31 @@ enum AppTheme {
         startPoint: .top,
         endPoint: .bottom
     )
+
+    // MARK: - Spacing System
+
+    enum Spacing {
+        static let pageEdge: CGFloat = 20
+        static let sectionGap: CGFloat = 14
+        static let cardPadding: CGFloat = 14
+        static let cardPaddingLarge: CGFloat = 18
+        static let cardPaddingCompact: CGFloat = 10
+        static let headerTop: CGFloat = 44
+        static let headerBottom: CGFloat = 16
+        static let filterToContent: CGFloat = 8
+        static let bottomSafeArea: CGFloat = 100
+        static let fabBottom: CGFloat = 96
+        static let fabTrailing: CGFloat = 20
+    }
+
+    // MARK: - Corner Radii
+
+    enum Radius {
+        static let card: CGFloat = 16
+        static let cardCompact: CGFloat = 12
+        static let button: CGFloat = 12
+        static let thumbnail: CGFloat = 10
+    }
 }
 
 extension Color {

@@ -109,8 +109,6 @@ struct VehicleRowCard: View {
                         compactMetric(label: "This year", value: AppFormatters.currency(vehicle.spentThisYear, code: vehicle.currencyCode))
                         compactMetric(label: "Reminders", value: "\(vehicle.activeRemindersCount)")
                     }
-
-                    .padding(.top, 2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }

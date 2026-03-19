@@ -34,10 +34,10 @@ struct SettingsView: View {
             AppTheme.background.ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 14) {
+                VStack(spacing: 10) {
                     headerSection
 
-                    VStack(spacing: 14) {
+                    VStack(spacing: 10) {
                         generalSection
                         unitsSection
                         proSection
@@ -98,24 +98,24 @@ struct SettingsView: View {
     }
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Settings")
                         .font(.system(size: 28, weight: .bold))
                         .foregroundStyle(AppTheme.primaryText)
 
                     Text("Preferences, data, and app info")
-                        .font(.subheadline)
+                        .font(.caption)
                         .foregroundStyle(AppTheme.secondaryText)
                 }
 
                 Spacer()
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 28)
-        .padding(.bottom, 14)
+        .padding(.horizontal, AppTheme.Spacing.pageEdge)
+        .padding(.top, 20)
+        .padding(.bottom, 10)
         .background(AppTheme.heroGradient)
     }
 
@@ -431,7 +431,7 @@ struct SettingsView: View {
                     }
                 }
                 .padding(.horizontal, 14)
-                .padding(.vertical, 12)
+                .padding(.vertical, 10)
 
                 content()
             }

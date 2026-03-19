@@ -17,7 +17,7 @@ struct PaywallView: View {
                 AppTheme.background.ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 16) {
+                    VStack(spacing: 14) {
                         GeometryReader { proxy in
                             Color.clear
                                 .preference(
@@ -71,9 +71,9 @@ struct PaywallView: View {
 
     private var heroSection: some View {
         PremiumBackdrop()
-            .frame(height: 224)
+            .frame(height: 200)
             .overlay(alignment: .topLeading) {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 10) {
                         Image(systemName: "crown.fill")
                             .font(.system(size: 14, weight: .semibold))
@@ -99,9 +99,9 @@ struct PaywallView: View {
 
                     Spacer(minLength: 0)
 
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Unlock Pro")
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .lineLimit(2)
 
@@ -255,7 +255,7 @@ struct PaywallView: View {
             comparisonCell(text: feature.pro, isFree: false)
                 .frame(width: comparisonColWidth)
         }
-        .padding(.vertical, 13)
+        .padding(.vertical, 10)
         .overlay(alignment: .bottom) {
             if !isLast {
                 Rectangle()
@@ -431,7 +431,7 @@ struct PaywallView: View {
                     .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.tertiaryText)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 15)
+            .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(isSelected ? Color.white.opacity(0.045) : Color.white.opacity(0.02))

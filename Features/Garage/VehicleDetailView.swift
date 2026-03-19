@@ -56,7 +56,7 @@ struct VehicleDetailView: View {
                         .frame(height: 224)
                     }
 
-                    VStack(spacing: 18) {
+                    VStack(spacing: 14) {
                         // Vehicle Info Card
                         SurfaceCard {
                             VStack(alignment: .leading, spacing: 0) {
@@ -92,7 +92,7 @@ struct VehicleDetailView: View {
                             }
                         }
                         .offset(y: -24)
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, AppTheme.Spacing.pageEdge)
                         .padding(.bottom, -24)
 
                         // Stats
@@ -116,13 +116,13 @@ struct VehicleDetailView: View {
                                 openAnalytics()
                             }
                         }
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, AppTheme.Spacing.pageEdge)
 
                         vehicleSummarySection
-                            .padding(.horizontal, 24)
+                            .padding(.horizontal, AppTheme.Spacing.pageEdge)
 
                         quickActions
-                            .padding(.horizontal, 24)
+                            .padding(.horizontal, AppTheme.Spacing.pageEdge)
                             .padding(.top, 2)
 
                         // Reminders
@@ -152,10 +152,10 @@ struct VehicleDetailView: View {
                                 }
                             }
                         }
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, AppTheme.Spacing.pageEdge)
 
                         // Fuel section
-                        fuelSection.padding(.horizontal, 24)
+                        fuelSection.padding(.horizontal, AppTheme.Spacing.pageEdge)
 
                         // Service History
                         VStack(alignment: .leading, spacing: 10) {
@@ -247,10 +247,10 @@ struct VehicleDetailView: View {
                                 }
                             }
                         }
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, AppTheme.Spacing.pageEdge)
                         .padding(.top, 4)
 
-                        Spacer().frame(height: 176)
+                        Spacer().frame(height: 120)
                     }
                 }
             }
@@ -296,7 +296,7 @@ struct VehicleDetailView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, AppTheme.Spacing.pageEdge)
                 .padding(.top, 48) // top-12 roughly matches safe area top + some padding
                 Spacer()
             }
@@ -378,14 +378,14 @@ struct VehicleDetailView: View {
     private let quickActionColumns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 2)
     private var quickActions: some View {
         LazyVGrid(columns: quickActionColumns, spacing: 10) {
-            quickActionButton(title: "Reminder", icon: "bell.fill") {
-                showingReminderForm = true
+            quickActionButton(title: "Add Service", icon: "wrench.and.screwdriver.fill", isPrimary: true) {
+                showingServiceForm = true
             }
             quickActionButton(title: "Fuel", icon: "fuelpump.fill") {
                 showingFuelTracking = true
             }
-            quickActionButton(title: "Add Service", icon: "wrench.and.screwdriver.fill") {
-                showingServiceForm = true
+            quickActionButton(title: "Reminder", icon: "bell.fill") {
+                showingReminderForm = true
             }
             Menu {
                 Button {
@@ -575,7 +575,7 @@ struct VehicleDetailView: View {
         }
     }
 
-    private func quickActionLabel(title: String, icon: String, isLocked: Bool = false) -> some View {
+    private func quickActionLabel(title: String, icon: String, isLocked: Bool = false, isPrimary: Bool = false) -> some View {
         VStack(spacing: 4) {
             ZStack(alignment: .topTrailing) {
                 Image(systemName: icon)
@@ -592,13 +592,13 @@ struct VehicleDetailView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.9)
         }
-        .foregroundStyle(AppTheme.primaryText)
+        .foregroundStyle(isPrimary ? AppTheme.accent : AppTheme.primaryText)
         .opacity(isLocked ? 0.6 : 1.0)
-        .frame(maxWidth: .infinity, minHeight: 58)
+        .frame(maxWidth: .infinity, minHeight: 50)
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(AppTheme.surfaceSecondary)
+                .fill(isPrimary ? AppTheme.accent.opacity(0.12) : AppTheme.surfaceSecondary)
         )
     }
 
@@ -820,9 +820,9 @@ struct VehicleDetailView: View {
         return "Due at \(AppFormatters.mileage(mileageDue))"
     }
 
-    private func quickActionButton(title: String, icon: String, isLocked: Bool = false, action: @escaping () -> Void) -> some View {
+    private func quickActionButton(title: String, icon: String, isLocked: Bool = false, isPrimary: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            quickActionLabel(title: title, icon: icon, isLocked: isLocked)
+            quickActionLabel(title: title, icon: icon, isLocked: isLocked, isPrimary: isPrimary)
         }
         .buttonStyle(.plain)
     }
@@ -867,7 +867,7 @@ struct VehicleDetailView: View {
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, minHeight: 112, maxHeight: 112, alignment: .topLeading)
+                .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
             }
         }
         .buttonStyle(.plain)

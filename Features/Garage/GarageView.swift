@@ -56,18 +56,18 @@ struct GarageView: View {
                 // Custom Header
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 8) { // mb-2 is spacing 8 between title and subtitle
+                        VStack(alignment: .leading, spacing: 6) {
                             Text("My Garage")
-                                .font(.system(size: 30, weight: .bold)) // text-3xl is 30px
+                                .font(.system(size: 28, weight: .bold))
                                 .foregroundStyle(AppTheme.primaryText)
-                            
+
                             Text(vehicles.isEmpty ? "Add your first vehicle to get started" : "\(vehicles.count) \(vehicles.count == 1 ? "vehicle" : "vehicles")")
-                                .font(.system(size: 16)) // base text
+                                .font(.subheadline)
                                 .foregroundStyle(AppTheme.secondaryText)
                         }
-                        
+
                         Spacer()
-                        
+
                         Menu {
                             Picker("Sort", selection: $sortOption) {
                                 ForForEach(SortOption.allCases) { option in
@@ -80,15 +80,15 @@ struct GarageView: View {
                                 .foregroundStyle(AppTheme.tertiaryText)
                         }
                     }
-                    
+
                     if !vehicles.isEmpty {
                         InlineSearchField(title: "Search vehicles...", text: $searchText)
-                            .padding(.top, 16)
+                            .padding(.top, 14)
                     }
                 }
-                .padding(.horizontal, 24) // px-6
-                .padding(.top, 48) // pt-12
-                .padding(.bottom, 20) // tighter rhythm before the list
+                .padding(.horizontal, AppTheme.Spacing.pageEdge)
+                .padding(.top, AppTheme.Spacing.headerTop)
+                .padding(.bottom, AppTheme.Spacing.headerBottom)
                 .background(AppTheme.heroGradient)
 
                 // Content
@@ -103,7 +103,7 @@ struct GarageView: View {
                             ) {
                                 addVehicleTapped()
                             }
-                            .padding(24)
+                            .padding(AppTheme.Spacing.pageEdge)
                         } else {
                             ContentUnavailableView {
                                 Label("No vehicles found", systemImage: "magnifyingglass")
@@ -113,7 +113,7 @@ struct GarageView: View {
                             .padding(.top, 40)
                         }
                     } else {
-                        LazyVStack(spacing: 16) {
+                        LazyVStack(spacing: 14) {
                             ForEach(filteredVehicles) { vehicle in
                                 NavigationLink {
                                     VehicleDetailView(vehicle: vehicle)
@@ -123,31 +123,17 @@ struct GarageView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding(.horizontal, 24)
-                        .padding(.top, 12)
-                        .padding(.bottom, 24)
-                        .padding(.bottom, 100) // Space for FAB and TabBar
+                        .padding(.horizontal, AppTheme.Spacing.pageEdge)
+                        .padding(.top, 6)
+                        .padding(.bottom, 120) // Space for FAB and TabBar
                     }
                 }
             }
 
-            // FAB
             if !vehicles.isEmpty {
-                Button {
+                FloatingAddButton {
                     addVehicleTapped()
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .bold)) // w-6 h-6
-                        .foregroundStyle(.white)
-                        .frame(width: 56, height: 56) // w-14 h-14
-                        .background(
-                            Circle()
-                                .fill(AppTheme.accent)
-                                .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 4) // shadow-lg
-                        )
                 }
-                .padding(.trailing, 24) // right-6
-                .padding(.bottom, 96) // bottom-24 (roughly, considering tab bar)
             }
         }
         .navigationBarHidden(true)

@@ -77,21 +77,21 @@ struct DocumentsView: View {
         let linkedCount = documentItems.filter { $0.serviceTitle != nil }.count
 
         return SurfaceCard {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text("Digital glovebox")
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(AppTheme.primaryText)
                     Spacer()
                     Text("\(documentsCount) saved")
-                        .font(.caption.weight(.medium))
+                        .font(.caption2.weight(.medium))
                         .foregroundStyle(AppTheme.secondaryText)
                 }
 
                 HStack(spacing: 12) {
-                    documentStat(title: "Documents", value: "\(documentsCount)", icon: "doc.fill")
-                    documentStat(title: "Files", value: "\(pagesCount)", icon: "square.stack.3d.up.fill")
-                    documentStat(title: "Linked", value: "\(linkedCount)", icon: "link")
+                    SummaryStatTile(title: "Documents", value: "\(documentsCount)", icon: "doc.fill")
+                    SummaryStatTile(title: "Files", value: "\(pagesCount)", icon: "square.stack.3d.up.fill")
+                    SummaryStatTile(title: "Linked", value: "\(linkedCount)", icon: "link")
                 }
 
                 if let savedDocumentLimit, !entitlementStore.canUseUnlimitedDocuments() {
@@ -112,28 +112,10 @@ struct DocumentsView: View {
                 }
 
                 Text("Store receipts, PDFs, and service paperwork with the right car.")
-                    .font(.footnote)
-                    .foregroundStyle(AppTheme.secondaryText)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.tertiaryText)
             }
         }
-    }
-
-    private func documentStat(title: String, value: String, icon: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(AppTheme.accent)
-                Text(title)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(AppTheme.secondaryText)
-            }
-
-            Text(value)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(AppTheme.primaryText)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var documentTopControls: some View {
@@ -216,7 +198,7 @@ struct DocumentsView: View {
 
                 VStack(spacing: 12) {
                     documentTopControls
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, AppTheme.Spacing.pageEdge)
 
                     if documentItems.isEmpty {
                         ScrollView(showsIndicators: false) {
@@ -240,7 +222,7 @@ struct DocumentsView: View {
                                 }
                                 .disabled(vehicles.isEmpty)
                             }
-                            .padding(.horizontal, 24)
+                            .padding(.horizontal, AppTheme.Spacing.pageEdge)
                             .padding(.top, 8)
                             .padding(.bottom, 24)
                         }
@@ -260,7 +242,7 @@ struct DocumentsView: View {
                                     }
                                 }
                             }
-                            .padding(.horizontal, 24)
+                            .padding(.horizontal, AppTheme.Spacing.pageEdge)
                             .padding(.top, 8)
                             .padding(.bottom, 24)
                         }

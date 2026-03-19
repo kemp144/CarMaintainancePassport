@@ -127,11 +127,11 @@ struct TimelineView: View {
         let eventsThisYear = events.filter { calendar.isDate($0.date, equalTo: .now, toGranularity: .year) }.count
         let latestDate = events.first?.date
 
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
-                timelineSummaryTile(title: "This year", value: "\(eventsThisYear) events", icon: "chart.bar.fill")
-                timelineSummaryTile(title: "Spending (\(String(currentYear)))", value: AppFormatters.currency(spendingThisYear, code: primaryCurrencyCode), icon: "dollarsign.circle.fill")
-                timelineSummaryTile(title: "Latest", value: latestDate.map { AppFormatters.mediumDate.string(from: $0) } ?? "No history", icon: "clock.fill")
+                SummaryStatTile(title: "This year", value: "\(eventsThisYear) events", icon: "chart.bar.fill")
+                SummaryStatTile(title: "Spending (\(String(currentYear)))", value: AppFormatters.currency(spendingThisYear, code: primaryCurrencyCode), icon: "dollarsign.circle.fill")
+                SummaryStatTile(title: "Latest", value: latestDate.map { AppFormatters.mediumDate.string(from: $0) } ?? "No history", icon: "clock.fill")
             }
 
             Text(scopeSummaryText)
@@ -157,18 +157,18 @@ struct TimelineView: View {
                 // Custom Header
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 6) {
                             Text("Timeline")
-                                .font(.system(size: 30, weight: .bold)) // text-3xl
+                                .font(.system(size: 28, weight: .bold))
                                 .foregroundStyle(AppTheme.primaryText)
-                            
+
                             Text(events.isEmpty ? "No events yet" : "\(events.count) \(events.count == 1 ? "event" : "events")")
-                                .font(.system(size: 16)) // text-base
+                                .font(.subheadline)
                                 .foregroundStyle(AppTheme.secondaryText)
                         }
-                        
+
                         Spacer()
-                        
+
                         Menu {
                             Picker("Sort", selection: $sort) {
                                 ForEach(SortOption.allCases) { option in
@@ -180,7 +180,7 @@ struct TimelineView: View {
                                 .font(.title2)
                                 .foregroundStyle(AppTheme.tertiaryText)
                         }
-                        
+
                         Menu {
                             Picker("Category", selection: $appState.timelineCategory) {
                                 ForEach(CategoryFilter.allCases) { filter in
@@ -194,15 +194,15 @@ struct TimelineView: View {
                                 .padding(.leading, 8)
                         }
                     }
-                    
+
                     if !events.isEmpty {
                         InlineSearchField(title: "Workshop, note or vehicle...", text: $searchText)
-                            .padding(.top, 16)
+                            .padding(.top, 14)
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 48) // pt-12
-                .padding(.bottom, 32) // pb-8
+                .padding(.horizontal, AppTheme.Spacing.pageEdge)
+                .padding(.top, AppTheme.Spacing.headerTop)
+                .padding(.bottom, AppTheme.Spacing.headerBottom)
                 .background(AppTheme.heroGradient)
 
                 VehicleFilterScrollView(vehicles: vehicles)
@@ -217,17 +217,17 @@ struct TimelineView: View {
                         ) {
                             appState.selectedTab = .garage
                         }
-                        .padding(.horizontal, 24)
-                        .padding(.top, 20)
+                        .padding(.horizontal, AppTheme.Spacing.pageEdge)
+                        .padding(.top, AppTheme.Spacing.filterToContent)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 } else {
                     ScrollView(showsIndicators: false) {
-                        LazyVStack(spacing: 18) {
+                        LazyVStack(spacing: 14) {
                             timelineSummary
 
                             ForEach(groupedEvents) { group in
-                                VStack(alignment: .leading, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 10) {
                                     HStack {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(group.title)
@@ -280,8 +280,8 @@ struct TimelineView: View {
                                 }
                             }
                         }
-                        .padding(24)
-                        .padding(.bottom, 116)
+                        .padding(AppTheme.Spacing.pageEdge)
+                        .padding(.bottom, AppTheme.Spacing.bottomSafeArea)
                     }
                 }
             }
@@ -297,9 +297,9 @@ struct TimelineView: View {
     }
 
     private func timelineListRow(for event: TimelineEvent) -> some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .top, spacing: 12) {
             icon(for: event)
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(title(for: event))
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(AppTheme.primaryText)
@@ -350,8 +350,9 @@ struct TimelineView: View {
         return ZStack {
             Circle()
                 .fill(AppTheme.surfaceSecondary)
-                .frame(width: 44, height: 44)
+                .frame(width: 38, height: 38)
             Image(systemName: iconName)
+                .font(.system(size: 14))
                 .foregroundStyle(AppTheme.accentSecondary)
         }
     }
@@ -462,25 +463,6 @@ struct TimelineView: View {
             return "Showing the current vehicle"
         }
         return "Showing all vehicles in your garage"
-    }
-
-    private func timelineSummaryTile(title: String, value: String, icon: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppTheme.accent)
-                Text(title)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(AppTheme.secondaryText)
-            }
-
-            Text(value)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(AppTheme.primaryText)
-                .lineLimit(2)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func monthTitle(for date: Date) -> String {

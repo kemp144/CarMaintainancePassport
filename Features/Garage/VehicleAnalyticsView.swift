@@ -26,33 +26,33 @@ struct VehicleAnalyticsView: View {
             AppTheme.background.ignoresSafeArea()
             
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
+                VStack(spacing: 16) {
                     // Total Summary
-                    SurfaceCard(padding: 24) {
-                        VStack(alignment: .leading, spacing: 8) {
+                    SurfaceCard(tier: .primary) {
+                        VStack(alignment: .leading, spacing: 6) {
                             Text("TOTAL LIFETIME SPENT")
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(AppTheme.secondaryText)
-                            
+
                             Text(AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode))
-                                .font(.system(size: 36, weight: .bold))
+                                .font(.system(size: 30, weight: .bold))
                                 .foregroundStyle(AppTheme.primaryText)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    
+
                     // Yearly Chart
-                    SurfaceCard(padding: 24) {
-                        VStack(alignment: .leading, spacing: 16) {
+                    SurfaceCard(tier: .primary) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Text("Spending by Year")
-                                .font(.headline.weight(.bold))
+                                .font(.headline.weight(.semibold))
                                 .foregroundStyle(AppTheme.primaryText)
-                            
+
                             if spendingByYear.isEmpty {
                                 Text("No data to display")
                                     .font(.subheadline)
                                     .foregroundStyle(AppTheme.secondaryText)
-                                    .frame(height: 200)
+                                    .frame(height: 180)
                             } else {
                                 Chart {
                                     ForEach(spendingByYear, id: \.year) { item in
@@ -64,18 +64,18 @@ struct VehicleAnalyticsView: View {
                                         .cornerRadius(4)
                                     }
                                 }
-                                .frame(height: 200)
+                                .frame(height: 180)
                             }
                         }
                     }
-                    
+
                     // Category Breakdown
-                    SurfaceCard(padding: 24) {
-                        VStack(alignment: .leading, spacing: 16) {
+                    SurfaceCard(tier: .primary) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Text("Breakdown by Category")
-                                .font(.headline.weight(.bold))
+                                .font(.headline.weight(.semibold))
                                 .foregroundStyle(AppTheme.primaryText)
-                            
+
                             if spendingByCategory.isEmpty {
                                 Text("No data to display")
                                     .font(.subheadline)
@@ -93,33 +93,35 @@ struct VehicleAnalyticsView: View {
                                         .cornerRadius(4)
                                     }
                                 }
-                                .frame(height: 240)
-                                .chartLegend(position: .bottom, spacing: 16)
+                                .frame(height: 200)
+                                .chartLegend(position: .bottom, spacing: 12)
                             }
                         }
                     }
-                    
+
                     // Category List
-                    VStack(spacing: 12) {
-                        ForEach(spendingByCategory, id: \.category.id) { item in
-                            HStack {
-                                Text(item.category.title)
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(AppTheme.primaryText)
-                                Spacer()
-                                Text(AppFormatters.currency(item.amount, code: vehicle.currencyCode))
-                                    .font(.subheadline.weight(.bold))
-                                    .foregroundStyle(AppTheme.primaryText)
-                            }
-                            .padding(.vertical, 4)
-                            if item.category != spendingByCategory.last?.category {
-                                Divider().overlay(AppTheme.separator)
+                    SurfaceCard {
+                        VStack(spacing: 0) {
+                            ForEach(Array(spendingByCategory.enumerated()), id: \.element.category.id) { index, item in
+                                HStack {
+                                    Text(item.category.title)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(AppTheme.primaryText)
+                                    Spacer()
+                                    Text(AppFormatters.currency(item.amount, code: vehicle.currencyCode))
+                                        .font(.subheadline.weight(.bold))
+                                        .foregroundStyle(AppTheme.primaryText)
+                                }
+                                .padding(.vertical, 8)
+
+                                if index < spendingByCategory.count - 1 {
+                                    Divider().overlay(AppTheme.separator)
+                                }
                             }
                         }
                     }
-                    .padding(.horizontal, 8)
                 }
-                .padding(24)
+                .padding(AppTheme.Spacing.pageEdge)
                 .padding(.bottom, 40)
             }
         }
