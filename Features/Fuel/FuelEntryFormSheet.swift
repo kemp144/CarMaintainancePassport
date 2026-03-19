@@ -38,7 +38,7 @@ struct FuelEntryFormSheet: View {
             Form {
                 Section {
                     DatePicker("Date", selection: $date, displayedComponents: .date)
-                    TextField("Mileage (km)", text: $mileage)
+                    TextField("Odometer (km)", text: $mileage)
                         .keyboardType(.numberPad)
                 } header: {
                     Text("Fill-up Info").foregroundStyle(AppTheme.secondaryText)

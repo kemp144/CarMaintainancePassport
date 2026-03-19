@@ -23,10 +23,13 @@ struct DocumentsView: View {
     @State private var searchText = ""
     @State private var showingAddFilesSheet = false
     @State private var pendingDraftSeed: DocumentDraftSeed?
+    @State private var pendingReceiptDraft: ScannedReceiptDraft?
     @State private var selectedDocument: DocumentSelection?
     @State private var deleteTarget: DocumentSelection?
     @State private var pendingServiceDraft: ScannedReceiptDraft?
     @State private var pendingServiceVehicle: Vehicle?
+    @State private var deleteErrorMessage: String?
+    @State private var isDeletingDocument = false
 
     private var documentItems: [DocumentListItem] {
         let modern = documents.map(DocumentListItem.init(document:))
@@ -79,7 +82,7 @@ struct DocumentsView: View {
                     documentStat(title: "Linked", value: "\(linkedCount)", icon: "link")
                 }
 
-                Text("Store receipts, registration, insurance, and warranties with the right car.")
+                Text("Store receipts, PDFs, and service paperwork with the right car.")
                     .font(.footnote)
                     .foregroundStyle(AppTheme.secondaryText)
             }
@@ -119,7 +122,7 @@ struct DocumentsView: View {
                             EmptyStateCard(
                                 icon: "doc.on.doc.fill",
                                 title: "Keep paperwork together",
-                                message: "Add photos or PDFs to create one document for this vehicle.",
+                                message: "Scan a receipt for a service draft, or add photos and PDFs to keep paperwork together.",
                                 actionTitle: "Add Files",
                                 verticalPadding: 40
                             ) {
@@ -136,19 +139,6 @@ struct DocumentsView: View {
                         ForEach(documentItems) { item in
                             documentRow(for: item)
                                 .listRowBackground(Color.clear)
-                                .contextMenu {
-                                    Button {
-                                        selectedDocument = item.selection
-                                    } label: {
-                                        Label("Open", systemImage: "doc.viewfinder")
-                                    }
-
-                                    Button(role: .destructive) {
-                                        deleteTarget = item.selection
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
                         }
                     }
                     .listStyle(.insetGrouped)
@@ -177,9 +167,15 @@ struct DocumentsView: View {
             }
         }
         .sheet(isPresented: $showingAddFilesSheet) {
-            DocumentAddFilesSheet { seed in
-                pendingDraftSeed = seed
-            }
+            DocumentAddFilesSheet(
+                allowReceiptScan: true,
+                onDocumentSeed: { seed in
+                    pendingDraftSeed = seed
+                },
+                onReceiptScanned: { draft in
+                    pendingReceiptDraft = draft
+                }
+            )
         }
         .sheet(item: $pendingDraftSeed, onDismiss: {
             pendingDraftSeed = nil
@@ -188,11 +184,25 @@ struct DocumentsView: View {
                 CreateDocumentView(
                     preselectedVehicle: currentVehicle,
                     draftSeed: seed
-                ) { vehicle, draft in
-                    pendingServiceVehicle = vehicle
-                    pendingServiceDraft = draft
+                )
+            }
+        }
+        .sheet(item: $pendingReceiptDraft, onDismiss: {
+            pendingReceiptDraft = nil
+        }) { draft in
+            NavigationStack {
+                ReceiptReviewView(
+                    vehicle: currentVehicle,
+                    draft: draft
+                ) { updatedDraft in
+                    if let vehicle = currentVehicle {
+                        pendingServiceVehicle = vehicle
+                        pendingServiceDraft = updatedDraft
+                    }
                 }
             }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedDocument) { selection in
             DocumentDetailView(selection: selection)
@@ -212,13 +222,25 @@ struct DocumentsView: View {
             if !newValue { deleteTarget = nil }
         }), titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
-                Task { await deleteDocument() }
+                guard let target = deleteTarget else { return }
+                Task { await deleteDocument(target) }
             }
             Button("Cancel", role: .cancel) {
                 deleteTarget = nil
             }
         } message: {
-            Text("This removes the document from the vault.")
+            Text("This removes the document and its attached files. Linked service entries will stay unchanged.")
+        }
+        .alert("Couldn’t delete document", isPresented: Binding(get: {
+            deleteErrorMessage != nil
+        }, set: { newValue in
+            if !newValue { deleteErrorMessage = nil }
+        })) {
+            Button("OK", role: .cancel) {
+                deleteErrorMessage = nil
+            }
+        } message: {
+            Text(deleteErrorMessage ?? "Please try again.")
         }
     }
 
@@ -281,29 +303,18 @@ struct DocumentsView: View {
                         .padding(.vertical, 5)
                         .background(Capsule().fill(AppTheme.surfaceSecondary))
 
-                    Button {
-                        selectedDocument = item.selection
+                    Menu {
+                        Button(role: .destructive) {
+                            deleteTarget = item.selection
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
                     } label: {
-                        Text("Open")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(AppTheme.accent)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Capsule().fill(AppTheme.surfaceSecondary))
+                        Image(systemName: "ellipsis.circle")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .frame(width: 28, height: 28)
                     }
-                    .buttonStyle(.borderless)
-
-                    Button {
-                        deleteTarget = item.selection
-                    } label: {
-                        Text("Delete")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.red.opacity(0.95))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Capsule().fill(AppTheme.surfaceSecondary))
-                    }
-                    .buttonStyle(.borderless)
                 }
             }
         }
@@ -321,24 +332,27 @@ struct DocumentsView: View {
     }
 
     @MainActor
-    private func deleteDocument() async {
-        guard let deleteTarget else { return }
+    private func deleteDocument(_ target: DocumentSelection) async {
+        guard !isDeletingDocument else { return }
 
-        switch deleteTarget {
-        case .modern(let document):
-            await DocumentVaultStorageService.shared.deleteDocument(document, in: modelContext)
-        case .legacy(let attachment):
-            await AttachmentStorageService.shared.delete(reference: attachment.storageReference)
-            await AttachmentStorageService.shared.delete(reference: attachment.thumbnailReference)
-            let context = attachment.modelContext
-            context?.delete(attachment)
-            attachment.vehicle?.updatedAt = .now
-            attachment.serviceEntry?.updatedAt = .now
-            try? context?.save()
+        isDeletingDocument = true
+        defer {
+            isDeletingDocument = false
+            self.deleteTarget = nil
         }
 
-        Haptics.success()
-        self.deleteTarget = nil
+        do {
+            switch target {
+            case .modern(let document):
+                try await DocumentVaultStorageService.shared.deleteDocument(document, in: modelContext)
+            case .legacy(let attachment):
+                try await DocumentVaultStorageService.shared.deleteLegacyAttachment(attachment, in: modelContext)
+            }
+
+            Haptics.success()
+        } catch {
+            deleteErrorMessage = "Please try again."
+        }
     }
 
     private func presentAddFiles() {
@@ -389,7 +403,11 @@ private struct DocumentListItem: Identifiable {
     var title: String {
         switch source {
         case .modern(let document):
-            return document.title
+            let cleaned = document.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            if cleaned.isEmpty || ["Receipt", "New Document", "Document"].contains(cleaned) {
+                return document.serviceEntry?.displayTitle ?? document.category.title
+            }
+            return cleaned
         case .legacy(let attachment):
             return attachment.filename
         }
@@ -490,14 +508,5 @@ private struct DocumentListItem: Identifiable {
                 attachment.serviceEntry?.displayTitle ?? ""
             ].joined(separator: " ")
         }
-    }
-}
-
-struct DocumentComposerSheet: View {
-    let preselectedVehicle: Vehicle?
-    let onCreateServiceDraft: (Vehicle, ScannedReceiptDraft) -> Void
-
-    var body: some View {
-        CreateDocumentView(preselectedVehicle: preselectedVehicle, initialPages: [], onCreateServiceDraft: onCreateServiceDraft)
     }
 }

@@ -89,10 +89,7 @@ struct FuelTrackingView: View {
     }
 
     private var statsSection: some View {
-        let totalLiters = sortedEntries.reduce(0.0) { $0 + $1.liters }
-        let totalCost = sortedEntries.reduce(0.0) { $0 + $1.totalCost }
-        let avgPrice = totalLiters > 0 ? totalCost / totalLiters : 0
-        let consumption = consumptionState()
+        let summary = FuelAnalyticsService.summary(for: sortedEntries)
 
         return VStack(alignment: .leading, spacing: 16) {
             Text("Statistics")
@@ -100,15 +97,18 @@ struct FuelTrackingView: View {
                 .foregroundStyle(AppTheme.primaryText)
 
             HStack(spacing: 12) {
-                statCard(title: "Total Liters", value: String(format: "%.1f L", totalLiters))
-                statCard(title: "Total Fuel Cost", value: AppFormatters.currency(totalCost, code: vehicle.currencyCode))
+                statCard(title: "Total Liters", value: summary.totalLiters > 0 ? String(format: "%.1f L", summary.totalLiters) : "—")
+                statCard(title: "Total Fuel Cost", value: summary.totalCost > 0 ? AppFormatters.currency(summary.totalCost, code: vehicle.currencyCode) : "—")
             }
             HStack(spacing: 12) {
-                statCard(title: "Avg Price/L", value: avgPrice > 0 ? String(format: "%.3f %@/L", avgPrice, vehicle.currencyCode) : "—")
+                statCard(
+                    title: "Avg Price/L",
+                    value: summary.averagePricePerLiter.map { "\(AppFormatters.currency($0, code: vehicle.currencyCode))/L" } ?? "—"
+                )
                 statCard(
                     title: "Avg Consumption",
-                    value: consumption.value.map { String(format: "%.1f L/100km", $0) } ?? "—",
-                    note: consumption.note
+                    value: summary.consumption.value.map { String(format: "%.1f L/100 km", $0) } ?? "—",
+                    note: summary.consumption.note
                 )
             }
         }
@@ -181,20 +181,22 @@ struct FuelTrackingView: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 6) {
-                            if entry.isFullTank {
-                                Image(systemName: "fuelpump.fill")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(AppTheme.accent)
-                            } else {
-                                Image(systemName: "fuelpump")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(AppTheme.secondaryText)
-                            }
+                            Image(systemName: entry.isFullTank ? "fuelpump.fill" : "fuelpump")
+                                .font(.system(size: 13))
+                                .foregroundStyle(entry.isFullTank ? AppTheme.accent : AppTheme.secondaryText)
                             Text(AppFormatters.mediumDate.string(from: entry.date))
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(AppTheme.primaryText)
+                            if entry.isFullTank {
+                                Text("Full")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(AppTheme.primaryText)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(Capsule().fill(AppTheme.accent.opacity(0.22)))
+                            }
                         }
-                        Text(String(format: "%.2f L", entry.liters) + " • " + AppFormatters.mileage(entry.mileage))
+                        Text(String(format: "%.1f L", entry.liters) + " • " + AppFormatters.mileage(entry.odometerKm))
                             .font(.system(size: 13))
                             .foregroundStyle(AppTheme.secondaryText)
                         if !entry.station.isEmpty {
@@ -211,7 +213,7 @@ struct FuelTrackingView: View {
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(AppTheme.primaryText)
                         if entry.pricePerLiter > 0 {
-                            Text(String(format: "%.3f/L", entry.pricePerLiter))
+                            Text("\(AppFormatters.currency(entry.pricePerLiter, code: entry.currencyCode))/L")
                                 .font(.system(size: 12))
                                 .foregroundStyle(AppTheme.secondaryText)
                         }
@@ -273,32 +275,4 @@ struct FuelTrackingView: View {
         vehicle.updatedAt = .now
     }
 
-    private func consumptionState() -> (value: Double?, note: String?) {
-        let fullTanks = sortedEntries
-            .filter { $0.isFullTank && $0.mileage > 0 }
-            .sorted { $0.mileage < $1.mileage }
-
-        guard fullTanks.count >= 2 else {
-            return (nil, "Need 2 full-tank entries")
-        }
-
-        var consumptions: [Double] = []
-        var rawResults: [Double] = []
-        for i in 1..<fullTanks.count {
-            let kmDriven = fullTanks[i].mileage - fullTanks[i - 1].mileage
-            guard kmDriven > 10 else { continue }
-            let l100km = (fullTanks[i].liters / Double(kmDriven)) * 100
-            rawResults.append(l100km)
-            if l100km > 2, l100km < 40 { consumptions.append(l100km) }
-        }
-
-        guard !consumptions.isEmpty else {
-            if rawResults.isEmpty {
-                return (nil, "Need more km between fills")
-            }
-            return (nil, "Check mileage / full tank data")
-        }
-
-        return (consumptions.reduce(0, +) / Double(consumptions.count), nil)
-    }
 }

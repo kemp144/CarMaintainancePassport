@@ -25,6 +25,8 @@ struct DocumentDetailView: View {
     @State private var previewURL: URL?
     @State private var showingDeleteConfirmation = false
     @State private var isEditingPages = false
+    @State private var deleteErrorMessage: String?
+    @State private var isDeletingDocument = false
 
     var body: some View {
         NavigationStack {
@@ -60,6 +62,7 @@ struct DocumentDetailView: View {
                     } label: {
                         Image(systemName: "trash")
                     }
+                    .disabled(isDeletingDocument)
                 }
             }
             .confirmationDialog("Delete this document?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
@@ -68,7 +71,18 @@ struct DocumentDetailView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This removes the document and all of its stored files.")
+                Text("This removes the document and its attached files. Linked service entries will stay unchanged.")
+            }
+            .alert("Couldn’t delete document", isPresented: Binding(get: {
+                deleteErrorMessage != nil
+            }, set: { newValue in
+                if !newValue { deleteErrorMessage = nil }
+            })) {
+                Button("OK", role: .cancel) {
+                    deleteErrorMessage = nil
+                }
+            } message: {
+                Text(deleteErrorMessage ?? "Please try again.")
             }
             .sheet(item: Binding(
                 get: {
@@ -238,31 +252,40 @@ struct DocumentDetailView: View {
 
     @MainActor
     private func deleteDocument() async {
-        switch selection {
-        case .modern(let document):
-            await DocumentVaultStorageService.shared.deleteDocument(document, in: modelContext)
-        case .legacy(let attachment):
-            await AttachmentStorageService.shared.delete(reference: attachment.storageReference)
-            await AttachmentStorageService.shared.delete(reference: attachment.thumbnailReference)
-            modelContext.delete(attachment)
-            attachment.vehicle?.updatedAt = .now
-            attachment.serviceEntry?.updatedAt = .now
-            try? modelContext.save()
+        guard !isDeletingDocument else { return }
+        isDeletingDocument = true
+        defer {
+            isDeletingDocument = false
         }
 
-        Haptics.success()
-        dismiss()
+        do {
+            switch selection {
+            case .modern(let document):
+                try await DocumentVaultStorageService.shared.deleteDocument(document, in: modelContext)
+            case .legacy(let attachment):
+                try await DocumentVaultStorageService.shared.deleteLegacyAttachment(attachment, in: modelContext)
+            }
+
+            Haptics.success()
+            dismiss()
+        } catch {
+            deleteErrorMessage = "Please try again."
+        }
     }
 
     @MainActor
     private func deletePage(_ page: DocumentPageRecord?) async {
         guard let page else { return }
         let document = page.document
-        await DocumentVaultStorageService.shared.deletePage(page, in: modelContext)
-        if document?.pages.isEmpty ?? true {
-            dismiss()
+        do {
+            try await DocumentVaultStorageService.shared.deletePage(page, in: modelContext)
+            if document?.pages.isEmpty ?? true {
+                dismiss()
+            }
+            Haptics.success()
+        } catch {
+            deleteErrorMessage = "Please try again."
         }
-        Haptics.success()
     }
 
     private var snapshotInfo: DocumentDetailSnapshot {

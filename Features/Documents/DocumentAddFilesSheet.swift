@@ -6,12 +6,27 @@ import UIKit
 struct DocumentAddFilesSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    let onSelection: (DocumentDraftSeed) -> Void
+    let allowReceiptScan: Bool
+    let onDocumentSeed: (DocumentDraftSeed) -> Void
+    let onReceiptScanned: ((ScannedReceiptDraft) -> Void)?
 
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var showingCamera = false
     @State private var showingReceiptScanner = false
     @State private var showingPDFImporter = false
+    @State private var isScanningReceipt = false
+    @State private var showingReceiptScanError = false
+    @State private var receiptScanTask: Task<Void, Never>?
+
+    init(
+        allowReceiptScan: Bool = true,
+        onDocumentSeed: @escaping (DocumentDraftSeed) -> Void,
+        onReceiptScanned: ((ScannedReceiptDraft) -> Void)? = nil
+    ) {
+        self.allowReceiptScan = allowReceiptScan
+        self.onDocumentSeed = onDocumentSeed
+        self.onReceiptScanned = onReceiptScanned
+    }
 
     var body: some View {
         NavigationStack {
@@ -27,6 +42,12 @@ struct DocumentAddFilesSheet: View {
                     .padding(.top, 12)
                     .padding(.bottom, 28)
                 }
+
+                if isScanningReceipt {
+                    ReceiptScanLoadingOverlay()
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
             }
             .navigationTitle("Add Files")
             .navigationBarTitleDisplayMode(.inline)
@@ -38,16 +59,13 @@ struct DocumentAddFilesSheet: View {
         }
         .presentationDetents([.medium, .height(430)])
         .presentationDragIndicator(.visible)
+        .onDisappear {
+            receiptScanTask?.cancel()
+        }
         .sheet(isPresented: $showingReceiptScanner) {
             OCRImagePickerSheet { image in
                 guard let image else { return }
-                handleImageSelection(
-                    image,
-                    filenamePrefix: "Receipt",
-                    title: "Receipt",
-                    category: .receipts,
-                    compressionQuality: 0.86
-                )
+                startReceiptScan(with: image)
             }
             .ignoresSafeArea()
         }
@@ -83,7 +101,7 @@ struct DocumentAddFilesSheet: View {
                 title = "PDF Document"
             }
 
-            complete(
+            completeDocument(
                 DocumentDraftSeed(
                     pages: pages,
                     title: title,
@@ -96,7 +114,7 @@ struct DocumentAddFilesSheet: View {
                 let pages = await loadSelectedPhotos(selectedPhotoItems, prefix: "Photo")
                 selectedPhotoItems = []
                 guard !pages.isEmpty else { return }
-                complete(
+                completeDocument(
                     DocumentDraftSeed(
                         pages: pages,
                         title: "New Document",
@@ -104,6 +122,14 @@ struct DocumentAddFilesSheet: View {
                     )
                 )
             }
+        }
+        .alert("Could not scan the receipt", isPresented: $showingReceiptScanError) {
+            Button("Try Again") {
+                showingReceiptScanner = true
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The receipt image is still available. You can try the scan again or add files manually.")
         }
     }
 
@@ -126,7 +152,7 @@ struct DocumentAddFilesSheet: View {
                         Text("Add files")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundStyle(AppTheme.primaryText)
-                        Text("Add photos or PDFs to create a document for this vehicle.")
+                        Text("Add photos, PDFs, or a receipt scan for this vehicle.")
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.secondaryText)
                     }
@@ -148,23 +174,25 @@ struct DocumentAddFilesSheet: View {
                 sectionLabel("Choose a source")
 
                 VStack(spacing: 10) {
-                    Button {
-                        showingReceiptScanner = true
-                    } label: {
-                        actionRow(
-                            title: "Scan Receipt (OCR)",
-                            subtitle: "Capture a receipt and keep OCR-ready text with the document.",
-                            systemImage: "doc.viewfinder"
-                        )
+                    if allowReceiptScan {
+                        Button {
+                            showingReceiptScanner = true
+                        } label: {
+                            actionRow(
+                                title: "Scan Receipt",
+                                subtitle: "Create a service draft from a receipt.",
+                                systemImage: "doc.viewfinder"
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
 
                     Button {
                         showingPDFImporter = true
                     } label: {
                         actionRow(
                             title: "Import PDF",
-                            subtitle: "Bring in an existing PDF from Files.",
+                            subtitle: "Save a PDF document for this vehicle.",
                             systemImage: "doc.badge.plus"
                         )
                     }
@@ -173,7 +201,7 @@ struct DocumentAddFilesSheet: View {
                     PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: 20, matching: .images) {
                         actionRow(
                             title: "Add Photos",
-                            subtitle: "Select one or more photos from your library.",
+                            subtitle: "Save one or more photos as a document.",
                             systemImage: "photo.on.rectangle.angled"
                         )
                     }
@@ -184,7 +212,7 @@ struct DocumentAddFilesSheet: View {
                     } label: {
                         actionRow(
                             title: "Take Photo",
-                            subtitle: "Use the camera to capture a paper copy.",
+                            subtitle: "Capture a document photo for this vehicle.",
                             systemImage: "camera.fill"
                         )
                     }
@@ -234,9 +262,15 @@ struct DocumentAddFilesSheet: View {
     }
 
     @MainActor
-    private func complete(_ seed: DocumentDraftSeed) {
+    private func completeDocument(_ seed: DocumentDraftSeed) {
         dismiss()
-        onSelection(seed)
+        onDocumentSeed(seed)
+    }
+
+    @MainActor
+    private func completeReceipt(_ draft: ScannedReceiptDraft) {
+        dismiss()
+        onReceiptScanned?(draft)
     }
 
     @MainActor
@@ -255,13 +289,45 @@ struct DocumentAddFilesSheet: View {
             imageData: data,
             sourceURL: nil
         )
-        complete(
+        completeDocument(
             DocumentDraftSeed(
                 pages: [page],
                 title: title,
                 category: category
             )
         )
+    }
+
+    @MainActor
+    private func startReceiptScan(with image: UIImage) {
+        guard allowReceiptScan else { return }
+        guard !isScanningReceipt else { return }
+        guard let imageData = image.jpegData(compressionQuality: 0.86) else { return }
+
+        isScanningReceipt = true
+        showingReceiptScanError = false
+        receiptScanTask?.cancel()
+
+        receiptScanTask = Task { @MainActor in
+            defer {
+                isScanningReceipt = false
+                receiptScanTask = nil
+            }
+
+            do {
+                let result = try await OCRService.shared.scan(image: image)
+                guard !Task.isCancelled else { return }
+                let draft = ScannedReceiptDraft(
+                    imageData: imageData,
+                    filename: "Receipt \(AppFormatters.receiptFilename.string(from: .now))",
+                    result: result
+                )
+                completeReceipt(draft)
+            } catch {
+                guard !Task.isCancelled else { return }
+                showingReceiptScanError = true
+            }
+        }
     }
 
     @MainActor
@@ -276,5 +342,36 @@ struct DocumentAddFilesSheet: View {
         }
 
         return pages
+    }
+}
+
+private struct ReceiptScanLoadingOverlay: View {
+    var body: some View {
+        VStack {
+            Spacer()
+
+            SurfaceCard {
+                VStack(spacing: 14) {
+                    ProgressView()
+                        .tint(AppTheme.accent)
+                        .scaleEffect(1.1)
+
+                    Text("Scanning receipt...")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+
+                    Text("Finding the date, amount, workshop, and other details.")
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.secondaryText)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(AppTheme.background.opacity(0.92).ignoresSafeArea())
     }
 }

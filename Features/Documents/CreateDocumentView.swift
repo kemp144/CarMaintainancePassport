@@ -11,7 +11,6 @@ struct CreateDocumentView: View {
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
 
     let preselectedVehicle: Vehicle?
-    let onCreateServiceDraft: (Vehicle, ScannedReceiptDraft) -> Void
 
     @State private var selectedVehicleID: UUID?
     @State private var selectedServiceID: UUID?
@@ -21,21 +20,15 @@ struct CreateDocumentView: View {
     @State private var notes: String
     @State private var pages: [DocumentDraftPage]
     @State private var showingAddFilesSheet = false
-    @State private var showingReceiptChoices = false
-    @State private var showingOCRResultSheet = false
-    @State private var receiptOCRResult: OCRService.OCRResult?
-    @State private var isScanningReceipt = false
     @State private var isSaving = false
     @State private var previewPage: DocumentDraftPage?
 
     init(
         preselectedVehicle: Vehicle? = nil,
         initialPages: [DocumentDraftPage] = [],
-        draftSeed: DocumentDraftSeed? = nil,
-        onCreateServiceDraft: @escaping (Vehicle, ScannedReceiptDraft) -> Void
+        draftSeed: DocumentDraftSeed? = nil
     ) {
         self.preselectedVehicle = preselectedVehicle
-        self.onCreateServiceDraft = onCreateServiceDraft
         _selectedVehicleID = State(initialValue: preselectedVehicle?.id)
         _selectedServiceID = State(initialValue: nil)
         _title = State(initialValue: draftSeed?.title ?? "New Document")
@@ -58,10 +51,6 @@ struct CreateDocumentView: View {
                         previewPage: $previewPage
                     ) {
                         presentAddFiles()
-                    }
-
-                    if category == .receipts {
-                        receiptToolsCard
                     }
 
                     saveButton
@@ -89,31 +78,12 @@ struct CreateDocumentView: View {
             selectedServiceID = nil
         }
         .sheet(isPresented: $showingAddFilesSheet) {
-            DocumentAddFilesSheet { seed in
-                appendDraftSeed(seed)
-            }
-        }
-        .confirmationDialog("What should we do with this receipt?", isPresented: $showingReceiptChoices, titleVisibility: .visible) {
-            Button("Extract Details") {
-                Task { await runReceiptOCR(mode: .extractOnly) }
-            }
-            Button("Create Service Entry") {
-                Task { await runReceiptOCR(mode: .createDraft) }
-            }
-            Button("Save as Document Only", role: .cancel) {
-                dismiss()
-            }
-        } message: {
-            Text("Keep the receipt in the vault, or let Car Service Passport prefill a service draft from all attached files.")
-        }
-        .sheet(isPresented: $showingOCRResultSheet) {
-            if let receiptOCRResult {
-                OCRResultSheet(result: receiptOCRResult) { filtered in
-                    createReceiptDraft(from: filtered)
+            DocumentAddFilesSheet(
+                allowReceiptScan: false,
+                onDocumentSeed: { seed in
+                    appendDraftSeed(seed)
                 }
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-            }
+            )
         }
         .sheet(item: $previewPage) { page in
             DraftPagePreviewSheet(page: page)
@@ -235,19 +205,6 @@ struct CreateDocumentView: View {
         }
     }
 
-    @ViewBuilder
-    private var receiptToolsCard: some View {
-        SurfaceCard {
-            VStack(alignment: .leading, spacing: 12) {
-                sectionLabel("Receipt tools")
-
-                Text("After saving, Car Service Passport can run OCR across every attached file and let you extract details or create a draft service entry.")
-                    .font(.footnote)
-                    .foregroundStyle(AppTheme.secondaryText)
-            }
-        }
-    }
-
     private var saveButton: some View {
         Button {
             Task { await saveDocument() }
@@ -315,7 +272,7 @@ struct CreateDocumentView: View {
         defer { isSaving = false }
 
         do {
-            let document = try await DocumentVaultStorageService.shared.saveDocument(
+            _ = try await DocumentVaultStorageService.shared.saveDocument(
                 pages: pages,
                 title: title,
                 category: category,
@@ -326,66 +283,10 @@ struct CreateDocumentView: View {
                 in: modelContext
             )
             Haptics.success()
-            if category == .receipts, entitlementStore.canUseOCR() {
-                _ = document
-                showingReceiptChoices = true
-            } else {
-                dismiss()
-            }
+            dismiss()
         } catch {
             Haptics.error()
         }
-    }
-
-    private enum ReceiptOCRMode {
-        case extractOnly
-        case createDraft
-    }
-
-    @MainActor
-    private func runReceiptOCR(mode: ReceiptOCRMode) async {
-        guard entitlementStore.canUseOCR() else {
-            paywallCoordinator.present(.ocrScan)
-            return
-        }
-
-        let images = pages.compactMap { $0.previewImage }
-        guard !images.isEmpty else { return }
-
-        isScanningReceipt = true
-        defer { isScanningReceipt = false }
-
-        do {
-            let result = try await OCRService.shared.scan(images: images)
-            receiptOCRResult = result
-
-            switch mode {
-            case .extractOnly:
-                showingOCRResultSheet = true
-            case .createDraft:
-                createReceiptDraft(from: result)
-            }
-        } catch {
-            // Keep the saved document and let the user continue manually.
-            if mode == .extractOnly {
-                showingOCRResultSheet = false
-            }
-        }
-    }
-
-    @MainActor
-    private func createReceiptDraft(from result: OCRService.OCRResult) {
-        guard let vehicle = selectedVehicle, let firstPage = pages.first?.imageData else { return }
-        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let filename = trimmedTitle.isEmpty || trimmedTitle == "New Document" ? "Receipt" : trimmedTitle
-
-        let draft = ScannedReceiptDraft(
-            imageData: firstPage,
-            filename: filename,
-            result: result
-        )
-        onCreateServiceDraft(vehicle, draft)
-        dismiss()
     }
 }
 

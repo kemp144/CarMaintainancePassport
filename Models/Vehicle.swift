@@ -144,10 +144,10 @@ extension Vehicle {
     }
 
     var totalFuelCost: Double {
-        fuelEntries.reduce(0) { $0 + $1.totalCost }
+        FuelAnalyticsService.summary(for: fuelEntries).totalCost
     }
 
     var totalFuelLiters: Double {
-        fuelEntries.reduce(0) { $0 + $1.liters }
+        FuelAnalyticsService.summary(for: fuelEntries).totalLiters
     }
 }

@@ -1,7 +1,7 @@
 import PhotosUI
 import SwiftUI
 
-/// A sheet that lets the user pick an image (camera or library) for OCR scanning.
+/// A sheet that lets the user pick an image (camera or library) for receipt scanning.
 struct OCRImagePickerSheet: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -28,10 +28,10 @@ struct OCRImagePickerSheet: View {
                         .foregroundStyle(AppTheme.accent)
 
                     VStack(spacing: 8) {
-                        Text("Scan Receipt (OCR)")
+                        Text("Scan Receipt")
                             .font(.title2.bold())
                             .foregroundStyle(AppTheme.primaryText)
-                        Text("Take a photo or pick one from your library.\nWe'll extract the date, cost, mileage, and workshop name.")
+                        Text("Capture a receipt and review the details before creating a service draft or saving it as a document.")
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.secondaryText)
                             .multilineTextAlignment(.center)

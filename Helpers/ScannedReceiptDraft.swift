@@ -15,6 +15,6 @@ struct ScannedReceiptDraft: Identifiable {
     }
 
     var hasUsefulData: Bool {
-        result.date != nil || result.price != nil || result.mileage != nil || result.workshopName != nil
+        result.date != nil || result.price != nil || result.mileage != nil || result.workshopName != nil || result.vendorName != nil
     }
 }

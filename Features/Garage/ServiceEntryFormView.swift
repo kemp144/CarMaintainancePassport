@@ -58,7 +58,7 @@ struct ServiceEntryFormView: View {
         _category = State(initialValue: ocrDraft?.suggestedCategory ?? entry?.category ?? (entry?.serviceType.defaultCategory ?? (ocrDraft?.suggestedServiceType?.defaultCategory ?? .maintenance)))
         _price = State(initialValue: ocrDraft?.result.price.map { String(format: "%.0f", $0) } ?? (entry?.price == 0 ? "" : String(format: "%.0f", entry?.price ?? 0)))
         _currencyCode = State(initialValue: entry?.currencyCode ?? vehicle?.currencyCode ?? CurrencyPreset.eur.rawValue)
-        _workshopName = State(initialValue: ocrDraft?.result.workshopName ?? entry?.workshopName ?? "")
+        _workshopName = State(initialValue: ocrDraft?.result.workshopName ?? ocrDraft?.result.vendorName ?? entry?.workshopName ?? "")
         _notes = State(initialValue: entry?.notes ?? "")
         _isImportant = State(initialValue: entry?.isImportant ?? false)
         _currentReceiptDraft = State(initialValue: ocrDraft)
@@ -85,7 +85,7 @@ struct ServiceEntryFormView: View {
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(AppTheme.primaryText)
 
-                                Text(currentReceiptDraft.hasUsefulData ? "Review extracted details before saving." : "The receipt is attached. Complete the fields below manually if needed.")
+                                Text(currentReceiptDraft.hasUsefulData ? "Review the scanned details before saving." : "The receipt is attached. Complete the fields below manually if needed.")
                                     .font(.footnote)
                                     .foregroundStyle(AppTheme.secondaryText)
                             }
@@ -132,7 +132,7 @@ struct ServiceEntryFormView: View {
                 } header: {
                     Text("Smart Scan").foregroundStyle(AppTheme.secondaryText)
                 } footer: {
-                    Text("Scan a receipt to prefill the draft, then review and save it manually.")
+                    Text("Scan a receipt to prefill the draft, then confirm the details before saving.")
                         .foregroundStyle(AppTheme.tertiaryText)
                 }
                 .listRowBackground(AppTheme.surface)
@@ -303,7 +303,7 @@ struct ServiceEntryFormView: View {
             }
         }
         .confirmationDialog("Receipt scanned", isPresented: $showingOCRCancelDialog, titleVisibility: .visible) {
-            Button("Save Receipt to Documents") {
+            Button("Save Receipt Only") {
                 Task { await saveReceiptOnly() }
             }
             Button("Discard Draft", role: .destructive) {
@@ -311,9 +311,9 @@ struct ServiceEntryFormView: View {
             }
             Button("Keep Editing", role: .cancel) {}
         } message: {
-            Text("You can discard the draft, save the receipt to Documents, or keep editing the service entry.")
+            Text("You can save the receipt to Documents, discard the draft, or keep editing the service entry.")
         }
-        .alert("Could not extract details", isPresented: $showingOCRFailureDialog) {
+        .alert("Could not read the receipt", isPresented: $showingOCRFailureDialog) {
             Button("Save as Document") {
                 Task { await saveReceiptOnly() }
             }
@@ -364,7 +364,7 @@ struct ServiceEntryFormView: View {
         if let price = result.price {
             self.price = String(format: "%.0f", price)
         }
-        if let workshopName = result.workshopName, !workshopName.isEmpty {
+        if let workshopName = result.workshopName ?? result.vendorName, !workshopName.isEmpty {
             self.workshopName = workshopName
         }
         if let serviceType = result.suggestedServiceType {

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Shows OCR-extracted fields and lets the user confirm which ones to apply.
+/// Shows scanned fields and lets the user confirm which ones to use.
 struct OCRResultSheet: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -36,10 +36,10 @@ struct OCRResultSheet: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 24) {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Receipt Scan Results")
+                            Text("Review scanned details")
                                 .font(.title2.bold())
                                 .foregroundStyle(AppTheme.primaryText)
-                            Text("Select which fields to apply to the service entry.")
+                            Text("Choose which details you want to use in the service entry.")
                                 .font(.subheadline)
                                 .foregroundStyle(AppTheme.secondaryText)
                         }
@@ -119,7 +119,7 @@ struct OCRResultSheet: View {
                                 onApply(filtered)
                                 dismiss()
                             } label: {
-                                Text("Apply Selected Fields")
+                                Text("Use Selected Details")
                                     .frame(maxWidth: .infinity)
                                     .padding()
                                     .background(RoundedRectangle(cornerRadius: 14).fill(AppTheme.accent))

@@ -87,42 +87,90 @@ final class DocumentVaultStorageService {
         }
     }
 
-    func deleteDocument(_ document: DocumentRecord, in modelContext: ModelContext) async {
+    func deleteDocument(_ document: DocumentRecord, in modelContext: ModelContext) async throws {
+        let linkedServiceEntry = document.serviceEntry
+        let linkedVehicle = document.vehicle
+        let storedReferences = document.sortedPages.flatMap { page -> [String?] in
+            [page.storageReference, page.thumbnailReference]
+        }
+
+        document.serviceEntry = nil
+        linkedVehicle?.updatedAt = .now
+        linkedServiceEntry?.updatedAt = .now
+
         for page in document.sortedPages {
-            await AttachmentStorageService.shared.delete(reference: page.storageReference)
-            await AttachmentStorageService.shared.delete(reference: page.thumbnailReference)
             modelContext.delete(page)
         }
 
         modelContext.delete(document)
-        document.vehicle?.updatedAt = .now
-        document.serviceEntry?.updatedAt = .now
-        try? modelContext.save()
+
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            throw error
+        }
+
+        for reference in storedReferences {
+            await AttachmentStorageService.shared.delete(reference: reference)
+        }
     }
 
-    func deletePage(_ page: DocumentPageRecord, in modelContext: ModelContext) async {
-        guard let document = page.document else { return }
+    func deleteLegacyAttachment(_ attachment: AttachmentRecord, in modelContext: ModelContext) async throws {
+        let linkedServiceEntry = attachment.serviceEntry
+        let linkedVehicle = attachment.vehicle
+        let storedReferences = [attachment.storageReference, attachment.thumbnailReference]
 
-        await AttachmentStorageService.shared.delete(reference: page.storageReference)
-        await AttachmentStorageService.shared.delete(reference: page.thumbnailReference)
-        modelContext.delete(page)
+        attachment.serviceEntry = nil
+        linkedVehicle?.updatedAt = .now
+        linkedServiceEntry?.updatedAt = .now
+
+        modelContext.delete(attachment)
+
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            throw error
+        }
+
+        for reference in storedReferences {
+            await AttachmentStorageService.shared.delete(reference: reference)
+        }
+    }
+
+    func deletePage(_ page: DocumentPageRecord, in modelContext: ModelContext) async throws {
+        guard let document = page.document else { return }
 
         let remaining = document.sortedPages.filter { $0.id != page.id }
         if remaining.isEmpty {
-            modelContext.delete(document)
-            document.vehicle?.updatedAt = .now
-            document.serviceEntry?.updatedAt = .now
-            try? modelContext.save()
+            try await deleteDocument(document, in: modelContext)
             return
         }
+
+        let linkedVehicle = document.vehicle
+        let linkedServiceEntry = document.serviceEntry
+        let storedReferences = [page.storageReference, page.thumbnailReference]
+
+        modelContext.delete(page)
 
         for (index, remainingPage) in remaining.enumerated() {
             remainingPage.orderIndex = index
         }
 
         document.updatedAt = .now
-        document.vehicle?.updatedAt = .now
-        document.serviceEntry?.updatedAt = .now
-        try? modelContext.save()
+        linkedVehicle?.updatedAt = .now
+        linkedServiceEntry?.updatedAt = .now
+
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            throw error
+        }
+
+        for reference in storedReferences {
+            await AttachmentStorageService.shared.delete(reference: reference)
+        }
     }
 }

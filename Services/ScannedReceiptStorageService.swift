@@ -15,24 +15,22 @@ final class ScannedReceiptStorageService {
         category: DocumentVaultCategory = .receipts,
         in modelContext: ModelContext
     ) async throws {
-        let stored = try await AttachmentStorageService.shared.saveImageData(imageData, filename: filename)
-        do {
-            let attachment = AttachmentRecord(
-                vehicle: vehicle,
-                serviceEntry: serviceEntry,
-                type: .image,
-                vaultCategory: category,
-                filename: filename,
-                storageReference: stored.storageReference,
-                thumbnailReference: stored.thumbnailReference
-            )
-            modelContext.insert(attachment)
-            vehicle.updatedAt = .now
-            try modelContext.save()
-        } catch {
-            await AttachmentStorageService.shared.delete(reference: stored.storageReference)
-            await AttachmentStorageService.shared.delete(reference: stored.thumbnailReference)
-            throw error
-        }
+        let page = DocumentDraftPage(
+            type: .image,
+            filename: filename,
+            imageData: imageData,
+            sourceURL: nil
+        )
+
+        _ = try await DocumentVaultStorageService.shared.saveDocument(
+            pages: [page],
+            title: URL(fileURLWithPath: filename).deletingPathExtension().lastPathComponent.isEmpty ? category.title : URL(fileURLWithPath: filename).deletingPathExtension().lastPathComponent,
+            category: category,
+            documentDate: serviceEntry?.date ?? .now,
+            notes: "",
+            vehicle: vehicle,
+            serviceEntry: serviceEntry,
+            in: modelContext
+        )
     }
 }

@@ -185,7 +185,8 @@ struct ServiceDetailView: View {
                             }
                         }
                     }
-                    .padding(24) // px-6 py-6
+                    .padding(.top, 8)
+                    .padding(.horizontal, 24) // px-6
                     .padding(.bottom, 60)
                 }
             }

@@ -15,6 +15,8 @@ struct VehicleDetailView: View {
     @State private var showingReminderForm = false
     @State private var showingDocumentComposer = false
     @State private var showingDocuments = false
+    @State private var selectedReminder: ReminderItem?
+    @State private var selectedServiceEntry: ServiceEntry?
     @State private var pendingServiceDraft: ScannedReceiptDraft?
     @State private var showingAnalytics = false
     @State private var showingFuelTracking = false
@@ -95,62 +97,65 @@ struct VehicleDetailView: View {
 
                         // Stats
                         HStack(spacing: 12) {
-                            Button {
-                                appState.selectedVehicleID = vehicle.id
-                                appState.timelineCategory = "All"
-                                appState.selectedTab = .timeline
-                                dismiss()
-                            } label: {
-                                SurfaceCard(padding: 16) {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        HStack(spacing: 6) {
-                                            Image(systemName: "doc.text.fill")
-                                                .font(.system(size: 13))
-                                                .foregroundStyle(AppTheme.accent)
-                                            Text("Services")
-                                                .font(.system(size: 11))
-                                                .foregroundStyle(AppTheme.secondaryText)
-                                        }
-                                        Text("\(vehicle.serviceEntries.count)")
-                                            .font(.system(size: 22, weight: .bold))
-                                            .foregroundStyle(AppTheme.primaryText)
-                                    }
-                                }
+                            summaryActionCard(
+                                title: "Services",
+                                value: "\(vehicle.serviceEntries.count)",
+                                icon: "doc.text.fill",
+                                helperText: "Open history"
+                            ) {
+                                openServiceHistory()
                             }
-                            .buttonStyle(.plain)
 
-                            Button {
-                                if entitlementStore.canSeeAnalytics() {
-                                    showingAnalytics = true
-                                } else {
-                                    paywallCoordinator.present(.analytics)
-                                }
-                            } label: {
-                                SurfaceCard(padding: 16) {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        HStack(spacing: 6) {
-                                            Image(systemName: "dollarsign.circle.fill")
-                                                .font(.system(size: 13))
-                                                .foregroundStyle(AppTheme.accent)
-                                            Text("Total Cost")
-                                                .font(.system(size: 11))
-                                                .foregroundStyle(AppTheme.secondaryText)
-                                        }
-                                        Text(AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode))
-                                            .font(.system(size: 22, weight: .bold))
-                                            .foregroundStyle(AppTheme.primaryText)
-                                    }
-                                }
+                            summaryActionCard(
+                                title: "Total Cost",
+                                value: AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode),
+                                icon: "dollarsign.circle.fill",
+                                helperText: "View insights",
+                                trailingBadge: entitlementStore.canSeeAnalytics() ? nil : "Pro"
+                            ) {
+                                openAnalytics()
                             }
-                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 24)
 
                         vehicleSummarySection
                             .padding(.horizontal, 24)
 
-                        quickActions.padding(.horizontal, 24)
-                            .padding(.top, -2)
+                        quickActions
+                            .padding(.horizontal, 24)
+                            .padding(.top, 2)
+
+                        // Reminders
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("Reminders")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(AppTheme.primaryText)
+
+                            SurfaceCard {
+                                if vehicle.sortedReminders.isEmpty {
+                                    Text("No reminders yet.")
+                                        .foregroundStyle(AppTheme.secondaryText)
+                                } else {
+                                    ForEach(vehicle.sortedReminders.prefix(3)) { reminder in
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(reminder.title)
+                                                    .foregroundStyle(AppTheme.primaryText)
+                                                Text(reminder.dateDue.map(AppFormatters.mediumDate.string) ?? reminder.mileageDue.map(AppFormatters.mileage) ?? "Custom")
+                                                    .font(.caption)
+                                                    .foregroundStyle(AppTheme.secondaryText)
+                                            }
+                                            Spacer()
+                                            ReminderBadge(status: reminder.status(for: vehicle))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 24)
+
+                        // Fuel section
+                        fuelSection.padding(.horizontal, 24)
 
                         // Service History
                         VStack(alignment: .leading, spacing: 10) {
@@ -160,18 +165,11 @@ struct VehicleDetailView: View {
                                     .foregroundStyle(AppTheme.primaryText)
                                 Spacer()
                                 Button {
-                                    showingServiceForm = true
+                                    openServiceHistory()
                                 } label: {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "plus")
-                                            .font(.system(size: 11.5, weight: .semibold))
-                                        Text("Add Service")
-                                            .font(.system(size: 11.5, weight: .semibold))
-                                    }
-                                    .foregroundStyle(Color.white.opacity(0.95))
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5)
-                                    .background(RoundedRectangle(cornerRadius: 8).fill(AppTheme.accent.opacity(0.88)))
+                                    Text("See all")
+                                        .font(.system(size: 12.5, weight: .semibold))
+                                        .foregroundStyle(AppTheme.accent)
                                 }
                             }
 
@@ -194,13 +192,13 @@ struct VehicleDetailView: View {
                                             showingServiceForm = true
                                         }
                                         .buttonStyle(SecondaryButtonStyle())
-                                        .frame(maxWidth: 200) // Keep it somewhat constrained to look nice
+                                        .frame(maxWidth: 200)
                                     }
                                     .frame(maxWidth: .infinity)
                                 }
                             } else {
-                                VStack(spacing: 10) { // space-y-3
-                                    ForEach(vehicle.sortedServices.prefix(5)) { entry in
+                                VStack(spacing: 10) {
+                                    ForEach(vehicle.sortedServices.prefix(3)) { entry in
                                         NavigationLink {
                                             ServiceDetailView(entry: entry)
                                         } label: {
@@ -250,56 +248,7 @@ struct VehicleDetailView: View {
                             }
                         }
                         .padding(.horizontal, 24)
-                        .padding(.top, 1)
-                        
-                        // Reminders
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("Reminders")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(AppTheme.primaryText)
-                            
-                            SurfaceCard {
-                                if vehicle.sortedReminders.isEmpty {
-                                    Text("No reminders yet.")
-                                        .foregroundStyle(AppTheme.secondaryText)
-                                } else {
-                                    ForEach(vehicle.sortedReminders.prefix(3)) { reminder in
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(reminder.title)
-                                                    .foregroundStyle(AppTheme.primaryText)
-                                                Text(reminder.dateDue.map(AppFormatters.mediumDate.string) ?? reminder.mileageDue.map(AppFormatters.mileage) ?? "Custom")
-                                                    .font(.caption)
-                                                    .foregroundStyle(AppTheme.secondaryText)
-                                            }
-                                            Spacer()
-                                            ReminderBadge(status: reminder.status(for: vehicle))
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 24)
-
-                        // Documents
-                        if !vehicle.sortedAttachments.isEmpty {
-                            VStack(alignment: .leading, spacing: 14) {
-                                Text("Documents")
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .foregroundStyle(AppTheme.primaryText)
-                                SurfaceCard {
-                                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                                        ForEach(vehicle.sortedAttachments.prefix(4)) { attachment in
-                                            AttachmentThumbnailView(attachment: attachment)
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 24)
-                        }
-
-                        // Fuel section
-                        fuelSection.padding(.horizontal, 24)
+                        .padding(.top, 4)
 
                         Spacer().frame(height: 176)
                     }
@@ -366,6 +315,11 @@ struct VehicleDetailView: View {
                 ServiceEntryFormView(vehicle: vehicle)
             }
         }
+        .sheet(item: $selectedServiceEntry) { entry in
+            NavigationStack {
+                ServiceDetailView(entry: entry)
+            }
+        }
         .sheet(isPresented: $showingOCRServiceForm) {
             NavigationStack {
                 ServiceEntryFormView(vehicle: vehicle, autoStartOCR: true)
@@ -376,16 +330,14 @@ struct VehicleDetailView: View {
                 ReminderFormView(vehicle: vehicle)
             }
         }
-        .sheet(isPresented: $showingDocumentComposer) {
-            NavigationStack {
-                DocumentComposerSheet(preselectedVehicle: vehicle) { _, draft in
-                    pendingServiceDraft = draft
-                }
-            }
-        }
         .sheet(isPresented: $showingDocuments) {
             NavigationStack {
                 DocumentsView()
+            }
+        }
+        .sheet(item: $selectedReminder) { reminder in
+            NavigationStack {
+                ReminderFormView(vehicle: vehicle, reminder: reminder)
             }
         }
         .sheet(item: $pendingServiceDraft) { draft in
@@ -423,10 +375,11 @@ struct VehicleDetailView: View {
         }
     }
 
-    private let quickActionColumns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
+    private let quickActionColumns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 2)
+    private let summaryActionColumns = Array(repeating: GridItem(.flexible(), spacing: 10, alignment: .top), count: 3)
 
     private var quickActions: some View {
-        LazyVGrid(columns: quickActionColumns, spacing: 12) {
+        LazyVGrid(columns: quickActionColumns, spacing: 10) {
             quickActionButton(title: "Reminder", icon: "bell.fill") {
                 showingReminderForm = true
             }
@@ -437,11 +390,8 @@ struct VehicleDetailView: View {
                     paywallCoordinator.present(.fuelTracking)
                 }
             }
-            Button {
-                appState.selectedVehicleID = vehicle.id
-                showingDocuments = true
-            } label: {
-                quickActionLabel(title: "Documents", icon: "doc.fill")
+            quickActionButton(title: "Add Service", icon: "wrench.and.screwdriver.fill") {
+                showingServiceForm = true
             }
             Menu {
                 Button {
@@ -548,49 +498,78 @@ struct VehicleDetailView: View {
     }
 
     private func quickActionLabel(title: String, icon: String) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 16.5, weight: .medium))
+                .font(.system(size: 15, weight: .medium))
             Text(title)
-                .font(.system(size: 11.5, weight: .medium))
+                .font(.system(size: 11, weight: .medium))
                 .lineLimit(1)
+                .minimumScaleFactor(0.9)
         }
         .foregroundStyle(AppTheme.primaryText)
-        .frame(maxWidth: .infinity, minHeight: 72)
-        .padding(.vertical, 11)
+        .frame(maxWidth: .infinity, minHeight: 58)
+        .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(AppTheme.surfaceSecondary)
         )
     }
 
     private var vehicleSummarySection: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
-            summaryTile(title: "Next due", value: nextDueText, icon: "bell.badge.fill", highlight: nextDueIsUrgent)
-            summaryTile(title: "Last service", value: lastServiceText, icon: "wrench.and.screwdriver.fill", highlight: false)
-            summaryTile(title: "Documents", value: "\(vehicle.documentsCount) saved", icon: "doc.fill", highlight: vehicle.documentsCount > 0)
+        LazyVGrid(columns: summaryActionColumns, spacing: 10) {
+            summaryActionTile(title: "Next due", value: nextDueText, icon: "bell.badge.fill", highlight: nextDueIsUrgent) {
+                if let reminder = vehicle.nextDueReminder {
+                    selectedReminder = reminder
+                } else {
+                    showingReminderForm = true
+                }
+            }
+
+            summaryActionTile(title: "Last service", value: lastServiceText, icon: "wrench.and.screwdriver.fill", highlight: false) {
+                if let service = vehicle.latestService {
+                    selectedServiceEntry = service
+                } else {
+                    showingServiceForm = true
+                }
+            }
+
+            summaryActionTile(title: "Docs", value: documentsSummaryText, icon: "doc.fill", highlight: vehicle.documentsCount > 0) {
+                openDocuments()
+            }
         }
     }
 
-    private func summaryTile(title: String, value: String, icon: String, highlight: Bool) -> some View {
-        SurfaceCard(padding: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 6) {
-                    Image(systemName: icon)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(highlight ? AppTheme.accent : AppTheme.secondaryText)
-                    Text(title)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(AppTheme.secondaryText)
-                }
+    private func summaryActionTile(title: String, value: String, icon: String, highlight: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            SurfaceCard(padding: 10) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 5) {
+                        Image(systemName: icon)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(highlight ? AppTheme.accent : AppTheme.secondaryText)
+                        Text(title)
+                            .font(.system(size: 10.5, weight: .medium))
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.9)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9.5, weight: .semibold))
+                            .foregroundStyle(AppTheme.tertiaryText)
+                    }
 
-                Text(value)
-                    .font(.system(size: 13.5, weight: .semibold))
-                    .foregroundStyle(AppTheme.primaryText)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
+                    Text(value)
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .minimumScaleFactor(0.84)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(minHeight: 60, alignment: .topLeading)
             }
         }
+        .buttonStyle(.plain)
     }
 
     private var nextDueText: String {
@@ -633,7 +612,12 @@ struct VehicleDetailView: View {
 
     private var lastServiceText: String {
         guard let service = vehicle.latestService else { return "No service yet" }
-        return "\(service.displayTitle) • \(AppFormatters.mediumDate.string(from: service.date))"
+        return AppFormatters.mediumDate.string(from: service.date)
+    }
+
+    private var documentsSummaryText: String {
+        let count = vehicle.documentsCount
+        return count == 1 ? "1 file" : "\(count) files"
     }
 
     private func quickActionButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
@@ -641,6 +625,66 @@ struct VehicleDetailView: View {
             quickActionLabel(title: title, icon: icon)
         }
         .buttonStyle(.plain)
+    }
+
+    private func summaryActionCard(title: String, value: String, icon: String, helperText: String, trailingBadge: String? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            SurfaceCard(padding: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: icon)
+                            .font(.system(size: 13))
+                            .foregroundStyle(AppTheme.accent)
+                        Text(title)
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppTheme.secondaryText)
+                        Spacer()
+                        if let trailingBadge {
+                            Text(trailingBadge)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(AppTheme.primaryText)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Capsule().fill(AppTheme.surfaceSecondary))
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppTheme.tertiaryText)
+                    }
+
+                    Text(value)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(AppTheme.primaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+
+                    Text(helperText)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func openDocuments() {
+        appState.selectedVehicleID = vehicle.id
+        showingDocuments = true
+    }
+
+    private func openServiceHistory() {
+        appState.selectedVehicleID = vehicle.id
+        appState.timelineCategory = "All"
+        appState.selectedTab = .timeline
+        dismiss()
+    }
+
+    private func openAnalytics() {
+        if entitlementStore.canSeeAnalytics() {
+            showingAnalytics = true
+        } else {
+            paywallCoordinator.present(.analytics)
+        }
     }
 
     private func exportPDF() {

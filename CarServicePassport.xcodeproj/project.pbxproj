@@ -18,6 +18,7 @@
 		20ACC1E2F36944D788CC7DE4 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB028C99B916AD3B8C3779A4 /* PaywallView.swift */; };
 		28632F1DF7C9352CD5BE7643 /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40709A4225D83FDCC074A51F /* OCRService.swift */; };
 		2BD9C024E21E51FB25213327 /* FuelTrackingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFB3AC6465D305060C00E8A5 /* FuelTrackingView.swift */; };
+		2BEA6486C1074C6589A177AD /* ReceiptReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D5FF2089913FF609571239F /* ReceiptReviewView.swift */; };
 		32DF6AB4DA3A2EB78EDB0F6A /* DocumentPageRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 415E8D8732F5E0C9899FBBDF /* DocumentPageRecord.swift */; };
 		363BD0CA582BED1D48830C74 /* StatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A12A3136D6855ECF3346ED6 /* StatCard.swift */; };
 		38A49DCB5F5E031E33C187EB /* VehicleFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 822ADCE5D67B2E53A94BD073 /* VehicleFormView.swift */; };
@@ -32,6 +33,7 @@
 		6FDD76FCDA8356326B690933 /* ServiceEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B682A27BB9233B527B6A7B8C /* ServiceEntry.swift */; };
 		71D52CA63AB1F267CE63CA19 /* VehicleAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC52A8D7462E4CA86BFCFDD9 /* VehicleAnalyticsView.swift */; };
 		7DF4B685F784E48AD0F79CCB /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13D9378B397B9D24F8DC9ECB /* RootTabView.swift */; };
+		80744BFC80B996C89FDB30BB /* FuelAnalyticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF15D672DCE1840CB63F11DB /* FuelAnalyticsService.swift */; };
 		80A8E1EAA56028864006B35A /* ReminderFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14CCDDF87DB26D1661DF7BB4 /* ReminderFormView.swift */; };
 		83D20247C25E3F0716D4AE9B /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE98AC51A32868A70E9A810F /* NotificationService.swift */; };
 		852FB2F017A28F78283A8A68 /* AppEnums.swift in Sources */ = {isa = PBXBuildFile; fileRef = 443D76F7736EEC3A9864A759 /* AppEnums.swift */; };
@@ -96,6 +98,7 @@
 		73CC718A359B722AAC5ED9CE /* BackupExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupExportService.swift; sourceTree = "<group>"; };
 		74D0494EAD497D20D8A41A27 /* Vehicle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vehicle.swift; sourceTree = "<group>"; };
 		78EB9D5EEF6478C0399212AE /* DocumentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentsView.swift; sourceTree = "<group>"; };
+		7D5FF2089913FF609571239F /* ReceiptReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptReviewView.swift; sourceTree = "<group>"; };
 		82213E54DCF730A2BF5F8E3C /* FuelEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelEntry.swift; sourceTree = "<group>"; };
 		822ADCE5D67B2E53A94BD073 /* VehicleFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleFormView.swift; sourceTree = "<group>"; };
 		842AA785AFB813052ACEE49D /* CameraCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraCaptureView.swift; sourceTree = "<group>"; };
@@ -128,6 +131,7 @@
 		DEEF995C6BEB4EDF5B64F03F /* ScannedReceiptStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannedReceiptStorageService.swift; sourceTree = "<group>"; };
 		EAB21EA3A1F24E39AEA7F25B /* OCRImagePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRImagePickerSheet.swift; sourceTree = "<group>"; };
 		EE5D36300CB70757E9422A4F /* ServiceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceDetailView.swift; sourceTree = "<group>"; };
+		EF15D672DCE1840CB63F11DB /* FuelAnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelAnalyticsService.swift; sourceTree = "<group>"; };
 		EFB3AC6465D305060C00E8A5 /* FuelTrackingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelTrackingView.swift; sourceTree = "<group>"; };
 		F78C2D135FC29E7C298E10F0 /* SurfaceCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfaceCard.swift; sourceTree = "<group>"; };
 		F7E49ECFCDFDB8E45D1A7B38 /* DocumentAttachmentsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentAttachmentsSection.swift; sourceTree = "<group>"; };
@@ -203,6 +207,7 @@
 				73CC718A359B722AAC5ED9CE /* BackupExportService.swift */,
 				B2E8F0EF13D7F6535616BA79 /* DocumentVaultStorageService.swift */,
 				4BEFEB61C93BB7961B8758CF /* EntitlementStore.swift */,
+				EF15D672DCE1840CB63F11DB /* FuelAnalyticsService.swift */,
 				AE98AC51A32868A70E9A810F /* NotificationService.swift */,
 				40709A4225D83FDCC074A51F /* OCRService.swift */,
 				21F56EF4A8A210F7B78ECC57 /* PDFExportService.swift */,
@@ -269,6 +274,7 @@
 			children = (
 				EAB21EA3A1F24E39AEA7F25B /* OCRImagePickerSheet.swift */,
 				CEA71B870A09C4B8E0F6EC40 /* OCRResultSheet.swift */,
+				7D5FF2089913FF609571239F /* ReceiptReviewView.swift */,
 			);
 			path = OCR;
 			sourceTree = "<group>";
@@ -431,6 +437,7 @@
 				03C65148C080A7137E471A57 /* EmptyStateCard.swift in Sources */,
 				09A7DCB961DE77EFC4BB37FB /* EntitlementStore.swift in Sources */,
 				B2EDA7C783D43C9A78111A3A /* Formatters.swift in Sources */,
+				80744BFC80B996C89FDB30BB /* FuelAnalyticsService.swift in Sources */,
 				AAB535742C042B78C3CB8E9A /* FuelEntry.swift in Sources */,
 				17E26DB739CCCC8A1A93293E /* FuelEntryFormSheet.swift in Sources */,
 				2BD9C024E21E51FB25213327 /* FuelTrackingView.swift in Sources */,
@@ -445,6 +452,7 @@
 				20ACC1E2F36944D788CC7DE4 /* PaywallView.swift in Sources */,
 				CB97B4CBDA3D1788FDA91252 /* PremiumBackground.swift in Sources */,
 				D452F71FDCC0A4A353F12498 /* PreviewURL.swift in Sources */,
+				2BEA6486C1074C6589A177AD /* ReceiptReviewView.swift in Sources */,
 				80A8E1EAA56028864006B35A /* ReminderFormView.swift in Sources */,
 				5CD10C73B922434F4F1773EF /* ReminderItem.swift in Sources */,
 				5AD538E9E717F5C143F5BAA7 /* RemindersView.swift in Sources */,

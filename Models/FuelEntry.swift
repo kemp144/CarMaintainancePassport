@@ -44,3 +44,10 @@ final class FuelEntry {
         self.createdAt = createdAt
     }
 }
+
+extension FuelEntry {
+    var odometerKm: Int {
+        get { mileage }
+        set { mileage = newValue }
+    }
+}
