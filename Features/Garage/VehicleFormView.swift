@@ -52,21 +52,40 @@ struct VehicleFormView: View {
 
             Form {
                 Section {
-                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                        HStack(spacing: 16) {
+                    HStack(spacing: 16) {
+                        ZStack(alignment: .topTrailing) {
                             coverView
 
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Vehicle cover")
-                                    .font(.headline)
-                                Text("A clean hero image for the garage card and export cover.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(AppTheme.secondaryText)
+                            if hasCoverImage {
+                                Button {
+                                    removeCover()
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 20))
+                                        .symbolRenderingMode(.palette)
+                                        .foregroundStyle(.white, Color.black.opacity(0.6))
+                                }
+                                .offset(x: 6, y: -6)
                             }
                         }
-                        .padding(.vertical, 8)
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Vehicle cover")
+                                .font(.headline)
+                                .foregroundStyle(AppTheme.primaryText)
+                            Text("A clean hero image for the garage card and export cover.")
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondaryText)
+
+                            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                                Text(hasCoverImage ? "Change photo" : "Choose photo")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(AppTheme.accent)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .buttonStyle(.plain)
+                    .padding(.vertical, 8)
                 }
                 .listRowBackground(AppTheme.surface)
 
@@ -171,6 +190,16 @@ struct VehicleFormView: View {
         }
     }
 
+    private var hasCoverImage: Bool {
+        coverPreview != nil
+    }
+
+    private func removeCover() {
+        coverPreview = nil
+        selectedPhotoItem = nil
+        coverReference = nil
+    }
+
     private var coverView: some View {
         RoundedRectangle(cornerRadius: 22, style: .continuous)
             .fill(AppTheme.surfaceSecondary)
@@ -207,7 +236,11 @@ struct VehicleFormView: View {
                 vehicle.currencyCode = currencyCode
                 vehicle.vin = vin.trimmingCharacters(in: .whitespacesAndNewlines)
                 vehicle.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-                vehicle.coverImageReference = imageReference ?? vehicle.coverImageReference
+                if let imageReference {
+                    vehicle.coverImageReference = imageReference
+                } else if coverReference == nil {
+                    vehicle.coverImageReference = nil
+                }
                 vehicle.updatedAt = .now
             } else {
                 let newVehicle = Vehicle(

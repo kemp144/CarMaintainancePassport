@@ -70,55 +70,51 @@ struct PaywallView: View {
     }
 
     private var heroSection: some View {
-        PremiumBackdrop()
-            .frame(height: 200)
-            .overlay(alignment: .topLeading) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "crown.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(AppTheme.accentSecondary)
-                            .frame(width: 30, height: 30)
-                            .background(
-                                Circle()
-                                    .fill(Color.white.opacity(0.06))
-                            )
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(AppTheme.accentSecondary)
+                    .frame(width: 30, height: 30)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(0.06))
+                    )
 
-                        Text("Pro Upgrade")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.white.opacity(0.8))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(Color.white.opacity(0.06))
-                            )
+                Text("Pro Upgrade")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.white.opacity(0.8))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.white.opacity(0.06))
+                    )
 
-                        Spacer()
-                    }
-
-                    Spacer(minLength: 0)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Unlock Pro")
-                            .font(.system(size: 30, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                            .lineLimit(2)
-
-                        Text("Keep every car organized with smarter reminders, detailed fuel tracking, documents, and export tools.")
-                            .font(.body)
-                            .foregroundStyle(Color.white.opacity(0.82))
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Text("No ads. Choose monthly, yearly, or lifetime when it fits.")
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(AppTheme.secondaryText)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(24)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                Spacer()
             }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Unlock Pro")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+
+                Text("Keep every car organized with smarter reminders, detailed fuel tracking, documents, and export tools.")
+                    .font(.body)
+                    .foregroundStyle(Color.white.opacity(0.82))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("No ads. Choose monthly, yearly, or lifetime when it fits.")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PremiumBackdrop())
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.card, style: .continuous))
     }
 
     private var pricingSection: some View {
@@ -398,7 +394,8 @@ struct PaywallView: View {
                         Text(plan.subtitle)
                             .font(.caption)
                             .foregroundStyle(AppTheme.secondaryText)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
 
                         if isYearly {
                             Text(plan.savingsText)
@@ -408,8 +405,6 @@ struct PaywallView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-
-                Spacer(minLength: 10)
 
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(planPriceText(for: plan))
@@ -421,10 +416,8 @@ struct PaywallView: View {
                     Text(plan.billingNote)
                         .font(.caption)
                         .foregroundStyle(AppTheme.tertiaryText)
-                        .multilineTextAlignment(.trailing)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
                 }
-                .frame(width: 104, alignment: .trailing)
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 18, weight: .semibold))

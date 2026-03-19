@@ -2,6 +2,11 @@ import SwiftData
 import SwiftUI
 
 struct SettingsView: View {
+    private let settingsRowHorizontalPadding: CGFloat = 14
+    private let settingsRowVerticalPadding: CGFloat = 11
+    private let settingsRowSpacing: CGFloat = 12
+    private let settingsInfoIconWidth: CGFloat = 12
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var entitlementStore: EntitlementStore
@@ -28,6 +33,8 @@ struct SettingsView: View {
     @State private var importError: String?
     @State private var showingImportResult = false
     @State private var isImporting = false
+    @State private var showingResetConfirmation = false
+    @State private var showingResetFinalConfirmation = false
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -45,6 +52,7 @@ struct SettingsView: View {
                         importSection
                         notificationsSection
                         privacySection
+                        dangerZoneSection
                         supportSection
                         #if DEBUG
                         developerSection
@@ -95,6 +103,22 @@ struct SettingsView: View {
                 Text("Imported \(r.vehiclesImported) vehicle(s), \(r.servicesImported) service(s), \(r.remindersImported) reminder(s), and \(r.documentsImported) document(s).")
             }
         }
+        .confirmationDialog("Reset all data?", isPresented: $showingResetConfirmation, titleVisibility: .visible) {
+            Button("Continue", role: .destructive) {
+                showingResetFinalConfirmation = true
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will permanently delete all vehicles, service entries, fuel logs, reminders, and documents. This cannot be undone.")
+        }
+        .alert("Are you sure?", isPresented: $showingResetFinalConfirmation) {
+            Button("Delete Everything", role: .destructive) {
+                resetAllData()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("All app data will be permanently erased. Consider exporting a backup first.")
+        }
     }
 
     private var headerSection: some View {
@@ -123,8 +147,8 @@ struct SettingsView: View {
         settingsGroupCard(title: "General", subtitle: "Core app preferences") {
             VStack(spacing: 0) {
                 settingsMenuRow(
-                    title: "Default currency",
-                    subtitle: "Used for totals, backups, and exports.",
+                    title: "Currency",
+                    subtitle: "Used for totals and exports.",
                     value: defaultCurrency
                 ) {
                     Picker("Default currency", selection: $defaultCurrency) {
@@ -137,7 +161,7 @@ struct SettingsView: View {
                 settingsDivider()
 
                 settingsToggleRow(
-                    title: "Show only current vehicle",
+                    title: "Current vehicle only",
                     subtitle: "Hides other vehicles in shared views.",
                     isOn: $appState.showOnlyCurrentVehicle
                 )
@@ -150,7 +174,7 @@ struct SettingsView: View {
             VStack(spacing: 0) {
                 settingsToggleRow(
                     title: "Use automatic defaults",
-                    subtitle: "Detects the likely regional unit profile.",
+                    subtitle: "Detects regional unit defaults.",
                     isOn: $useSystemDefaultUnits
                 )
 
@@ -412,6 +436,73 @@ struct SettingsView: View {
         }
     }
 
+    private var dangerZoneSection: some View {
+        SurfaceCard(padding: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Danger Zone")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(Color.red)
+
+                    Text("Irreversible actions")
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+
+                Button {
+                    showingResetConfirmation = true
+                } label: {
+                    HStack(alignment: .top, spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.red.opacity(0.15))
+
+                            Image(systemName: "trash.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.red)
+                        }
+                        .frame(width: 28, height: 28)
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Reset all data")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.red)
+
+                            Text("Delete all vehicles, entries, and documents.")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+
+                        Spacer(minLength: 12)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func resetAllData() {
+        do {
+            for vehicle in vehicles {
+                for attachment in vehicle.attachments {
+                    Task {
+                        await AttachmentStorageService.shared.delete(reference: attachment.storageReference)
+                        await AttachmentStorageService.shared.delete(reference: attachment.thumbnailReference)
+                    }
+                }
+                modelContext.delete(vehicle)
+            }
+            try modelContext.save()
+            Haptics.success()
+        } catch {
+            Haptics.error()
+        }
+    }
+
     private func settingsGroupCard<Content: View>(
         title: String,
         subtitle: String? = nil,
@@ -441,7 +532,7 @@ struct SettingsView: View {
     private func settingsDivider() -> some View {
         Divider()
             .overlay(AppTheme.separator)
-            .padding(.leading, 14)
+            .padding(.leading, settingsRowHorizontalPadding)
     }
 
     private func settingsToggleRow(
@@ -449,27 +540,13 @@ struct SettingsView: View {
         subtitle: String? = nil,
         isOn: Binding<Bool>
     ) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(AppTheme.primaryText)
-
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.secondaryText)
-                }
-            }
-
-            Spacer(minLength: 12)
-
+        settingsAlignedRow {
+            settingsRowLabel(title: title, subtitle: subtitle)
+        } trailing: {
             Toggle("", isOn: isOn)
                 .labelsHidden()
                 .tint(AppTheme.accent)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
     }
 
     private func settingsMenuRow<Content: View>(
@@ -478,29 +555,15 @@ struct SettingsView: View {
         value: String,
         @ViewBuilder menu: () -> Content
     ) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(AppTheme.primaryText)
-
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.secondaryText)
-                }
-            }
-
-            Spacer(minLength: 12)
-
+        settingsAlignedRow {
+            settingsRowLabel(title: title, subtitle: subtitle)
+        } trailing: {
             Menu {
                 menu()
             } label: {
                 settingsValuePill(value)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
     }
 
     private func settingsActionRow(
@@ -551,33 +614,32 @@ struct SettingsView: View {
         value: String,
         accent: Color = AppTheme.primaryText
     ) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text(title)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(AppTheme.secondaryText)
-
-            Spacer(minLength: 12)
-
+        settingsAlignedRow {
+            settingsRowLabel(title: title, titleColor: AppTheme.secondaryText)
+        } trailing: {
             Text(value)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
                 .multilineTextAlignment(.trailing)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
     }
 
     private func settingsCompactNote(_ message: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "info.circle.fill")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(AppTheme.secondaryText)
+                .font(.system(size: 11))
+                .foregroundStyle(AppTheme.tertiaryText)
+                .frame(width: settingsInfoIconWidth, alignment: .center)
+                .padding(.top, 1)
 
             Text(message)
                 .font(.caption)
-                .foregroundStyle(AppTheme.secondaryText)
+                .foregroundStyle(AppTheme.tertiaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, settingsRowHorizontalPadding)
         .padding(.vertical, 10)
     }
 
@@ -626,6 +688,39 @@ struct SettingsView: View {
                         .strokeBorder(AppTheme.separator, lineWidth: 1)
                 }
         )
+    }
+
+    private func settingsAlignedRow<Leading: View, Trailing: View>(
+        @ViewBuilder leading: () -> Leading,
+        @ViewBuilder trailing: () -> Trailing
+    ) -> some View {
+        HStack(alignment: .top, spacing: settingsRowSpacing) {
+            leading()
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            trailing()
+                .fixedSize(horizontal: true, vertical: false)
+        }
+        .padding(.horizontal, settingsRowHorizontalPadding)
+        .padding(.vertical, settingsRowVerticalPadding)
+    }
+
+    private func settingsRowLabel(
+        title: String,
+        subtitle: String? = nil,
+        titleColor: Color = AppTheme.primaryText
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(titleColor)
+
+            if let subtitle {
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+        }
     }
 
     private var distanceUnitBinding: Binding<DistanceUnit> {

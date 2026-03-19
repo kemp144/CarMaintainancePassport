@@ -161,19 +161,44 @@ struct ServiceEntryFormView: View {
 
                     DatePicker("Date", selection: $date, displayedComponents: .date)
 
-                    TextField("Mileage (\(UnitSettings.currentDistanceUnit.shortTitle))", text: $mileage)
-                        .keyboardType(.numberPad)
+                    HStack {
+                        Text("Odometer")
+                            .foregroundStyle(AppTheme.primaryText)
+                        Spacer()
+                        HStack(spacing: 4) {
+                            TextField("0", text: $mileage)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(minWidth: 60)
+                            Text(UnitSettings.currentDistanceUnit.shortTitle)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+                    }
                 } header: {
                     Text("Service").foregroundStyle(AppTheme.secondaryText)
                 }
                 .listRowBackground(AppTheme.surface)
 
                 Section {
-                    TextField("Cost", text: $price)
-                        .keyboardType(.decimalPad)
-
-                    TextField("Currency", text: $currencyCode)
-                        .textInputAutocapitalization(.characters)
+                    HStack {
+                        Text("Cost")
+                            .foregroundStyle(AppTheme.primaryText)
+                        Spacer()
+                        HStack(spacing: 4) {
+                            TextField("0", text: $price)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(minWidth: 60)
+                            Picker("", selection: $currencyCode) {
+                                ForEach(CurrencyPreset.allCases) { preset in
+                                    Text(preset.rawValue).tag(preset.rawValue)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            .tint(AppTheme.secondaryText)
+                        }
+                    }
                 } header: {
                     Text("Cost").foregroundStyle(AppTheme.secondaryText)
                 }

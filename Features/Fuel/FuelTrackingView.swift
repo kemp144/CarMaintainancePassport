@@ -434,7 +434,15 @@ struct FuelTrackingView: View {
                         }
                     }
                     .chartYAxis {
-                        AxisMarks(position: .leading)
+                        AxisMarks(position: .leading) { value in
+                            AxisGridLine()
+                            AxisValueLabel()
+                                .foregroundStyle(AppTheme.tertiaryText)
+                        }
+                    }
+                    .chartPlotStyle { plotArea in
+                        plotArea
+                            .padding(.leading, 8)
                     }
                 }
             }

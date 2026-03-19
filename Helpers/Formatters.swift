@@ -123,7 +123,7 @@ struct UnitProfile: Equatable {
     var consumptionUnit: ConsumptionUnit
 
     var summary: String {
-        "\(distanceUnit.title), \(fuelVolumeUnit.title), \(consumptionUnit.title)"
+        "\(distanceUnit.title) · \(fuelVolumeUnit.title) · \(consumptionUnit.title)"
     }
 
     static let metric = UnitProfile(distanceUnit: .kilometers, fuelVolumeUnit: .liters, consumptionUnit: .litersPer100Kilometers)
