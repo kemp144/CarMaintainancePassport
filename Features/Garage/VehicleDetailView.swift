@@ -461,26 +461,73 @@ struct VehicleDetailView: View {
                             }
                         }
                     } else {
+                        let fuelAnalysis = FuelAnalyticsService.analysis(for: vehicle.fuelEntries)
+
                         SurfaceCard(padding: 16) {
-                            VStack(spacing: 12) {
-                                HStack {
-                                    statPill(title: "Total Liters", value: String(format: "%.1f L", vehicle.totalFuelLiters))
+                            VStack(alignment: .leading, spacing: 14) {
+                                HStack(alignment: .top) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Ownership Fuel Snapshot")
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundStyle(AppTheme.primaryText)
+                                        Text("Compact overview")
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.tertiaryText)
+                                    }
                                     Spacer()
-                                    statPill(title: "Fuel Cost", value: AppFormatters.currency(vehicle.totalFuelCost, code: vehicle.currencyCode))
+                                    Image(systemName: "fuelpump.fill")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(AppTheme.accent)
+                                        .padding(8)
+                                        .background(Circle().fill(AppTheme.surfaceSecondary))
                                 }
+
+                                HStack {
+                                    statPill(title: "Total Liters", value: "\(AppFormatters.decimal(fuelAnalysis.insights.totalLiters)) L")
+                                    Spacer()
+                                    statPill(title: "Fuel Cost", value: AppFormatters.currency(fuelAnalysis.insights.totalCost, code: vehicle.currencyCode))
+                                }
+
                                 Divider().background(AppTheme.separator)
-                                if let latest = vehicle.sortedFuelEntries.first {
+
+                                if let latest = fuelAnalysis.insights.lastFillUp {
                                     HStack {
-                                        Image(systemName: "fuelpump.fill")
-                                            .foregroundStyle(AppTheme.accent)
-                                            .font(.system(size: 14))
-                                        Text("Last fill-up: \(AppFormatters.mediumDate.string(from: latest.date))")
-                                            .font(.system(size: 14))
-                                            .foregroundStyle(AppTheme.secondaryText)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Last fill-up")
+                                                .font(.caption)
+                                                .foregroundStyle(AppTheme.tertiaryText)
+                                            Text(AppFormatters.mediumDate.string(from: latest.date))
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundStyle(AppTheme.primaryText)
+                                        }
                                         Spacer()
-                                        Text(String(format: "%.2f L", latest.liters))
+                                        Text(latest.liters.map { "\(AppFormatters.decimal($0)) L" } ?? "—")
                                             .font(.system(size: 14, weight: .semibold))
                                             .foregroundStyle(AppTheme.primaryText)
+                                    }
+                                }
+
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Last valid tank")
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.tertiaryText)
+                                        Text(
+                                            fuelAnalysis.insights.lastValidConsumption.value
+                                                .map { "\(AppFormatters.decimal($0)) L/100 km" }
+                                            ?? "Not enough data yet"
+                                        )
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(AppTheme.primaryText)
+                                    }
+
+                                    Spacer()
+
+                                    if let note = fuelAnalysis.insights.lastValidConsumption.note {
+                                        Text(note)
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.secondaryText)
+                                            .multilineTextAlignment(.trailing)
                                     }
                                 }
                             }

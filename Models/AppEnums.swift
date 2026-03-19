@@ -246,6 +246,109 @@ enum ReminderStatus: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+enum FuelEntryType: String, Codable, CaseIterable, Identifiable {
+    case initialTank
+    case fullFillUp
+    case partialFillUp
+    case missedFillUp
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .initialTank: return "Initial Tank"
+        case .fullFillUp: return "Full Fill-up"
+        case .partialFillUp: return "Partial Fill-up"
+        case .missedFillUp: return "Missed Fill-up"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .initialTank: return "Initial"
+        case .fullFillUp: return "Full"
+        case .partialFillUp: return "Partial"
+        case .missedFillUp: return "Missed"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .initialTank: return "flag.fill"
+        case .fullFillUp: return "fuelpump.fill"
+        case .partialFillUp: return "fuelpump"
+        case .missedFillUp: return "exclamationmark.triangle.fill"
+        }
+    }
+
+    var defaultIsFullTank: Bool {
+        switch self {
+        case .initialTank, .fullFillUp:
+            return true
+        case .partialFillUp, .missedFillUp:
+            return false
+        }
+    }
+
+    var requiresFuelAmounts: Bool {
+        switch self {
+        case .fullFillUp, .partialFillUp:
+            return true
+        case .initialTank, .missedFillUp:
+            return false
+        }
+    }
+
+    var helperText: String {
+        switch self {
+        case .initialTank:
+            return "Creates the starting point for accurate tracking."
+        case .fullFillUp:
+            return "Use when the tank is filled completely."
+        case .partialFillUp:
+            return "Adds fuel without closing a full-to-full cycle yet."
+        case .missedFillUp:
+            return "Marks the sequence as incomplete until the next full fill-up."
+        }
+    }
+}
+
+enum FuelLogPeriod: String, CaseIterable, Identifiable {
+    case currentTank
+    case days30
+    case days90
+    case months12
+    case allTime
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .currentTank: return "Current Tank"
+        case .days30: return "30 Days"
+        case .days90: return "90 Days"
+        case .months12: return "12 Months"
+        case .allTime: return "All Time"
+        }
+    }
+}
+
+enum FuelChartMetric: String, CaseIterable, Identifiable {
+    case spend
+    case consumption
+    case price
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .spend: return "Spend"
+        case .consumption: return "Consumption"
+        case .price: return "Price"
+        }
+    }
+}
+
 enum CurrencyPreset: String, CaseIterable, Identifiable {
     case eur = "EUR"
     case usd = "USD"

@@ -17,7 +17,8 @@ enum PreviewData {
             AttachmentRecord.self,
             DocumentRecord.self,
             DocumentPageRecord.self,
-            ReminderItem.self
+            ReminderItem.self,
+            FuelEntry.self
         ])
 
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
@@ -84,6 +85,20 @@ enum PreviewData {
         let attachment2 = AttachmentRecord(vehicle: bmw, serviceEntry: tires, type: .image, filename: "Tire Condition.jpg", storageReference: "preview-tires.jpg", thumbnailReference: "preview-tires-thumb.jpg")
         let attachment3 = AttachmentRecord(vehicle: mini, type: .pdf, filename: "Insurance Contract.pdf", storageReference: "preview-insurance.pdf")
         [attachment1, attachment2, attachment3].forEach(context.insert)
+
+        let fuelEntries = [
+            FuelEntry(vehicle: audi, date: Calendar.current.date(byAdding: .day, value: -40, to: .now)!, mileage: 84_000, liters: 0, totalCost: 0, currencyCode: "EUR", entryType: .initialTank, fuelTypeName: "Diesel", station: "Aral"),
+            FuelEntry(vehicle: audi, date: Calendar.current.date(byAdding: .day, value: -28, to: .now)!, mileage: 84_510, liters: 24.6, totalCost: 44.70, currencyCode: "EUR", entryType: .partialFillUp, fuelTypeName: "Diesel", station: "Shell"),
+            FuelEntry(vehicle: audi, date: Calendar.current.date(byAdding: .day, value: -15, to: .now)!, mileage: 85_180, liters: 38.4, totalCost: 68.35, currencyCode: "EUR", entryType: .fullFillUp, fuelTypeName: "Diesel", station: "Aral"),
+            FuelEntry(vehicle: audi, date: Calendar.current.date(byAdding: .day, value: -4, to: .now)!, mileage: 85_690, liters: 31.9, totalCost: 58.10, currencyCode: "EUR", entryType: .fullFillUp, fuelTypeName: "Diesel", station: "Aral"),
+            FuelEntry(vehicle: bmw, date: Calendar.current.date(byAdding: .day, value: -34, to: .now)!, mileage: 140_300, liters: 0, totalCost: 0, currencyCode: "EUR", entryType: .initialTank, fuelTypeName: "Diesel", station: "OMV"),
+            FuelEntry(vehicle: bmw, date: Calendar.current.date(byAdding: .day, value: -22, to: .now)!, mileage: 140_960, liters: 42.5, totalCost: 76.90, currencyCode: "EUR", entryType: .fullFillUp, fuelTypeName: "Diesel", station: "OMV"),
+            FuelEntry(vehicle: bmw, date: Calendar.current.date(byAdding: .day, value: -11, to: .now)!, mileage: 141_540, liters: 39.2, totalCost: 71.85, currencyCode: "EUR", entryType: .fullFillUp, fuelTypeName: "Diesel", station: "Shell"),
+            FuelEntry(vehicle: mini, date: Calendar.current.date(byAdding: .day, value: -30, to: .now)!, mileage: 30_250, liters: 0, totalCost: 0, currencyCode: "EUR", entryType: .initialTank, fuelTypeName: "Premium 95", station: "NIS"),
+            FuelEntry(vehicle: mini, date: Calendar.current.date(byAdding: .day, value: -19, to: .now)!, mileage: 30_620, liters: 18.7, totalCost: 33.45, currencyCode: "EUR", entryType: .partialFillUp, fuelTypeName: "Premium 95", station: "NIS"),
+            FuelEntry(vehicle: mini, date: Calendar.current.date(byAdding: .day, value: -9, to: .now)!, mileage: 31_040, liters: 21.4, totalCost: 39.20, currencyCode: "EUR", entryType: .fullFillUp, fuelTypeName: "Premium 95", station: "MOL")
+        ]
+        fuelEntries.forEach(context.insert)
 
         try? context.save()
     }
@@ -191,6 +206,53 @@ enum PreviewData {
             (.battery, 1, 91_600, 310, "Battery Shop", "Nova AGM baterija.", false, .repair, nil)
         ])
 
+        createFuelEntries(for: audi, in: context, entries: [
+            (.initialTank, 130, 118_420, 0, 0, "Diesel", "OMV", "Početak praćenja potrošnje posle kupovine."),
+            (.partialFillUp, 116, 119_060, 21.4, 36.10, "Diesel", "Shell", ""),
+            (.fullFillUp, 101, 119_880, 43.8, 74.05, "Diesel", "OMV", ""),
+            (.fullFillUp, 84, 120_710, 47.1, 81.60, "Diesel", "OMV", ""),
+            (.partialFillUp, 66, 121_330, 18.3, 32.55, "Diesel", "MOL", "Dopuna pred put."),
+            (.fullFillUp, 51, 122_120, 39.4, 70.15, "Diesel", "Shell", ""),
+            (.missedFillUp, 34, 123_020, 0, 0, "Diesel", "", "Jedno sipanje nije uneto."),
+            (.fullFillUp, 22, 123_690, 44.8, 79.05, "Diesel", "OMV", "Početak novog validnog niza."),
+            (.fullFillUp, 9, 124_560, 46.3, 82.25, "Diesel", "OMV", "")
+        ])
+
+        createFuelEntries(for: golf, in: context, entries: [
+            (.initialTank, 118, 61_100, 0, 0, "95", "NIS Petrol", ""),
+            (.fullFillUp, 99, 61_720, 35.9, 59.95, "95", "NIS Petrol", ""),
+            (.fullFillUp, 82, 62_310, 34.4, 58.10, "95", "MOL", ""),
+            (.partialFillUp, 63, 62_710, 16.8, 29.65, "95", "Shell", ""),
+            (.fullFillUp, 47, 63_280, 27.5, 48.90, "95", "MOL", ""),
+            (.fullFillUp, 28, 63_940, 36.1, 63.55, "95", "OMV", ""),
+            (.partialFillUp, 14, 64_330, 14.9, 27.10, "95", "OMV", "Kratka dopuna."),
+            (.fullFillUp, 5, 64_910, 24.6, 45.20, "95", "NIS Petrol", "")
+        ])
+
+        createFuelEntries(for: peugeot, in: context, entries: [
+            (.initialTank, 142, 146_800, 0, 0, "Diesel", "Lukoil", ""),
+            (.fullFillUp, 126, 147_620, 48.7, 82.30, "Diesel", "Lukoil", ""),
+            (.missedFillUp, 110, 148_540, 0, 0, "Diesel", "", "Vlasnik je zaboravio jedno sipanje."),
+            (.fullFillUp, 94, 149_180, 41.6, 73.05, "Diesel", "MOL", "Ovaj unos ne sme dati potrošnju."),
+            (.partialFillUp, 75, 149_620, 19.2, 34.10, "Diesel", "MOL", ""),
+            (.fullFillUp, 57, 150_320, 33.8, 60.55, "Diesel", "OMV", "Novi validan ciklus."),
+            (.fullFillUp, 38, 151_110, 45.1, 80.90, "Diesel", "Shell", ""),
+            (.partialFillUp, 18, 151_540, 20.3, 37.35, "Diesel", "Lukoil", ""),
+            (.fullFillUp, 6, 152_240, 31.7, 58.90, "Diesel", "OMV", "")
+        ])
+
+        createFuelEntries(for: rangeRover, in: context, entries: [
+            (.initialTank, 126, 84_100, 0, 0, "Premium Diesel", "Shell", ""),
+            (.partialFillUp, 111, 84_520, 22.8, 42.30, "Premium Diesel", "Shell", "Dopuna u gradu."),
+            (.fullFillUp, 95, 85_150, 46.4, 88.60, "Premium Diesel", "OMV MaxxMotion", ""),
+            (.fullFillUp, 78, 85_760, 49.9, 96.80, "Premium Diesel", "OMV MaxxMotion", ""),
+            (.partialFillUp, 58, 86_210, 24.1, 47.90, "Premium Diesel", "Shell V-Power", ""),
+            (.fullFillUp, 40, 86_930, 37.8, 76.15, "Premium Diesel", "Shell V-Power", ""),
+            (.fullFillUp, 23, 87_540, 50.6, 101.40, "Premium Diesel", "OMV MaxxMotion", ""),
+            (.partialFillUp, 10, 87_980, 18.5, 37.20, "Premium Diesel", "MOL", ""),
+            (.fullFillUp, 3, 88_520, 29.4, 59.35, "Premium Diesel", "Shell V-Power", "")
+        ])
+
         createReminder(for: audi, in: context, type: .oilChange, title: "Audi mali servis", notes: "Planiraj zamenu ulja pre letnjeg puta.", monthsAhead: 4, mileageDue: 132_000, timing: .thirtyDaysBefore)
         createReminder(for: golf, in: context, type: .registration, title: "Golf registracija", notes: "Pripremi polisu i tehnički.", monthsAhead: 11, mileageDue: nil, timing: .thirtyDaysBefore)
         createReminder(for: peugeot, in: context, type: .inspection, title: "Peugeot kontrola ogibljenja", notes: "Proveriti trap i balans posle zime.", monthsAhead: 2, mileageDue: 158_000, timing: .sevenDaysBefore)
@@ -248,6 +310,33 @@ enum PreviewData {
             isEnabled: true
         )
         context.insert(reminder)
+    }
+
+    private static func createFuelEntries(
+        for vehicle: Vehicle,
+        in context: ModelContext,
+        entries: [(type: FuelEntryType, daysAgo: Int, mileage: Int, liters: Double, totalCost: Double, fuelType: String, station: String, notes: String)]
+    ) {
+        for entry in entries {
+            let liters = entry.type.requiresFuelAmounts ? entry.liters : 0
+            let totalCost = entry.type.requiresFuelAmounts ? entry.totalCost : 0
+            let pricePerLiter = liters > 0 ? totalCost / liters : 0
+
+            let item = FuelEntry(
+                vehicle: vehicle,
+                date: Calendar.current.date(byAdding: .day, value: -entry.daysAgo, to: .now) ?? .now,
+                mileage: entry.mileage,
+                liters: liters,
+                pricePerLiter: pricePerLiter,
+                totalCost: totalCost,
+                currencyCode: vehicle.currencyCode,
+                entryType: entry.type,
+                fuelTypeName: entry.fuelType,
+                station: entry.station,
+                notes: entry.notes
+            )
+            context.insert(item)
+        }
     }
 
     private static func date(monthsAgo: Int) -> Date {
