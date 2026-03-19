@@ -9,6 +9,10 @@ struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
 
     @AppStorage("settings.defaultCurrency") private var defaultCurrency = CurrencyPreset.eur.rawValue
+    @AppStorage(UnitSettings.useSystemDefaultKey) private var useSystemDefaultUnits = true
+    @AppStorage(UnitSettings.distanceUnitKey) private var distanceUnitRaw = UnitSettings.suggestedProfile().distanceUnit.rawValue
+    @AppStorage(UnitSettings.fuelVolumeUnitKey) private var fuelVolumeUnitRaw = UnitSettings.suggestedProfile().fuelVolumeUnit.rawValue
+    @AppStorage(UnitSettings.consumptionUnitKey) private var consumptionUnitRaw = UnitSettings.suggestedProfile().consumptionUnit.rawValue
 
     @Query private var vehicles: [Vehicle]
     @Query private var services: [ServiceEntry]
@@ -29,193 +33,32 @@ struct SettingsView: View {
         ZStack(alignment: .top) {
             AppTheme.background.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                // Custom Header
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Settings")
-                                .font(.system(size: 30, weight: .bold)) // text-3xl
-                                .foregroundStyle(AppTheme.primaryText)
-                            
-                            Text("Preferences and app info")
-                                .font(.system(size: 16)) // text-base
-                                .foregroundStyle(AppTheme.secondaryText)
-                        }
-                        Spacer()
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 48) // pt-12
-                .padding(.bottom, 32) // pb-8
-                .background(AppTheme.heroGradient)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 14) {
+                    headerSection
 
-                List {
-                    Section {
-                        Picker("Default currency", selection: $defaultCurrency) {
-                            ForEach(CurrencyPreset.allCases) { preset in
-                                Text(preset.rawValue).tag(preset.rawValue)
-                            }
-                        }
-                        .foregroundStyle(AppTheme.primaryText)
-                        Toggle("Show only global selected vehicle", isOn: $appState.showOnlyCurrentVehicle)
-                            .foregroundStyle(AppTheme.primaryText)
-                    } header: {
-                        Text("Preferences")
-                            .foregroundStyle(AppTheme.secondaryText)
-                    }
-                    .listRowBackground(AppTheme.surface)
-
-                    Section {
-                        VStack(alignment: .leading, spacing: 12) {
-                            if entitlementStore.hasProAccess {
-                                Label("Pro unlocked", systemImage: "checkmark.seal.fill")
-                                    .foregroundStyle(AppTheme.success)
-                            } else {
-                                Text("Pro adds unlimited vehicles, smarter mileage reminders, OCR scanning, and resale-ready exports.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(AppTheme.secondaryText)
-
-                                Button("Upgrade to Pro") {
-                                    paywallCoordinator.present(.settings)
-                                }
-                                .foregroundStyle(AppTheme.accent)
-
-                                Button("Restore Purchases") {
-                                    Task {
-                                        await entitlementStore.restorePurchases()
-                                    }
-                                }
-                                .foregroundStyle(AppTheme.accent)
-                            }
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                settingsProRow(title: "Unlimited vehicles", icon: "car.2.fill")
-                                settingsProRow(title: "Mileage reminders", icon: "speedometer")
-                                settingsProRow(title: "OCR and advanced export", icon: "doc.viewfinder")
-                            }
-                        }
-
+                    VStack(spacing: 14) {
+                        generalSection
+                        unitsSection
+                        proSection
+                        backupSection
+                        importSection
+                        notificationsSection
+                        privacySection
+                        supportSection
                         #if DEBUG
-                        Toggle("Debug Pro Override", isOn: Binding(get: {
-                            entitlementStore.debugProOverride
-                        }, set: { value in
-                            entitlementStore.setDebugOverride(value)
-                        }))
-                        .foregroundStyle(AppTheme.primaryText)
-                        
-                        Button("Generate Demo Garage") {
-                            PreviewData.generateDemoGarage(in: modelContext)
-                            Haptics.success()
-                        }
-                        .foregroundStyle(AppTheme.accent)
+                        developerSection
                         #endif
-                    } header: {
-                        Text("Pro")
-                            .foregroundStyle(AppTheme.secondaryText)
+                        aboutSection
                     }
-                    .listRowBackground(AppTheme.surface)
-
-                    Section {
-                        Button("Export JSON Backup") {
-                            exportBackup()
-                        }
-                        .foregroundStyle(AppTheme.accent)
-
-                        Button("Save Backup to Files") {
-                            saveBackupToDocuments()
-                        }
-                        .foregroundStyle(AppTheme.accent)
-
-                        Toggle("Auto Backup on Background", isOn: $autoBackupEnabled)
-                            .foregroundStyle(AppTheme.primaryText)
-
-                        Text("Backups are saved locally in Files. Enable auto backup to save your library when the app moves to the background.")
-                            .font(.footnote)
-                            .foregroundStyle(AppTheme.secondaryText)
-                    } header: {
-                        Text("Backup")
-                            .foregroundStyle(AppTheme.secondaryText)
-                    }
-                    .listRowBackground(AppTheme.surface)
-
-                    Section {
-                        if isImporting {
-                            HStack(spacing: 10) {
-                                ProgressView()
-                                Text("Importing…")
-                                    .foregroundStyle(AppTheme.secondaryText)
-                            }
-                        } else {
-                            Button("Import from JSON Backup") {
-                                if entitlementStore.canImportData() {
-                                    showingImportPicker = true
-                                } else {
-                                    paywallCoordinator.present(.importData)
-                                }
-                            }
-                            .foregroundStyle(AppTheme.accent)
-                        }
-                        Text("Import a previously exported backup. Existing records with the same ID are skipped to avoid duplicates.")
-                            .font(.footnote)
-                            .foregroundStyle(AppTheme.secondaryText)
-                    } header: {
-                        Text("Import")
-                            .foregroundStyle(AppTheme.secondaryText)
-                    }
-                    .listRowBackground(AppTheme.surface)
-
-                    Section {
-                        Button("Open Notification Settings") {
-                            if let url = URL(string: UIApplication.openSettingsURLString) {
-                                openURL(url)
-                            }
-                        }
-                        .foregroundStyle(AppTheme.accent)
-                        Text("Permission is requested only when you enable reminders that need notifications.")
-                            .font(.footnote)
-                            .foregroundStyle(AppTheme.secondaryText)
-                    } header: {
-                        Text("Notifications")
-                            .foregroundStyle(AppTheme.secondaryText)
-                    }
-                    .listRowBackground(AppTheme.surface)
-
-                    Section {
-                        Text("Car Service Passport is local-first. No account, no ads, and no backend dependency are required.")
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.primaryText)
-                    } header: {
-                        Text("Privacy")
-                            .foregroundStyle(AppTheme.secondaryText)
-                    }
-                    .listRowBackground(AppTheme.surface)
-
-                    Section {
-                        Text("Feedback and support options can be added here before release.")
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.secondaryText)
-                    } header: {
-                        Text("Support")
-                            .foregroundStyle(AppTheme.secondaryText)
-                    }
-                    .listRowBackground(AppTheme.surface)
-
-                    Section {
-                        LabeledContent("Version", value: appVersion)
-                            .foregroundStyle(AppTheme.primaryText)
-                        LabeledContent("Vehicles", value: "\(vehicles.count)")
-                            .foregroundStyle(AppTheme.primaryText)
-                        LabeledContent("Entries", value: "\(services.count)")
-                            .foregroundStyle(AppTheme.primaryText)
-                    } header: {
-                        Text("About")
-                            .foregroundStyle(AppTheme.secondaryText)
-                    }
-                    .listRowBackground(AppTheme.surface)
                 }
-                .scrollContentBackground(.hidden)
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 24)
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 88)
         }
         .navigationBarHidden(true)
         .sheet(item: Binding(get: {
@@ -249,6 +92,568 @@ struct SettingsView: View {
                 Text("Imported \(r.vehiclesImported) vehicle(s), \(r.servicesImported) service(s), \(r.remindersImported) reminder(s), and \(r.documentsImported) document(s).")
             }
         }
+    }
+
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Settings")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(AppTheme.primaryText)
+
+                    Text("Preferences, data, and app info")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+
+                Spacer()
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 40)
+        .padding(.bottom, 18)
+        .background(AppTheme.heroGradient)
+    }
+
+    private var generalSection: some View {
+        settingsGroupCard(title: "General", subtitle: "Core app preferences") {
+            VStack(spacing: 0) {
+                settingsMenuRow(
+                    title: "Default currency",
+                    subtitle: "Used for totals, backups, and exports.",
+                    value: defaultCurrency
+                ) {
+                    Picker("Default currency", selection: $defaultCurrency) {
+                        ForEach(CurrencyPreset.allCases) { preset in
+                            Text(preset.rawValue).tag(preset.rawValue)
+                        }
+                    }
+                }
+
+                settingsDivider()
+
+                settingsToggleRow(
+                    title: "Show only current vehicle",
+                    subtitle: "Hides other vehicles in shared views.",
+                    isOn: $appState.showOnlyCurrentVehicle
+                )
+            }
+        }
+    }
+
+    private var unitsSection: some View {
+        settingsGroupCard(title: "Units", subtitle: "Automatic defaults keep this simple") {
+            VStack(spacing: 0) {
+                settingsToggleRow(
+                    title: "Use automatic defaults",
+                    subtitle: "Detects the likely regional unit profile.",
+                    isOn: $useSystemDefaultUnits
+                )
+
+                settingsDivider()
+
+                settingsInfoRow(
+                    title: "Detected profile",
+                    value: UnitSettings.suggestedProfile().summary,
+                    accent: AppTheme.secondaryText
+                )
+
+                if useSystemDefaultUnits {
+                    settingsCompactNote("Manual unit selectors are hidden while automatic defaults is on.")
+                } else {
+                    settingsDivider()
+
+                    settingsMenuRow(
+                        title: "Distance unit",
+                        subtitle: nil,
+                        value: UnitSettings.currentDistanceUnit.title
+                    ) {
+                        Picker("Distance unit", selection: distanceUnitBinding) {
+                            ForEach(DistanceUnit.allCases) { unit in
+                                Text(unit.title).tag(unit)
+                            }
+                        }
+                    }
+
+                    settingsDivider()
+
+                    settingsMenuRow(
+                        title: "Fuel volume unit",
+                        subtitle: nil,
+                        value: UnitSettings.currentFuelVolumeUnit.title
+                    ) {
+                        Picker("Fuel volume unit", selection: fuelVolumeUnitBinding) {
+                            ForEach(FuelVolumeUnit.allCases) { unit in
+                                Text(unit.title).tag(unit)
+                            }
+                        }
+                    }
+
+                    settingsDivider()
+
+                    settingsMenuRow(
+                        title: "Consumption unit",
+                        subtitle: nil,
+                        value: UnitSettings.currentConsumptionUnit.title
+                    ) {
+                        Picker("Consumption unit", selection: consumptionUnitBinding) {
+                            ForEach(ConsumptionUnit.allCases) { unit in
+                                Text(unit.title).tag(unit)
+                            }
+                        }
+                    }
+                }
+
+                settingsCompactNote("Units affect fuel tracking, reminders, service intervals, and analytics.")
+            }
+        }
+    }
+
+    private var proSection: some View {
+        SurfaceCard(padding: 14) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(AppTheme.accent.opacity(0.15))
+
+                        Image(systemName: entitlementStore.hasProAccess ? "checkmark.seal.fill" : "sparkles")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(entitlementStore.hasProAccess ? AppTheme.success : AppTheme.accent)
+                    }
+                    .frame(width: 36, height: 36)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 8) {
+                            Text("Pro")
+                                .font(.headline.weight(.semibold))
+                                .foregroundStyle(AppTheme.primaryText)
+
+                            if entitlementStore.hasProAccess {
+                                Text("Unlocked")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(AppTheme.success)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Capsule(style: .continuous).fill(AppTheme.success.opacity(0.14)))
+                            } else {
+                                Text("Premium")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(AppTheme.accent)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
+                            }
+                        }
+
+                        Text(entitlementStore.hasProAccess ? "All premium features are active on this device." : "Unlock unlimited vehicles, OCR, advanced export, and smarter reminders.")
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+
+                if entitlementStore.hasProAccess {
+                    settingsCompactNote("Premium features are ready to use whenever you need them.")
+                } else {
+                    HStack(spacing: 10) {
+                        Button {
+                            paywallCoordinator.present(.settings)
+                        } label: {
+                            Text("Upgrade to Pro")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+
+                        Button {
+                            Task {
+                                await entitlementStore.restorePurchases()
+                            }
+                        } label: {
+                            Text("Restore")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(SecondaryButtonStyle())
+                    }
+                }
+            }
+        }
+    }
+
+    private var backupSection: some View {
+        settingsGroupCard(title: "Backup", subtitle: "Keep a local copy of your data") {
+            VStack(spacing: 0) {
+                settingsActionRow(
+                    title: "Export JSON backup",
+                    subtitle: "Create a portable backup file.",
+                    icon: "square.and.arrow.up"
+                ) {
+                    exportBackup()
+                }
+
+                settingsDivider()
+
+                settingsActionRow(
+                    title: "Save backup to Files",
+                    subtitle: "Store a copy in the Files app.",
+                    icon: "folder.badge.plus"
+                ) {
+                    saveBackupToDocuments()
+                }
+
+                settingsDivider()
+
+                settingsToggleRow(
+                    title: "Auto backup on background",
+                    subtitle: "Saves your library when the app moves to the background.",
+                    isOn: $autoBackupEnabled
+                )
+            }
+        }
+    }
+
+    private var importSection: some View {
+        settingsGroupCard(title: "Import", subtitle: "Restore from a previous backup") {
+            VStack(spacing: 0) {
+                if isImporting {
+                    settingsProgressRow(title: "Importing backup", subtitle: "Please wait while data is restored.")
+                } else {
+                    settingsActionRow(
+                        title: "Import from JSON backup",
+                        subtitle: "Existing records with matching IDs are skipped.",
+                        icon: "square.and.arrow.down"
+                    ) {
+                        if entitlementStore.canImportData() {
+                            showingImportPicker = true
+                        } else {
+                            paywallCoordinator.present(.importData)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var notificationsSection: some View {
+        settingsGroupCard(title: "Notifications", subtitle: "Reminder permissions") {
+            VStack(spacing: 0) {
+                settingsActionRow(
+                    title: "Open notification settings",
+                    subtitle: "Enable permissions for reminders that need alerts.",
+                    icon: "bell.badge"
+                ) {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        openURL(url)
+                    }
+                }
+            }
+        }
+    }
+
+    private var privacySection: some View {
+        settingsGroupCard(title: "Privacy", subtitle: "Local-first by design") {
+            VStack(spacing: 0) {
+                settingsInfoRow(title: "Account", value: "Not required")
+                settingsDivider()
+                settingsInfoRow(title: "Storage", value: "On device")
+                settingsDivider()
+                settingsInfoRow(title: "Ads", value: "None")
+            }
+        }
+    }
+
+    private var supportSection: some View {
+        settingsGroupCard(title: "Support", subtitle: "Help and feedback") {
+            VStack(spacing: 0) {
+                settingsInfoRow(title: "Status", value: "Coming soon")
+            }
+        }
+    }
+
+    #if DEBUG
+    private var developerSection: some View {
+        settingsGroupCard(title: "Developer", subtitle: "Debug tools for local builds") {
+            VStack(spacing: 0) {
+                settingsToggleRow(
+                    title: "Debug Pro Override",
+                    subtitle: "Force premium access during development.",
+                    isOn: Binding(get: {
+                        entitlementStore.debugProOverride
+                    }, set: { value in
+                        entitlementStore.setDebugOverride(value)
+                    })
+                )
+
+                settingsDivider()
+
+                settingsActionRow(
+                    title: "Generate demo garage",
+                    subtitle: "Rebuild the sample dataset locally.",
+                    icon: "wand.and.stars"
+                ) {
+                    PreviewData.generateDemoGarage(in: modelContext)
+                    Haptics.success()
+                }
+            }
+        }
+    }
+    #endif
+
+    private var aboutSection: some View {
+        settingsGroupCard(title: "About", subtitle: "Build and library stats") {
+            VStack(spacing: 0) {
+                settingsInfoRow(title: "Version", value: appVersion)
+                settingsDivider()
+                settingsInfoRow(title: "Vehicles", value: "\(vehicles.count)")
+                settingsDivider()
+                settingsInfoRow(title: "Entries", value: "\(services.count)")
+            }
+        }
+    }
+
+    private func settingsGroupCard<Content: View>(
+        title: String,
+        subtitle: String? = nil,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        SurfaceCard(padding: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+
+                content()
+            }
+        }
+    }
+
+    private func settingsDivider() -> some View {
+        Divider()
+            .overlay(AppTheme.separator)
+            .padding(.leading, 14)
+    }
+
+    private func settingsToggleRow(
+        title: String,
+        subtitle: String? = nil,
+        isOn: Binding<Bool>
+    ) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(AppTheme.primaryText)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+            }
+
+            Spacer(minLength: 12)
+
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+                .tint(AppTheme.accent)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+    }
+
+    private func settingsMenuRow<Content: View>(
+        title: String,
+        subtitle: String?,
+        value: String,
+        @ViewBuilder menu: () -> Content
+    ) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(AppTheme.primaryText)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+            }
+
+            Spacer(minLength: 12)
+
+            Menu {
+                menu()
+            } label: {
+                settingsValuePill(value)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+    }
+
+    private func settingsActionRow(
+        title: String,
+        subtitle: String? = nil,
+        icon: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(AppTheme.surfaceSecondary)
+
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppTheme.accent)
+                }
+                .frame(width: 28, height: 28)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(AppTheme.primaryText)
+
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                }
+
+                Spacer(minLength: 12)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(AppTheme.tertiaryText)
+                    .padding(.top, 2)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func settingsInfoRow(
+        title: String,
+        value: String,
+        accent: Color = AppTheme.primaryText
+    ) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(AppTheme.secondaryText)
+
+            Spacer(minLength: 12)
+
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(accent)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+    }
+
+    private func settingsCompactNote(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "info.circle.fill")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(AppTheme.secondaryText)
+
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(AppTheme.secondaryText)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    private func settingsProgressRow(title: String, subtitle: String? = nil) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            ProgressView()
+                .tint(AppTheme.accent)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(AppTheme.primaryText)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+            }
+
+            Spacer(minLength: 12)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+    }
+
+    private func settingsValuePill(_ value: String) -> some View {
+        HStack(spacing: 6) {
+            Text(value)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(AppTheme.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(AppTheme.tertiaryText)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            Capsule(style: .continuous)
+                .fill(AppTheme.surfaceSecondary)
+                .overlay {
+                    Capsule(style: .continuous)
+                        .strokeBorder(AppTheme.separator, lineWidth: 1)
+                }
+        )
+    }
+
+    private var distanceUnitBinding: Binding<DistanceUnit> {
+        Binding(
+            get: {
+                DistanceUnit(rawValue: distanceUnitRaw) ?? UnitSettings.suggestedProfile().distanceUnit
+            },
+            set: { distanceUnitRaw = $0.rawValue }
+        )
+    }
+
+    private var fuelVolumeUnitBinding: Binding<FuelVolumeUnit> {
+        Binding(
+            get: {
+                FuelVolumeUnit(rawValue: fuelVolumeUnitRaw) ?? UnitSettings.suggestedProfile().fuelVolumeUnit
+            },
+            set: { fuelVolumeUnitRaw = $0.rawValue }
+        )
+    }
+
+    private var consumptionUnitBinding: Binding<ConsumptionUnit> {
+        Binding(
+            get: {
+                ConsumptionUnit(rawValue: consumptionUnitRaw) ?? UnitSettings.suggestedProfile().consumptionUnit
+            },
+            set: { consumptionUnitRaw = $0.rawValue }
+        )
     }
 
     private var appVersion: String {
@@ -291,17 +696,6 @@ struct SettingsView: View {
             }
             isImporting = false
             showingImportResult = true
-        }
-    }
-
-    private func settingsProRow(title: String, icon: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(AppTheme.accent)
-            Text(title)
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(AppTheme.primaryText)
         }
     }
 }

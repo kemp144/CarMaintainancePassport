@@ -331,6 +331,16 @@ enum FuelLogPeriod: String, CaseIterable, Identifiable {
         case .allTime: return "All Time"
         }
     }
+
+    var shortTitle: String {
+        switch self {
+        case .currentTank: return "Tank"
+        case .days30: return "30D"
+        case .days90: return "90D"
+        case .months12: return "12M"
+        case .allTime: return "All"
+        }
+    }
 }
 
 enum FuelChartMetric: String, CaseIterable, Identifiable {

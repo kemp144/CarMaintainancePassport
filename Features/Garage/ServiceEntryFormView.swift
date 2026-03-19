@@ -52,7 +52,7 @@ struct ServiceEntryFormView: View {
         self.initialVehicle = vehicle ?? entry?.vehicle
         _selectedVehicleID = State(initialValue: (vehicle ?? entry?.vehicle)?.id)
         _date = State(initialValue: ocrDraft?.result.date ?? entry?.date ?? .now)
-        _mileage = State(initialValue: ocrDraft?.result.mileage.map(String.init) ?? entry.map { String($0.mileage) } ?? vehicle.map { String($0.currentMileage) } ?? "")
+        _mileage = State(initialValue: ocrDraft?.result.mileage.map { UnitFormatter.distanceValue(Double($0)) } ?? entry.map { UnitFormatter.distanceValue(Double($0.mileage)) } ?? vehicle.map { UnitFormatter.distanceValue(Double($0.currentMileage)) } ?? "")
         _serviceType = State(initialValue: ocrDraft?.suggestedServiceType ?? entry?.serviceType ?? .oilChange)
         _customServiceTypeName = State(initialValue: entry?.customServiceTypeName ?? "")
         _category = State(initialValue: ocrDraft?.suggestedCategory ?? entry?.category ?? (entry?.serviceType.defaultCategory ?? (ocrDraft?.suggestedServiceType?.defaultCategory ?? .maintenance)))
@@ -158,7 +158,7 @@ struct ServiceEntryFormView: View {
 
                     DatePicker("Date", selection: $date, displayedComponents: .date)
                     
-                    TextField("Mileage (km)", text: $mileage)
+                    TextField("Mileage (\(UnitSettings.currentDistanceUnit.shortTitle))", text: $mileage)
                         .keyboardType(.numberPad)
 
                 } header: {
@@ -257,7 +257,7 @@ struct ServiceEntryFormView: View {
                 Button(isSaving ? "Saving..." : "Save") {
                     Task { await saveEntry() }
                 }
-                .disabled(isSaving || selectedVehicle == nil || Int(mileage) == nil)
+                .disabled(isSaving || selectedVehicle == nil || UnitFormatter.parseDistance(mileage) == nil)
             }
         }
         .sheet(isPresented: $showingCamera) {
@@ -328,7 +328,7 @@ struct ServiceEntryFormView: View {
             Button("12 months") {
                 createSuggestedReminder(months: 12, kilometers: nil)
             }
-            Button("10,000 km") {
+            Button(UnitFormatter.distance(10_000)) {
                 createSuggestedReminder(months: nil, kilometers: 10_000)
             }
             Button("Custom") {
@@ -405,7 +405,7 @@ struct ServiceEntryFormView: View {
     }
 
     private func saveEntry() async {
-        guard let vehicle = selectedVehicle, let mileageValue = Int(mileage) else { return }
+        guard let vehicle = selectedVehicle, let mileageValue = UnitFormatter.parseDistance(mileage) else { return }
 
         isSaving = true
         defer { isSaving = false }

@@ -88,7 +88,7 @@ struct GarageView: View {
                 }
                 .padding(.horizontal, 24) // px-6
                 .padding(.top, 48) // pt-12
-                .padding(.bottom, 32) // pb-8
+                .padding(.bottom, 20) // tighter rhythm before the list
                 .background(AppTheme.heroGradient)
 
                 // Content
@@ -123,7 +123,9 @@ struct GarageView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding(24)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 12)
+                        .padding(.bottom, 24)
                         .padding(.bottom, 100) // Space for FAB and TabBar
                     }
                 }

@@ -227,7 +227,7 @@ struct VehicleDetailView: View {
                                                     HStack(spacing: 6) {
                                                         Image(systemName: "gauge.with.dots.needle.33percent")
                                                             .font(.system(size: 12))
-                                                        Text("\(entry.mileage) km")
+                                                        Text(AppFormatters.mileage(entry.mileage))
                                                             .font(.system(size: 13.5, weight: .medium))
                                                     }
                                                     .foregroundStyle(AppTheme.secondaryText)
@@ -376,8 +376,6 @@ struct VehicleDetailView: View {
     }
 
     private let quickActionColumns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 2)
-    private let summaryActionColumns = Array(repeating: GridItem(.flexible(), spacing: 10, alignment: .top), count: 3)
-
     private var quickActions: some View {
         LazyVGrid(columns: quickActionColumns, spacing: 10) {
             quickActionButton(title: "Reminder", icon: "bell.fill") {
@@ -483,7 +481,7 @@ struct VehicleDetailView: View {
                                 }
 
                                 HStack {
-                                    statPill(title: "Total Liters", value: "\(AppFormatters.decimal(fuelAnalysis.insights.totalLiters)) L")
+                                    statPill(title: "Total Fuel", value: AppFormatters.fuelVolume(fuelAnalysis.insights.totalLiters))
                                     Spacer()
                                     statPill(title: "Fuel Cost", value: AppFormatters.currency(fuelAnalysis.insights.totalCost, code: vehicle.currencyCode))
                                 }
@@ -501,7 +499,7 @@ struct VehicleDetailView: View {
                                                 .foregroundStyle(AppTheme.primaryText)
                                         }
                                         Spacer()
-                                        Text(latest.liters.map { "\(AppFormatters.decimal($0)) L" } ?? "—")
+                                        Text(latest.liters.map { AppFormatters.fuelVolume($0) } ?? "—")
                                             .font(.system(size: 14, weight: .semibold))
                                             .foregroundStyle(AppTheme.primaryText)
                                     }
@@ -514,7 +512,7 @@ struct VehicleDetailView: View {
                                             .foregroundStyle(AppTheme.tertiaryText)
                                         Text(
                                             fuelAnalysis.insights.lastValidConsumption.value
-                                                .map { "\(AppFormatters.decimal($0)) L/100 km" }
+                                                .map { AppFormatters.consumption($0) }
                                             ?? "Not enough data yet"
                                         )
                                         .font(.system(size: 14, weight: .semibold))
@@ -608,97 +606,152 @@ struct VehicleDetailView: View {
     }
 
     private var vehicleSummarySection: some View {
-        LazyVGrid(columns: summaryActionColumns, spacing: 10) {
-            summaryActionTile(title: "Next due", value: nextDueText, icon: "bell.badge.fill", highlight: nextDueIsUrgent) {
-                if let reminder = vehicle.nextDueReminder {
-                    selectedReminder = reminder
-                } else {
-                    showingReminderForm = true
+        HStack(alignment: .top, spacing: 10) {
+            nextDueSummaryCard
+
+            VStack(spacing: 8) {
+                summaryActionTile(title: "Last service", value: lastServiceText, icon: "wrench.and.screwdriver.fill", highlight: false, compact: true) {
+                    if let service = vehicle.latestService {
+                        selectedServiceEntry = service
+                    } else {
+                        showingServiceForm = true
+                    }
+                }
+
+                summaryActionTile(title: "Docs", value: documentsSummaryText, icon: "doc.fill", highlight: vehicle.documentsCount > 0, compact: true) {
+                    openDocuments()
                 }
             }
-
-            summaryActionTile(title: "Last service", value: lastServiceText, icon: "wrench.and.screwdriver.fill", highlight: false) {
-                if let service = vehicle.latestService {
-                    selectedServiceEntry = service
-                } else {
-                    showingServiceForm = true
-                }
-            }
-
-            summaryActionTile(title: "Docs", value: documentsSummaryText, icon: "doc.fill", highlight: vehicle.documentsCount > 0) {
-                openDocuments()
-            }
+            .frame(maxWidth: 118)
         }
     }
 
-    private func summaryActionTile(title: String, value: String, icon: String, highlight: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            SurfaceCard(padding: 10) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 5) {
-                        Image(systemName: icon)
+    private var nextDueSummaryCard: some View {
+        Button {
+            if let reminder = nextDueReminder {
+                selectedReminder = reminder
+            } else {
+                showingReminderForm = true
+            }
+        } label: {
+            SurfaceCard(padding: 12) {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "bell.badge.fill")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(highlight ? AppTheme.accent : AppTheme.secondaryText)
-                        Text(title)
+                            .foregroundStyle(nextDueIsUrgent ? AppTheme.accent : AppTheme.secondaryText)
+
+                        Text("Next due")
                             .font(.system(size: 10.5, weight: .medium))
                             .foregroundStyle(AppTheme.secondaryText)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.9)
-                        Spacer()
+
+                        Spacer(minLength: 0)
+
+                        if let reminder = nextDueReminder {
+                            let status = reminder.status(for: vehicle)
+                            if status != .upcoming {
+                                ReminderBadge(status: status)
+                            }
+                        }
+
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 9.5, weight: .semibold))
+                            .font(.system(size: 8.5, weight: .semibold))
                             .foregroundStyle(AppTheme.tertiaryText)
                     }
 
-                    Text(value)
-                        .font(.system(size: 12.5, weight: .semibold))
+                    Text(nextDueMainText)
+                        .font(.system(size: 14.5, weight: .semibold))
                         .foregroundStyle(AppTheme.primaryText)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .minimumScaleFactor(0.84)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
+
+                    if let nextDueSupportText {
+                        Text(nextDueSupportText)
+                            .font(.system(size: 11.5, weight: .medium))
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.85)
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(minHeight: 60, alignment: .topLeading)
+                .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading)
             }
         }
         .buttonStyle(.plain)
     }
 
-    private var nextDueText: String {
-        guard let reminder = vehicle.nextDueReminder else { return "No active reminders" }
+    private func summaryActionTile(title: String, value: String, icon: String, highlight: Bool, compact: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            SurfaceCard(padding: compact ? 6 : 10) {
+                VStack(alignment: .leading, spacing: compact ? 4 : 6) {
+                    HStack(spacing: 4) {
+                        Image(systemName: icon)
+                            .font(.system(size: compact ? 10 : 11, weight: .semibold))
+                            .foregroundStyle(highlight ? AppTheme.accent : AppTheme.secondaryText)
+                        Text(title)
+                            .font(.system(size: compact ? 10 : 10.5, weight: .medium))
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.9)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: compact ? 8.5 : 9.5, weight: .semibold))
+                            .foregroundStyle(AppTheme.tertiaryText)
+                    }
+
+                    Text(value)
+                        .font(.system(size: compact ? 12 : 12.5, weight: .semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .minimumScaleFactor(0.82)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(minHeight: compact ? 38 : 60, alignment: .topLeading)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var nextDueReminder: ReminderItem? {
+        vehicle.nextDueReminder
+    }
+
+    private var nextDueMainText: String {
+        guard let reminder = nextDueReminder else { return "No active reminders" }
 
         switch reminder.status(for: vehicle) {
-        case .overdue:
-            if let dateDue = reminder.dateDue {
-                return "Overdue • \(AppFormatters.mediumDate.string(from: dateDue))"
-            }
-            if let mileageDue = reminder.mileageDue {
-                return "Overdue • \(AppFormatters.mileage(mileageDue))"
-            }
-            return "Overdue • \(reminder.title)"
-        case .dueSoon:
-            if let dateDue = reminder.dateDue {
-                return "Due soon • \(AppFormatters.mediumDate.string(from: dateDue))"
-            }
-            if let mileageDue = reminder.mileageDue {
-                return "Due soon • \(AppFormatters.mileage(mileageDue))"
-            }
-            return "Due soon • \(reminder.title)"
-        case .upcoming:
-            if let dateDue = reminder.dateDue {
-                return "\(AppFormatters.mediumDate.string(from: dateDue))"
-            }
-            if let mileageDue = reminder.mileageDue {
-                return "\(AppFormatters.mileage(mileageDue))"
-            }
-            return reminder.title
         case .disabled:
             return "Reminder paused"
+        case .overdue, .dueSoon, .upcoming:
+            if let dateDue = reminder.dateDue {
+                return AppFormatters.mediumDate.string(from: dateDue)
+            }
+            if let mileageDue = reminder.mileageDue {
+                return AppFormatters.mileage(mileageDue)
+            }
+            return reminder.title
+        }
+    }
+
+    private var nextDueSupportText: String? {
+        guard let reminder = nextDueReminder else {
+            return "Add a reminder for service, tires, or registration."
+        }
+
+        switch reminder.status(for: vehicle) {
+        case .disabled:
+            return "Tap to review this reminder."
+        case .overdue:
+            return nextDueDetailText(for: reminder, overdue: true, dueSoon: false)
+        case .dueSoon:
+            return nextDueDetailText(for: reminder, overdue: false, dueSoon: true)
+        case .upcoming:
+            return nextDueDetailText(for: reminder, overdue: false, dueSoon: false)
         }
     }
 
     private var nextDueIsUrgent: Bool {
-        guard let reminder = vehicle.nextDueReminder else { return false }
+        guard let reminder = nextDueReminder else { return false }
         return reminder.status(for: vehicle) != .upcoming
     }
 
@@ -710,6 +763,64 @@ struct VehicleDetailView: View {
     private var documentsSummaryText: String {
         let count = vehicle.documentsCount
         return count == 1 ? "1 file" : "\(count) files"
+    }
+
+    private func nextDueDetailText(for reminder: ReminderItem, overdue: Bool, dueSoon: Bool) -> String? {
+        var parts: [String] = []
+
+        if let dateDue = reminder.dateDue {
+            parts.append(dateRemainingText(for: dateDue, overdue: overdue, dueSoon: dueSoon))
+        }
+
+        if let mileageDue = reminder.mileageDue {
+            parts.append(mileageRemainingText(for: mileageDue, overdue: overdue, dueSoon: dueSoon))
+        }
+
+        if parts.isEmpty {
+            return reminder.notes.isEmpty ? "Custom reminder" : reminder.notes
+        }
+
+        return parts.joined(separator: " • ")
+    }
+
+    private func dateRemainingText(for dateDue: Date, overdue: Bool, dueSoon: Bool) -> String {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: .now)
+        let dueDate = calendar.startOfDay(for: dateDue)
+        let days = calendar.dateComponents([.day], from: start, to: dueDate).day ?? 0
+
+        if overdue {
+            return days < 0 ? "Overdue by \(abs(days)) \(abs(days) == 1 ? "day" : "days")" : "Due today"
+        }
+
+        if dueSoon {
+            if days <= 0 {
+                return "Due today"
+            }
+            return "Due in \(days) \(days == 1 ? "day" : "days")"
+        }
+
+        if days < 0 {
+            return "Overdue by \(abs(days)) \(abs(days) == 1 ? "day" : "days")"
+        }
+        if days == 0 {
+            return "Due today"
+        }
+        return "Due in \(days) \(days == 1 ? "day" : "days")"
+    }
+
+    private func mileageRemainingText(for mileageDue: Int, overdue: Bool, dueSoon: Bool) -> String {
+        let remaining = mileageDue - vehicle.currentMileage
+
+        if overdue || remaining < 0 {
+            return "Over by \(AppFormatters.mileage(abs(remaining)))"
+        }
+
+        if dueSoon || remaining <= 1_000 {
+            return "\(AppFormatters.mileage(remaining)) remaining"
+        }
+
+        return "Due at \(AppFormatters.mileage(mileageDue))"
     }
 
     private func quickActionButton(title: String, icon: String, isLocked: Bool = false, action: @escaping () -> Void) -> some View {

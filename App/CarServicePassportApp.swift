@@ -13,6 +13,10 @@ struct CarServicePassportApp: App {
 
     private let modelContainer = Self.makeModelContainer()
 
+    init() {
+        UnitSettings.registerDefaultValues()
+    }
+
     var body: some Scene {
         WindowGroup {
             Group {

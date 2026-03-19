@@ -55,13 +55,17 @@ struct PremiumSectionHeader: View {
 struct FilterPill: View {
     let title: String
     let isSelected: Bool
+    var compact: Bool = false
 
     var body: some View {
         Text(title)
-            .font(.subheadline.weight(.medium))
+            .font(compact ? .caption.weight(.semibold) : .subheadline.weight(.medium))
             .foregroundStyle(isSelected ? Color.white : AppTheme.secondaryText)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .frame(minWidth: compact ? 52 : 0)
+            .padding(.horizontal, compact ? 12 : 14)
+            .padding(.vertical, compact ? 7 : 8)
             .background(
                 Capsule(style: .continuous)
                     .fill(isSelected ? AppTheme.surfaceSecondary : Color.clear)

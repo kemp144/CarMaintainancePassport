@@ -34,7 +34,7 @@ struct ReminderFormView: View {
         _includesDate = State(initialValue: reminder?.dateDue != nil || linkedService != nil)
         _dateDue = State(initialValue: reminder?.dateDue ?? Calendar.current.date(byAdding: .month, value: 12, to: linkedService?.date ?? .now) ?? .now)
         _includesMileage = State(initialValue: reminder?.mileageDue != nil)
-        _mileageDue = State(initialValue: reminder?.mileageDue.map(String.init) ?? "")
+        _mileageDue = State(initialValue: reminder?.mileageDue.map { UnitFormatter.distanceValue(Double($0)) } ?? "")
         _timing = State(initialValue: reminder?.notificationTiming ?? .sevenDaysBefore)
         _isEnabled = State(initialValue: reminder?.isEnabled ?? true)
     }
@@ -92,7 +92,7 @@ struct ReminderFormView: View {
                     }
                     
                     if includesMileage {
-                        TextField("Mileage due", text: $mileageDue)
+                        TextField("Mileage due (\(UnitSettings.currentDistanceUnit.shortTitle))", text: $mileageDue)
                             .keyboardType(.numberPad)
                     }
 
@@ -127,6 +127,8 @@ struct ReminderFormView: View {
 
     private func saveReminder() async {
         guard let vehicle = selectedVehicle else { return }
+        let parsedMileageDue = includesMileage ? UnitFormatter.parseDistance(mileageDue) : nil
+        if includesMileage && parsedMileageDue == nil { return }
 
         let activeReminder: ReminderItem
         if let reminder {
@@ -136,7 +138,7 @@ struct ReminderFormView: View {
             reminder.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
             reminder.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
             reminder.dateDue = includesDate ? dateDue : nil
-            reminder.mileageDue = includesMileage ? Int(mileageDue) : nil
+            reminder.mileageDue = parsedMileageDue
             reminder.notificationTiming = timing
             reminder.isEnabled = isEnabled
             reminder.updatedAt = .now
@@ -149,7 +151,7 @@ struct ReminderFormView: View {
                 title: title.trimmingCharacters(in: .whitespacesAndNewlines),
                 notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
                 dateDue: includesDate ? dateDue : nil,
-                mileageDue: includesMileage ? Int(mileageDue) : nil,
+                mileageDue: parsedMileageDue,
                 notificationTiming: timing,
                 isEnabled: isEnabled
             )

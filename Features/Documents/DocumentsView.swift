@@ -107,6 +107,44 @@ struct DocumentsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private var documentTopControls: some View {
+        HStack(spacing: 12) {
+            Menu {
+                Picker("Type", selection: $filter) {
+                    ForEach(Filter.allCases) { filter in
+                        Text(filter.rawValue).tag(filter)
+                    }
+                }
+            } label: {
+                FilterPill(title: filter.rawValue, isSelected: true, compact: true)
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 0)
+
+            Button {
+                presentAddFiles()
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(AppTheme.surfaceSecondary)
+                        .overlay {
+                            Circle()
+                                .strokeBorder(AppTheme.separator, lineWidth: 1)
+                        }
+
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+                }
+                .frame(width: 38, height: 38)
+            }
+            .buttonStyle(.plain)
+            .disabled(vehicles.isEmpty)
+            .opacity(vehicles.isEmpty ? 0.45 : 1)
+        }
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             AppTheme.background.ignoresSafeArea()
@@ -114,58 +152,49 @@ struct DocumentsView: View {
             VStack(spacing: 0) {
                 VehicleFilterScrollView(vehicles: vehicles)
 
-                if documentItems.isEmpty {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 12) {
-                            vaultSummary
-
-                            EmptyStateCard(
-                                icon: "doc.on.doc.fill",
-                                title: "Keep paperwork together",
-                                message: "Scan a receipt for a service draft, or add photos and PDFs to keep paperwork together.",
-                                actionTitle: "Add Files",
-                                verticalPadding: 40
-                            ) {
-                                presentAddFiles()
-                            }
-                            .disabled(vehicles.isEmpty)
-                        }
+                VStack(spacing: 12) {
+                    documentTopControls
                         .padding(.horizontal, 24)
-                        .padding(.top, 10)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                } else {
-                    List {
-                        ForEach(documentItems) { item in
-                            documentRow(for: item)
-                                .listRowBackground(Color.clear)
+
+                    if documentItems.isEmpty {
+                        ScrollView(showsIndicators: false) {
+                            VStack(spacing: 12) {
+                                vaultSummary
+
+                                EmptyStateCard(
+                                    icon: "doc.on.doc.fill",
+                                    title: "Keep paperwork together",
+                                    message: "Scan a receipt for a service draft, or add photos and PDFs to keep paperwork together.",
+                                    actionTitle: "Add Files",
+                                    verticalPadding: 40
+                                ) {
+                                    presentAddFiles()
+                                }
+                                .disabled(vehicles.isEmpty)
+                            }
+                            .padding(.horizontal, 24)
+                            .padding(.top, 8)
+                            .padding(.bottom, 24)
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    } else {
+                        List {
+                            ForEach(documentItems) { item in
+                                documentRow(for: item)
+                                    .listRowBackground(Color.clear)
+                            }
+                        }
+                        .listStyle(.insetGrouped)
+                        .scrollContentBackground(.hidden)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                    .listStyle(.insetGrouped)
-                    .scrollContentBackground(.hidden)
                 }
+                .padding(.top, 8)
             }
         }
         .navigationTitle("Documents")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $searchText, prompt: "File, title or vehicle")
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Picker("Type", selection: $filter) {
-                    ForEach(Filter.allCases) { filter in
-                        Text(filter.rawValue).tag(filter)
-                    }
-                }
-                .pickerStyle(.menu)
-
-                Button {
-                    presentAddFiles()
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .disabled(vehicles.isEmpty)
-            }
-        }
         .sheet(isPresented: $showingAddFilesSheet) {
             DocumentAddFilesSheet(
                 allowReceiptScan: true,

@@ -36,7 +36,7 @@ struct VehicleFormView: View {
         _model = State(initialValue: vehicle?.model ?? "")
         _year = State(initialValue: vehicle?.year ?? Calendar.current.component(.year, from: .now))
         _licensePlate = State(initialValue: vehicle?.licensePlate ?? "")
-        _currentMileage = State(initialValue: vehicle.map { String($0.currentMileage) } ?? "")
+        _currentMileage = State(initialValue: vehicle.map { UnitFormatter.distanceValue(Double($0.currentMileage)) } ?? "")
         _purchaseDate = State(initialValue: vehicle?.purchaseDate ?? .now)
         _hasPurchaseDate = State(initialValue: vehicle?.purchaseDate != nil)
         _purchasePrice = State(initialValue: vehicle?.purchasePrice.map { String(Int($0)) } ?? "")
@@ -79,7 +79,7 @@ struct VehicleFormView: View {
                         }
                     }
                     TextField("License plate", text: $licensePlate)
-                    TextField("Current mileage", text: $currentMileage)
+                    TextField("Current mileage (\(UnitSettings.currentDistanceUnit.shortTitle))", text: $currentMileage)
                         .keyboardType(.numberPad)
                     Picker("Currency", selection: $currencyCode) {
                         ForEach(CurrencyPreset.allCases) { preset in
@@ -201,7 +201,7 @@ struct VehicleFormView: View {
                 vehicle.model = model.trimmingCharacters(in: .whitespacesAndNewlines)
                 vehicle.year = year
                 vehicle.licensePlate = licensePlate.trimmingCharacters(in: .whitespacesAndNewlines)
-                vehicle.currentMileage = Int(currentMileage) ?? 0
+                vehicle.currentMileage = UnitFormatter.parseDistance(currentMileage) ?? 0
                 vehicle.purchaseDate = hasPurchaseDate ? purchaseDate : nil
                 vehicle.purchasePrice = Double(purchasePrice)
                 vehicle.currencyCode = currencyCode
@@ -215,7 +215,7 @@ struct VehicleFormView: View {
                     model: model.trimmingCharacters(in: .whitespacesAndNewlines),
                     year: year,
                     licensePlate: licensePlate.trimmingCharacters(in: .whitespacesAndNewlines),
-                    currentMileage: Int(currentMileage) ?? 0,
+                    currentMileage: UnitFormatter.parseDistance(currentMileage) ?? 0,
                     purchaseDate: hasPurchaseDate ? purchaseDate : nil,
                     purchasePrice: Double(purchasePrice),
                     currencyCode: currencyCode,

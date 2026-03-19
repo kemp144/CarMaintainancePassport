@@ -13,6 +13,7 @@ struct FuelTrackingView: View {
     @State private var showingDeleteConfirmation = false
     @State private var selectedPeriod: FuelLogPeriod = .allTime
     @State private var selectedChartMetric: FuelChartMetric = .spend
+    @State private var expandedEntryIDs: Set<UUID> = []
 
     private var analysis: FuelLogAnalysis {
         FuelAnalyticsService.analysis(for: vehicle.fuelEntries, period: selectedPeriod)
@@ -35,7 +36,7 @@ struct FuelTrackingView: View {
             AppTheme.background.ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
+                VStack(spacing: 20) {
                     headerSection
 
                     periodSelector
@@ -54,9 +55,9 @@ struct FuelTrackingView: View {
                         entriesSection
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
-                .padding(.bottom, 100)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 124)
             }
         }
         .navigationTitle("Fuel Log")
@@ -93,13 +94,13 @@ struct FuelTrackingView: View {
 
     private var headerSection: some View {
         SurfaceCard(padding: 20) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Fuel Log")
+                        Text("Overview")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundStyle(AppTheme.primaryText)
-                        Text("Trustworthy fuel costs and consumption, only when the sequence is mathematically sound.")
+                        Text("Selected-period summary with only valid fuel data.")
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.secondaryText)
                     }
@@ -114,14 +115,14 @@ struct FuelTrackingView: View {
                 }
 
                 if let lastFillUp = analysis.insights.lastFillUp {
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         headerMetric(
                             title: "Last Fill-up",
                             value: AppFormatters.mediumDate.string(from: lastFillUp.date)
                         )
                         headerMetric(
                             title: "Liters",
-                            value: lastFillUp.liters.map { "\(AppFormatters.decimal($0)) L" } ?? "—"
+                            value: lastFillUp.liters.map { AppFormatters.fuelVolume($0) } ?? "—"
                         )
                         headerMetric(
                             title: "Spend",
@@ -146,19 +147,38 @@ struct FuelTrackingView: View {
     }
 
     private var periodSelector: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(FuelLogPeriod.allCases) { period in
-                    Button {
-                        selectedPeriod = period
-                    } label: {
-                        FilterPill(title: period.title, isSelected: selectedPeriod == period)
-                    }
-                    .buttonStyle(.plain)
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 8), count: FuelLogPeriod.allCases.count),
+            spacing: 8
+        ) {
+            ForEach(FuelLogPeriod.allCases) { period in
+                Button {
+                    selectedPeriod = period
+                } label: {
+                    periodTabPill(title: period.shortTitle, isSelected: selectedPeriod == period)
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.vertical, 2)
         }
+    }
+
+    private func periodTabPill(title: String, isSelected: Bool) -> some View {
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(isSelected ? Color.white : AppTheme.secondaryText)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 6)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(isSelected ? AppTheme.accent : Color.clear)
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .strokeBorder(isSelected ? AppTheme.accent.opacity(0.7) : AppTheme.separator, lineWidth: 1)
+                    )
+            )
     }
 
     private var emptyStateSection: some View {
@@ -199,72 +219,88 @@ struct FuelTrackingView: View {
         VStack(alignment: .leading, spacing: 16) {
             PremiumSectionHeader(
                 title: "Highlights",
-                subtitle: "Only valid cycles feed the consumption metrics."
+                subtitle: "Everything here follows the selected period."
             )
 
             HStack(spacing: 12) {
                 fuelStatCard(
                     title: "Last Valid Tank",
-                    value: analysis.insights.lastValidConsumption.value.map { "\(AppFormatters.decimal($0)) L/100 km" } ?? "—",
+                    value: analysis.insights.lastValidConsumption.value.map { AppFormatters.consumption($0) } ?? "—",
                     note: analysis.insights.lastValidConsumption.note,
-                    icon: "gauge.with.dots.needle.33percent"
+                    icon: "gauge.with.dots.needle.33percent",
+                    emphasis: .primary
                 )
                 fuelStatCard(
                     title: "3-Tank Average",
-                    value: analysis.insights.rollingThreeCycleAverage.value.map { "\(AppFormatters.decimal($0)) L/100 km" } ?? "—",
+                    value: analysis.insights.rollingThreeCycleAverage.value.map { AppFormatters.consumption($0) } ?? "—",
                     note: analysis.insights.rollingThreeCycleAverage.note,
-                    icon: "waveform.path.ecg"
+                    icon: "waveform.path.ecg",
+                    emphasis: .primary
                 )
             }
 
-            HStack(spacing: 12) {
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
+            ], spacing: 12) {
                 fuelStatCard(
-                    title: "Avg Price / L",
-                    value: analysis.insights.averagePricePerLiter.map { "\(AppFormatters.currency($0, code: vehicle.currencyCode))/L" } ?? "—",
-                    note: selectedPeriod.title,
-                    icon: "eurosign.circle.fill"
+                    title: "Avg Price / \(UnitSettings.currentFuelVolumeUnit.shortTitle)",
+                    value: analysis.insights.averagePricePerLiter.map { UnitFormatter.costPerFuelUnitCurrency($0, currencyCode: vehicle.currencyCode) } ?? "—",
+                    note: nil,
+                    icon: "eurosign.circle.fill",
+                    emphasis: .secondary
                 )
                 fuelStatCard(
-                    title: "Fuel Spend This Month",
-                    value: AppFormatters.currency(analysis.insights.spendThisMonth, code: vehicle.currencyCode),
-                    note: analysis.insights.spendThisMonth == 0 ? "No spend logged this month." : nil,
-                    icon: "calendar"
+                    title: "Fuel Spend",
+                    value: AppFormatters.currency(analysis.insights.totalCost, code: vehicle.currencyCode),
+                    note: nil,
+                    icon: "calendar",
+                    emphasis: .secondary
                 )
-            }
-
-            HStack(spacing: 12) {
                 fuelStatCard(
-                    title: "Cost / 100 km",
-                    value: analysis.insights.averageCostPer100Km.value.map { AppFormatters.currency($0, code: vehicle.currencyCode) } ?? "—",
+                    title: UnitFormatter.costRateTitle(),
+                    value: analysis.insights.averageCostPer100Km.value.map { UnitFormatter.costPerDistanceCurrency($0, currencyCode: vehicle.currencyCode) } ?? "—",
                     note: analysis.insights.averageCostPer100Km.note,
-                    icon: "banknote.fill"
+                    icon: "banknote.fill",
+                    emphasis: .secondary
                 )
                 fuelStatCard(
                     title: "Tracked Distance",
                     value: analysis.insights.totalTrackedDistanceKm > 0 ? AppFormatters.mileage(analysis.insights.totalTrackedDistanceKm) : "—",
                     note: analysis.insights.totalTrackedDistanceKm == 0 ? "Needs at least two odometer points." : nil,
-                    icon: "road.lanes"
+                    icon: "road.lanes",
+                    emphasis: .secondary
                 )
             }
         }
     }
 
-    private func fuelStatCard(title: String, value: String, note: String?, icon: String) -> some View {
-        SurfaceCard {
-            VStack(alignment: .leading, spacing: 10) {
+    private enum FuelStatCardEmphasis {
+        case primary
+        case secondary
+    }
+
+    private func fuelStatCard(title: String, value: String, note: String?, icon: String, emphasis: FuelStatCardEmphasis) -> some View {
+        let isPrimary = emphasis == .primary
+
+        return SurfaceCard(padding: isPrimary ? 16 : 14) {
+            VStack(alignment: .leading, spacing: isPrimary ? 10 : 8) {
                 HStack(spacing: 8) {
                     Image(systemName: icon)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: isPrimary ? 12 : 11, weight: .semibold))
                         .foregroundStyle(AppTheme.accent)
                     Text(title)
-                        .font(.caption.weight(.semibold))
+                        .font(isPrimary ? .caption.weight(.semibold) : .caption2.weight(.semibold))
                         .foregroundStyle(AppTheme.secondaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.9)
                 }
 
                 Text(value)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: isPrimary ? 19 : 16, weight: .bold))
                     .foregroundStyle(AppTheme.primaryText)
-                    .lineLimit(2)
+                    .lineLimit(isPrimary ? 2 : 1)
+                    .minimumScaleFactor(0.9)
 
                 if let note {
                     Text(note)
@@ -273,6 +309,7 @@ struct FuelTrackingView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+            .frame(minHeight: isPrimary ? 110 : 88, alignment: .topLeading)
         }
     }
 
@@ -361,7 +398,7 @@ struct FuelTrackingView: View {
         VStack(alignment: .leading, spacing: 16) {
             PremiumSectionHeader(
                 title: "History",
-                subtitle: "\(displayedEntries.count) entries in \(selectedPeriod.title.lowercased())"
+                subtitle: "\(displayedEntries.count) entries • \(selectedPeriod.title)"
             )
 
             VStack(spacing: 10) {
@@ -374,14 +411,25 @@ struct FuelTrackingView: View {
 
     private func fuelRow(_ entry: FuelEntry) -> some View {
         let insight = analysis.insight(for: entry)
+        let isExpanded = expandedEntryIDs.contains(entry.id)
+        let stationLine = entry.station.trimmingCharacters(in: .whitespacesAndNewlines)
+        let litersText = entry.liters > 0 ? AppFormatters.fuelVolume(entry.liters) : "—"
+        let odometerText = AppFormatters.mileage(entry.odometerKm)
+        let priceText = entry.totalCost > 0 ? AppFormatters.currency(entry.totalCost, code: entry.currencyCode) : "—"
 
-        return Button {
-            entryToEdit = entry
-        } label: {
-            SurfaceCard(padding: 16) {
-                VStack(alignment: .leading, spacing: 14) {
+        return SurfaceCard(padding: 12) {
+            Button {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
+                    if isExpanded {
+                        expandedEntryIDs.remove(entry.id)
+                    } else {
+                        expandedEntryIDs.insert(entry.id)
+                    }
+                }
+            } label: {
+                VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .top, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 7) {
                             HStack(spacing: 8) {
                                 Text(AppFormatters.mediumDate.string(from: entry.date))
                                     .font(.system(size: 15, weight: .semibold))
@@ -396,67 +444,99 @@ struct FuelTrackingView: View {
                                 }
                             }
 
-                            Text(AppFormatters.mileage(entry.odometerKm))
-                                .font(.subheadline)
-                                .foregroundStyle(AppTheme.secondaryText)
+                            HStack(spacing: 10) {
+                                HStack(spacing: 5) {
+                                    Text("Liters")
+                                    Text(litersText)
+                                }
 
-                            if !entry.station.isEmpty || !entry.fuelTypeName.isEmpty {
-                                Text([entry.station, entry.fuelTypeName].filter { !$0.isEmpty }.joined(separator: " • "))
-                                    .font(.caption)
+                                Text("•")
                                     .foregroundStyle(AppTheme.tertiaryText)
+
+                                HStack(spacing: 5) {
+                                    Text("Odometer")
+                                    Text(odometerText)
+                                }
                             }
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                         }
 
-                        Spacer()
+                        Spacer(minLength: 12)
 
-                        VStack(alignment: .trailing, spacing: 6) {
-                            Text(entry.totalCost > 0 ? AppFormatters.currency(entry.totalCost, code: entry.currencyCode) : "—")
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(priceText)
                                 .font(.system(size: 16, weight: .bold))
                                 .foregroundStyle(AppTheme.primaryText)
 
-                            Text(entry.liters > 0 ? "\(AppFormatters.decimal(entry.liters)) L" : "No fuel amount")
+                            Text("Total")
                                 .font(.caption)
                                 .foregroundStyle(AppTheme.secondaryText)
                         }
+
+                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppTheme.tertiaryText)
+                            .padding(.top, 4)
                     }
 
-                    HStack(spacing: 12) {
-                        detailPill(title: "Price / L", value: insight?.pricePerLiter.map { "\(AppFormatters.currency($0, code: entry.currencyCode))/L" } ?? "—")
-                        detailPill(title: "Since Previous", value: insight?.distanceSincePreviousEntryKm.map(AppFormatters.mileage) ?? "—")
+                    if !stationLine.isEmpty {
+                        Text(stationLine)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.tertiaryText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                     }
 
-                    if let consumption = insight?.cycleConsumption {
-                        HStack(spacing: 12) {
-                            detailPill(title: "Consumption", value: "\(AppFormatters.decimal(consumption)) L/100 km")
-                            detailPill(
-                                title: "Cost / 100 km",
-                                value: insight?.cycleCostPer100Km.map { AppFormatters.currency($0, code: entry.currencyCode) } ?? "—"
+                    if isExpanded {
+                        Divider()
+                            .overlay(AppTheme.separator)
+
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.flexible(), spacing: 12),
+                                GridItem(.flexible(), spacing: 12)
+                            ],
+                            spacing: 12
+                        ) {
+                            expandedMetric(
+                                title: "Price / \(UnitSettings.currentFuelVolumeUnit.shortTitle)",
+                                value: insight?.pricePerLiter.map { UnitFormatter.costPerFuelUnitCurrency($0, currencyCode: entry.currencyCode) } ?? "—"
+                            )
+                            expandedMetric(
+                                title: "Since Prev",
+                                value: insight?.distanceSincePreviousEntryKm.map(AppFormatters.mileage) ?? "—"
+                            )
+
+                            expandedMetric(
+                                title: "Consumption",
+                                value: insight?.cycleConsumption.map(AppFormatters.consumption) ?? "—"
+                            )
+                            expandedMetric(
+                                title: UnitFormatter.costRateTitle(),
+                                value: insight?.cycleCostPer100Km.map { UnitFormatter.costPerDistanceCurrency($0, currencyCode: entry.currencyCode) } ?? "—"
                             )
                         }
-                    } else if let note = insight?.note {
-                        Text(note)
-                            .font(.footnote)
-                            .foregroundStyle(insight?.status == .invalid ? AppTheme.warning : AppTheme.secondaryText)
-                    }
 
-                    HStack(spacing: 10) {
-                        Button {
-                            entryToEdit = entry
-                        } label: {
-                            rowActionIcon("pencil")
-                        }
+                        if let note = insight?.note {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "quote.opening")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(insight?.status == .invalid ? AppTheme.warning : AppTheme.secondaryText)
 
-                        Button(role: .destructive) {
-                            entryToDelete = entry
-                            showingDeleteConfirmation = true
-                        } label: {
-                            rowActionIcon("trash")
+                                Text(note)
+                                    .font(.footnote)
+                                    .foregroundStyle(insight?.status == .invalid ? AppTheme.warning : AppTheme.secondaryText)
+                            }
+                            .padding(.top, 2)
                         }
                     }
                 }
             }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
         .contextMenu {
             Button {
                 entryToEdit = entry
@@ -484,7 +564,7 @@ struct FuelTrackingView: View {
             )
     }
 
-    private func detailPill(title: String, value: String) -> some View {
+    private func expandedMetric(title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
                 .font(.caption2)
@@ -503,14 +583,6 @@ struct FuelTrackingView: View {
                         .strokeBorder(AppTheme.separator, lineWidth: 1)
                 }
         )
-    }
-
-    private func rowActionIcon(_ systemName: String) -> some View {
-        Image(systemName: systemName)
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(systemName == "trash" ? AppTheme.secondaryText : AppTheme.accent)
-            .padding(8)
-            .background(Circle().fill(AppTheme.surfaceSecondary))
     }
 
     private func deleteEntry(_ entry: FuelEntry) {

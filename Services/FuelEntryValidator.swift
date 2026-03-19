@@ -20,6 +20,21 @@ struct FuelEntryDraft {
         return totalCost / liters
     }
 
+    func derivedPricePerFuelUnit(using fuelVolumeUnit: FuelVolumeUnit) -> Double? {
+        guard let totalCost, totalCost > 0, let liters, liters > 0 else { return nil }
+
+        let volumeInDisplayedUnits: Double
+        switch fuelVolumeUnit {
+        case .liters:
+            volumeInDisplayedUnits = liters
+        case .gallons:
+            volumeInDisplayedUnits = liters / (UnitSettings.currentConsumptionUnit == .mpgUK ? UnitConverter.litersPerImperialGallon : UnitConverter.litersPerUSGallon)
+        }
+
+        guard volumeInDisplayedUnits > 0 else { return nil }
+        return totalCost / volumeInDisplayedUnits
+    }
+
     var isFullTank: Bool {
         entryType.defaultIsFullTank
     }

@@ -30,9 +30,9 @@ struct FuelEntryFormSheet: View {
         self.vehicle = vehicle
         self.entry = entry
         _date = State(initialValue: entry?.date ?? .now)
-        _mileage = State(initialValue: entry.map { String($0.mileage) } ?? String(vehicle.currentMileage))
+        _mileage = State(initialValue: entry.map { UnitFormatter.distanceValue(Double($0.mileage)) } ?? UnitFormatter.distanceValue(Double(vehicle.currentMileage)))
         _entryType = State(initialValue: entry?.entryType ?? .fullFillUp)
-        _liters = State(initialValue: entry.map { $0.liters > 0 ? String(format: "%.2f", $0.liters) : "" } ?? "")
+        _liters = State(initialValue: entry.map { $0.liters > 0 ? UnitFormatter.fuelVolumeValue($0.liters) : "" } ?? "")
         _totalCost = State(initialValue: entry.map { $0.totalCost > 0 ? String(format: "%.2f", $0.totalCost) : "" } ?? "")
         _fuelTypeName = State(initialValue: entry?.fuelTypeName ?? "")
         _station = State(initialValue: entry?.station ?? "")
@@ -65,7 +65,7 @@ struct FuelEntryFormSheet: View {
                 Section {
                     DatePicker("Date", selection: $date, displayedComponents: .date)
 
-                    TextField("Odometer (km)", text: $mileage)
+                    TextField("Odometer (\(UnitSettings.currentDistanceUnit.shortTitle))", text: $mileage)
                         .keyboardType(.numberPad)
                 } header: {
                     Text("Trip Context").foregroundStyle(AppTheme.secondaryText)
@@ -76,24 +76,24 @@ struct FuelEntryFormSheet: View {
                 .listRowBackground(AppTheme.surface)
 
                 Section {
-                    TextField(entryType.requiresFuelAmounts ? "Liters" : "Liters (optional)", text: $liters)
+                    TextField(entryType.requiresFuelAmounts ? UnitSettings.currentFuelVolumeUnit.title : "\(UnitSettings.currentFuelVolumeUnit.title) (optional)", text: $liters)
                         .keyboardType(.decimalPad)
 
                     TextField(entryType.requiresFuelAmounts ? "Total price" : "Total price (optional)", text: $totalCost)
                         .keyboardType(.decimalPad)
 
-                    if let pricePerLiter = draft.derivedPricePerLiter {
+                    if let pricePerUnit = draft.derivedPricePerFuelUnit(using: UnitSettings.currentFuelVolumeUnit) {
                         HStack {
-                            Text("Price per liter")
+                            Text("Price per \(UnitSettings.currentFuelVolumeUnit.shortTitle)")
                             Spacer()
-                            Text("\(AppFormatters.currency(pricePerLiter, code: resolvedCurrencyCode))/L")
+                            Text("\(AppFormatters.currency(pricePerUnit, code: resolvedCurrencyCode))/\(UnitSettings.currentFuelVolumeUnit.shortTitle)")
                                 .foregroundStyle(AppTheme.secondaryText)
                         }
                     }
                 } header: {
                     Text("Fuel").foregroundStyle(AppTheme.secondaryText)
                 } footer: {
-                    Text(entryType.requiresFuelAmounts ? "Both liters and total price are required for fill-ups." : "You can leave these blank for an initial tank or a missed entry.")
+                    Text(entryType.requiresFuelAmounts ? "Both fuel volume and total price are required for fill-ups." : "You can leave these blank for an initial tank or a missed entry.")
                         .foregroundStyle(AppTheme.tertiaryText)
                 }
                 .listRowBackground(AppTheme.surface)
@@ -214,15 +214,15 @@ struct FuelEntryFormSheet: View {
     }
 
     private var parsedMileage: Int? {
-        Int(mileage)
+        UnitFormatter.parseDistance(mileage)
     }
 
     private var parsedLiters: Double? {
-        parseDecimal(liters)
+        UnitFormatter.parseFuelVolume(liters)
     }
 
     private var parsedTotalCost: Double? {
-        parseDecimal(totalCost)
+        UnitFormatter.parseDecimal(totalCost)
     }
 
     private var isReadyToValidate: Bool {
@@ -324,13 +324,5 @@ struct FuelEntryFormSheet: View {
         let serviceMileage = vehicle.serviceEntries.map(\.mileage).max() ?? 0
         vehicle.currentMileage = max(max(existingFuelMileage, serviceMileage), mileage)
         vehicle.updatedAt = .now
-    }
-
-    private func parseDecimal(_ value: String) -> Double? {
-        let normalized = value
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: ",", with: ".")
-        guard !normalized.isEmpty else { return nil }
-        return Double(normalized)
     }
 }
