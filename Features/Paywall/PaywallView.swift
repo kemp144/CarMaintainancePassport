@@ -105,7 +105,7 @@ struct PaywallView: View {
                             .foregroundStyle(.white)
                             .lineLimit(2)
 
-                        Text("Keep every car organized with smarter reminders, documents, and export tools.")
+                        Text("Keep every car organized with smarter reminders, detailed fuel tracking, documents, and export tools.")
                             .font(.body)
                             .foregroundStyle(Color.white.opacity(0.82))
                             .fixedSize(horizontal: false, vertical: true)
@@ -113,6 +113,7 @@ struct PaywallView: View {
                         Text("No ads. Choose monthly, yearly, or lifetime when it fits.")
                             .font(.footnote.weight(.medium))
                             .foregroundStyle(AppTheme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .padding(24)
@@ -181,6 +182,12 @@ struct PaywallView: View {
                         icon: "bell.badge.fill",
                         title: "Smart reminders",
                         message: "Get reminders by date, mileage, or both."
+                    )
+
+                    benefitRow(
+                        icon: "fuelpump.fill",
+                        title: "Detailed fuel tracking",
+                        message: "Unlock consumption, charts, filters, and deeper fuel insights."
                     )
 
                     benefitRow(
@@ -376,21 +383,22 @@ struct PaywallView: View {
             }
         } label: {
             HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Text(plan.title)
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(AppTheme.primaryText)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(plan.title)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
 
-                        if let badge = plan.badge {
-                            badgeView(badge, highlighted: isYearly || plan == .lifetime)
-                        }
+                    if let badge = plan.badge {
+                        badgeView(badge, highlighted: isYearly || plan == .lifetime)
                     }
 
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(plan.subtitle)
                             .font(.caption)
                             .foregroundStyle(AppTheme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
 
                         if isYearly {
                             Text(plan.savingsText)
@@ -399,6 +407,7 @@ struct PaywallView: View {
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 Spacer(minLength: 10)
 
@@ -406,17 +415,23 @@ struct PaywallView: View {
                     Text(planPriceText(for: plan))
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(isSelected ? .white : AppTheme.primaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
 
                     Text(plan.billingNote)
                         .font(.caption)
                         .foregroundStyle(AppTheme.tertiaryText)
+                        .multilineTextAlignment(.trailing)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .frame(width: 104, alignment: .trailing)
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.tertiaryText)
             }
-            .padding(14)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 15)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(isSelected ? Color.white.opacity(0.045) : Color.white.opacity(0.02))
@@ -467,6 +482,8 @@ struct PaywallView: View {
         Text(title)
             .font(.caption2.weight(.semibold))
             .foregroundStyle(highlighted ? AppTheme.accentSecondary : AppTheme.secondaryText)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: true)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(
@@ -489,15 +506,15 @@ struct PaywallView: View {
     private var comparisonFeatures: [ComparisonFeature] {
         [
             ComparisonFeature(title: "Vehicles", free: "1 vehicle", pro: "Unlimited", highlightPro: true),
-            ComparisonFeature(title: "Service entries", free: "Unlimited", pro: "Unlimited", highlightPro: false),
+            ComparisonFeature(title: "Service logging", free: "Included", pro: "Included", highlightPro: false),
             ComparisonFeature(title: "Reminders", free: "By date", pro: "Date + mileage", highlightPro: true),
-            ComparisonFeature(title: "Receipt scan", free: "Basic photos", pro: "Photos + OCR", highlightPro: true),
-            ComparisonFeature(title: "PDF export", free: "Basic PDF", pro: "Advanced + resale", highlightPro: false),
-            ComparisonFeature(title: "Documents", free: "Basic storage", pro: "Glovebox + links", highlightPro: false),
-            ComparisonFeature(title: "CSV export", free: "Not included", pro: "Included", highlightPro: false),
-            ComparisonFeature(title: "Analytics", free: "Not included", pro: "Included", highlightPro: false),
-            ComparisonFeature(title: "Fuel tracking", free: "Basic logs", pro: "Included", highlightPro: false),
-            ComparisonFeature(title: "Backup & import", free: "Manual only", pro: "Included", highlightPro: false)
+            ComparisonFeature(title: "Fuel history", free: "Logs + totals", pro: "Logs + totals", highlightPro: false),
+            ComparisonFeature(title: "Fuel analytics", free: "Not included", pro: "Detailed tracking", highlightPro: true),
+            ComparisonFeature(title: "OCR receipts", free: "Not included", pro: "Included", highlightPro: true),
+            ComparisonFeature(title: "Documents", free: "Up to 10 saved", pro: "Unlimited", highlightPro: true),
+            ComparisonFeature(title: "Backup & restore", free: "Included", pro: "Included", highlightPro: false),
+            ComparisonFeature(title: "Premium reports", free: "Not included", pro: "PDF + CSV + resale", highlightPro: true),
+            ComparisonFeature(title: "Insights", free: "Basic totals", pro: "Cost insights", highlightPro: true)
         ]
     }
 }

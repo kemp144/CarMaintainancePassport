@@ -8,6 +8,8 @@ struct ServiceEntryFormView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var entitlementStore: EntitlementStore
     @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
+    @Query private var attachments: [AttachmentRecord]
+    @Query private var documents: [DocumentRecord]
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
 
     private let entry: ServiceEntry?
@@ -354,6 +356,11 @@ struct ServiceEntryFormView: View {
     private var selectedVehicle: Vehicle? {
         vehicles.first(where: { $0.id == selectedVehicleID }) ?? initialVehicle
     }
+
+    private var savedDocumentCount: Int {
+        attachments.count + documents.count
+    }
+
     private func applyScannedReceipt(result: OCRService.OCRResult) {
         if let date = result.date {
             self.date = date
@@ -390,6 +397,11 @@ struct ServiceEntryFormView: View {
         guard let vehicle = selectedVehicle, let imageData = pendingReceiptImageData ?? currentReceiptDraft?.imageData else { return }
         let filename = pendingReceiptFilename ?? currentReceiptDraft?.filename ?? "Receipt"
 
+        guard entitlementStore.canAddSavedDocuments(existingCount: savedDocumentCount) else {
+            paywallCoordinator.present(.documentVault)
+            return
+        }
+
         do {
             try await ScannedReceiptStorageService.shared.saveReceipt(
                 imageData: imageData,
@@ -406,6 +418,13 @@ struct ServiceEntryFormView: View {
 
     private func saveEntry() async {
         guard let vehicle = selectedVehicle, let mileageValue = UnitFormatter.parseDistance(mileage) else { return }
+
+        let removedCount = removedAttachmentIDs.count
+        let netExistingDocuments = max(0, savedDocumentCount - removedCount)
+        guard entitlementStore.canAddSavedDocuments(existingCount: netExistingDocuments, addingCount: draftAttachments.count) else {
+            paywallCoordinator.present(.documentVault)
+            return
+        }
 
         isSaving = true
         defer { isSaving = false }

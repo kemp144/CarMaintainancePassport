@@ -59,6 +59,18 @@ struct DocumentsView: View {
             .sorted { $0.createdAt > $1.createdAt }
     }
 
+    private var savedDocumentCount: Int {
+        documents.count + attachments.count
+    }
+
+    private var savedDocumentLimit: Int? {
+        entitlementStore.maxSavedDocuments
+    }
+
+    private var hasReachedFreeDocumentLimit: Bool {
+        !entitlementStore.canAddSavedDocuments(existingCount: savedDocumentCount)
+    }
+
     private var vaultSummary: some View {
         let documentsCount = documentItems.count
         let pagesCount = documentItems.reduce(0) { $0 + $1.pageCount }
@@ -80,6 +92,23 @@ struct DocumentsView: View {
                     documentStat(title: "Documents", value: "\(documentsCount)", icon: "doc.fill")
                     documentStat(title: "Files", value: "\(pagesCount)", icon: "square.stack.3d.up.fill")
                     documentStat(title: "Linked", value: "\(linkedCount)", icon: "link")
+                }
+
+                if let savedDocumentLimit, !entitlementStore.canUseUnlimitedDocuments() {
+                    HStack(spacing: 8) {
+                        Text("\(savedDocumentCount) of \(savedDocumentLimit) saved items used")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(hasReachedFreeDocumentLimit ? AppTheme.accent : AppTheme.secondaryText)
+
+                        if hasReachedFreeDocumentLimit {
+                            Text("Pro")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(AppTheme.accent)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
+                        }
+                    }
                 }
 
                 Text("Store receipts, PDFs, and service paperwork with the right car.")
@@ -140,8 +169,41 @@ struct DocumentsView: View {
                 .frame(width: 38, height: 38)
             }
             .buttonStyle(.plain)
-            .disabled(vehicles.isEmpty)
-            .opacity(vehicles.isEmpty ? 0.45 : 1)
+            .disabled(vehicles.isEmpty || hasReachedFreeDocumentLimit)
+            .opacity((vehicles.isEmpty || hasReachedFreeDocumentLimit) ? 0.45 : 1)
+        }
+    }
+
+    private var documentLimitCard: some View {
+        SurfaceCard(padding: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text("Need more document space?")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.primaryText)
+
+                        Text("Pro")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
+                    }
+
+                    Text("Free keeps your first saved documents local and accessible. Pro adds unlimited storage and OCR-based receipt capture.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+
+                Spacer(minLength: 12)
+
+                Button("Upgrade") {
+                    paywallCoordinator.present(.documentVault)
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
+            }
         }
     }
 
@@ -161,10 +223,16 @@ struct DocumentsView: View {
                             VStack(spacing: 12) {
                                 vaultSummary
 
+                                if hasReachedFreeDocumentLimit {
+                                    documentLimitCard
+                                }
+
                                 EmptyStateCard(
                                     icon: "doc.on.doc.fill",
                                     title: "Keep paperwork together",
-                                    message: "Scan a receipt for a service draft, or add photos and PDFs to keep paperwork together.",
+                                    message: entitlementStore.canUseDocumentOCR()
+                                        ? "Scan a receipt for a service draft, or add photos and PDFs to keep paperwork together."
+                                        : "Add photos and PDFs to keep receipts, paperwork, and ownership records together.",
                                     actionTitle: "Add Files",
                                     verticalPadding: 40
                                 ) {
@@ -178,15 +246,25 @@ struct DocumentsView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     } else {
-                        List {
-                            ForEach(documentItems) { item in
-                                documentRow(for: item)
-                                    .listRowBackground(Color.clear)
+                        ScrollView(showsIndicators: false) {
+                            VStack(spacing: 12) {
+                                vaultSummary
+
+                                if hasReachedFreeDocumentLimit {
+                                    documentLimitCard
+                                }
+
+                                LazyVStack(spacing: 12) {
+                                    ForEach(documentItems) { item in
+                                        documentRow(for: item)
+                                    }
+                                }
                             }
+                            .padding(.horizontal, 24)
+                            .padding(.top, 8)
+                            .padding(.bottom, 24)
                         }
-                        .listStyle(.insetGrouped)
-                        .scrollContentBackground(.hidden)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     }
                 }
                 .padding(.top, 8)
@@ -197,7 +275,7 @@ struct DocumentsView: View {
         .searchable(text: $searchText, prompt: "File, title or vehicle")
         .sheet(isPresented: $showingAddFilesSheet) {
             DocumentAddFilesSheet(
-                allowReceiptScan: true,
+                allowReceiptScan: entitlementStore.canUseDocumentOCR(),
                 onDocumentSeed: { seed in
                     pendingDraftSeed = seed
                 },
@@ -386,6 +464,11 @@ struct DocumentsView: View {
 
     private func presentAddFiles() {
         guard entitlementStore.canUseDocumentVault() else {
+            paywallCoordinator.present(.documentVault)
+            return
+        }
+
+        guard entitlementStore.canAddSavedDocuments(existingCount: savedDocumentCount) else {
             paywallCoordinator.present(.documentVault)
             return
         }

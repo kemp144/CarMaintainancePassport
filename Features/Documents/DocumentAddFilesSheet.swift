@@ -152,7 +152,7 @@ struct DocumentAddFilesSheet: View {
                         Text("Add files")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundStyle(AppTheme.primaryText)
-                        Text("Add photos, PDFs, or a receipt scan for this vehicle.")
+                        Text(allowReceiptScan ? "Add photos, PDFs, or a receipt scan for this vehicle." : "Add photos or PDFs for this vehicle.")
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.secondaryText)
                     }
@@ -160,7 +160,7 @@ struct DocumentAddFilesSheet: View {
                     Spacer()
                 }
 
-                Text("Multiple files can stay together in one document.")
+                Text(allowReceiptScan ? "Multiple files can stay together in one document." : "You can keep multiple photos or PDFs together in one document.")
                     .font(.footnote)
                     .foregroundStyle(AppTheme.tertiaryText)
             }

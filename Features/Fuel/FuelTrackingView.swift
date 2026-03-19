@@ -4,6 +4,8 @@ import SwiftUI
 
 struct FuelTrackingView: View {
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var entitlementStore: EntitlementStore
+    @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
 
     let vehicle: Vehicle
 
@@ -15,8 +17,15 @@ struct FuelTrackingView: View {
     @State private var selectedChartMetric: FuelChartMetric = .spend
     @State private var expandedEntryIDs: Set<UUID> = []
 
+    private var hasDetailedFuelAccess: Bool {
+        entitlementStore.canUseDetailedFuelTracking()
+    }
+
     private var analysis: FuelLogAnalysis {
-        FuelAnalyticsService.analysis(for: vehicle.fuelEntries, period: selectedPeriod)
+        FuelAnalyticsService.analysis(
+            for: vehicle.fuelEntries,
+            period: hasDetailedFuelAccess ? selectedPeriod : .allTime
+        )
     }
 
     private var entryLookup: [UUID: FuelEntry] {
@@ -39,19 +48,25 @@ struct FuelTrackingView: View {
                 VStack(spacing: 20) {
                     headerSection
 
-                    periodSelector
+                    if hasDetailedFuelAccess {
+                        periodSelector
+                    } else {
+                        fuelProTeaser
+                    }
 
                     if vehicle.fuelEntries.isEmpty {
                         emptyStateSection
                     } else if displayedEntries.isEmpty {
                         filteredEmptyState
                     } else {
-                        if let note = analysis.insights.lastValidConsumption.note {
+                        if hasDetailedFuelAccess, let note = analysis.insights.lastValidConsumption.note {
                             inlineEducationCard(message: note)
                         }
 
-                        statsSection
-                        chartSection
+                        if hasDetailedFuelAccess {
+                            statsSection
+                            chartSection
+                        }
                         entriesSection
                     }
                 }
@@ -100,7 +115,7 @@ struct FuelTrackingView: View {
                         Text("Overview")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundStyle(AppTheme.primaryText)
-                        Text("Selected-period summary with only valid fuel data.")
+                        Text(hasDetailedFuelAccess ? "Selected-period summary with only valid fuel data." : "Basic totals, recent fill-up, and full history.")
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.secondaryText)
                     }
@@ -121,15 +136,48 @@ struct FuelTrackingView: View {
                             value: AppFormatters.mediumDate.string(from: lastFillUp.date)
                         )
                         headerMetric(
-                            title: "Liters",
-                            value: lastFillUp.liters.map { AppFormatters.fuelVolume($0) } ?? "—"
+                            title: "Total Fuel",
+                            value: analysis.insights.totalLiters > 0 ? AppFormatters.fuelVolume(analysis.insights.totalLiters) : "—"
                         )
                         headerMetric(
-                            title: "Spend",
-                            value: lastFillUp.totalCost.map { AppFormatters.currency($0, code: lastFillUp.currencyCode) } ?? "—"
+                            title: "Total Spend",
+                            value: analysis.insights.totalCost > 0 ? AppFormatters.currency(analysis.insights.totalCost, code: vehicle.currencyCode) : "—"
                         )
                     }
                 }
+            }
+        }
+    }
+
+    private var fuelProTeaser: some View {
+        SurfaceCard(padding: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text("Detailed Fuel Tracking")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.primaryText)
+
+                        Text("Pro")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
+                    }
+
+                    Text("Unlock consumption, charts, advanced filters, OCR receipts, and deeper fuel insights.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+
+                Spacer(minLength: 12)
+
+                Button("Upgrade") {
+                    paywallCoordinator.present(.fuelTracking)
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
             }
         }
     }
@@ -398,7 +446,7 @@ struct FuelTrackingView: View {
         VStack(alignment: .leading, spacing: 16) {
             PremiumSectionHeader(
                 title: "History",
-                subtitle: "\(displayedEntries.count) entries • \(selectedPeriod.title)"
+                subtitle: "\(displayedEntries.count) entries • \(hasDetailedFuelAccess ? selectedPeriod.title : FuelLogPeriod.allTime.title)"
             )
 
             VStack(spacing: 10) {

@@ -53,12 +53,15 @@ struct SettingsView: View {
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 18)
-                .padding(.bottom, 24)
+                .padding(.top, 12)
+                .padding(.bottom, 32)
             }
         }
+        .safeAreaInset(edge: .top) {
+            Color.clear.frame(height: 8)
+        }
         .safeAreaInset(edge: .bottom) {
-            Color.clear.frame(height: 88)
+            Color.clear.frame(height: 104)
         }
         .navigationBarHidden(true)
         .sheet(item: Binding(get: {
@@ -111,8 +114,8 @@ struct SettingsView: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 40)
-        .padding(.bottom, 18)
+        .padding(.top, 28)
+        .padding(.bottom, 14)
         .background(AppTheme.heroGradient)
     }
 
@@ -247,7 +250,7 @@ struct SettingsView: View {
                             }
                         }
 
-                        Text(entitlementStore.hasProAccess ? "All premium features are active on this device." : "Unlock unlimited vehicles, OCR, advanced export, and smarter reminders.")
+                        Text(entitlementStore.hasProAccess ? "All premium features are active on this device." : "Unlock unlimited vehicles, fuel insights, OCR, premium exports, and smarter reminders.")
                             .font(.footnote)
                             .foregroundStyle(AppTheme.secondaryText)
                     }
@@ -315,7 +318,7 @@ struct SettingsView: View {
     }
 
     private var importSection: some View {
-        settingsGroupCard(title: "Import", subtitle: "Restore from a previous backup") {
+        settingsGroupCard(title: "Import", subtitle: "Restore from a previous local backup") {
             VStack(spacing: 0) {
                 if isImporting {
                     settingsProgressRow(title: "Importing backup", subtitle: "Please wait while data is restored.")
@@ -325,11 +328,7 @@ struct SettingsView: View {
                         subtitle: "Existing records with matching IDs are skipped.",
                         icon: "square.and.arrow.down"
                     ) {
-                        if entitlementStore.canImportData() {
-                            showingImportPicker = true
-                        } else {
-                            paywallCoordinator.present(.importData)
-                        }
+                        showingImportPicker = true
                     }
                 }
             }

@@ -3,6 +3,11 @@ import StoreKit
 
 @MainActor
 final class EntitlementStore: ObservableObject {
+    private enum Limits {
+        static let freeVehicles = 1
+        static let freeSavedDocuments = 10
+    }
+
     enum ProPlan: String, CaseIterable {
         case monthly
         case yearly
@@ -65,19 +70,51 @@ final class EntitlementStore: ObservableObject {
         observeTransactionsIfNeeded()
     }
 
+    var maxVehicles: Int? {
+        hasProAccess ? nil : Limits.freeVehicles
+    }
+
+    var maxSavedDocuments: Int? {
+        hasProAccess ? nil : Limits.freeSavedDocuments
+    }
+
     func canAddVehicle(existingCount: Int) -> Bool {
-        hasProAccess || existingCount < 1
+        hasProAccess || existingCount < Limits.freeVehicles
+    }
+
+    func canAddMoreVehicles(existingCount: Int) -> Bool {
+        canAddVehicle(existingCount: existingCount)
     }
 
     func canExportPDF() -> Bool {
+        hasProAccess
+    }
+
+    func canExportAdvancedReports() -> Bool {
         hasProAccess
     }
     
     func canUseAdvancedReminders() -> Bool {
         hasProAccess
     }
+
+    func canUseMileageReminders() -> Bool {
+        hasProAccess
+    }
     
     func canUseDocumentVault() -> Bool {
+        true
+    }
+
+    func canAddSavedDocuments(existingCount: Int, addingCount: Int = 1) -> Bool {
+        hasProAccess || existingCount + addingCount <= Limits.freeSavedDocuments
+    }
+
+    func canUseUnlimitedDocuments() -> Bool {
+        hasProAccess
+    }
+
+    func canUseDocumentOCR() -> Bool {
         hasProAccess
     }
     
@@ -85,7 +122,19 @@ final class EntitlementStore: ObservableObject {
         hasProAccess
     }
 
+    func canViewAdvancedInsights() -> Bool {
+        hasProAccess
+    }
+
     func canUseFuelTracking() -> Bool {
+        true
+    }
+
+    func canUseDetailedFuelTracking() -> Bool {
+        hasProAccess
+    }
+
+    func canUseFuelAnalytics() -> Bool {
         hasProAccess
     }
 
@@ -98,7 +147,7 @@ final class EntitlementStore: ObservableObject {
     }
 
     func canImportData() -> Bool {
-        hasProAccess
+        true
     }
 
     func product(for plan: ProPlan) -> Product? {

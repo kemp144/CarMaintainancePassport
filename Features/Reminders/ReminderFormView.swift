@@ -83,8 +83,8 @@ struct ReminderFormView: View {
 
                     HStack {
                         Toggle("Set mileage (Pro)", isOn: $includesMileage)
-                            .onChange(of: includesMileage) { newValue in
-                                if newValue && !entitlementStore.canUseAdvancedReminders() {
+                            .onChange(of: includesMileage) { _, newValue in
+                                if newValue && !entitlementStore.canUseMileageReminders() {
                                     includesMileage = false
                                     paywallCoordinator.present(.advancedReminders)
                                 }

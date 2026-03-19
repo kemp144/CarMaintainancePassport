@@ -30,11 +30,11 @@ enum PaywallReason: String, Identifiable {
         case .advancedReminders:
             return "Unlock smarter reminders"
         case .documentVault:
-            return "Keep documents in one glovebox"
+            return "Unlock a smarter glovebox"
         case .analytics:
             return "See your ownership costs clearly"
         case .fuelTracking:
-            return "Track fuel with more insight"
+            return "Unlock detailed fuel tracking"
         case .ocrScan:
             return "Scan receipts automatically"
         case .vinLookup:
@@ -55,11 +55,11 @@ enum PaywallReason: String, Identifiable {
         case .advancedReminders:
             return "Add mileage-based reminders so maintenance follows how much you actually drive."
         case .documentVault:
-            return "Keep receipts, registration, and warranty files attached to the right vehicle."
+            return "Keep more documents in one place, unlock OCR receipt capture, and organize paperwork with a richer glovebox workflow."
         case .analytics:
             return "See where ownership costs go and spot the patterns that matter."
         case .fuelTracking:
-            return "Log fill-ups and build a clearer picture of cost and consumption."
+            return "Log fuel for free, then unlock consumption, charts, filters, OCR, and deeper fuel insights with Pro."
         case .ocrScan:
             return "Let the app extract receipt details so service entries take less time."
         case .vinLookup:
@@ -67,7 +67,7 @@ enum PaywallReason: String, Identifiable {
         case .importData:
             return "Bring your existing records into Car Service Passport in one step."
         case .settings:
-            return "Unlock the full service passport experience when you're ready for more convenience."
+            return "Unlock unlimited vehicles, fuel insights, OCR, premium exports, and smarter reminder controls."
         }
     }
 }

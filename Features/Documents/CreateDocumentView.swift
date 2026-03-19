@@ -8,6 +8,8 @@ struct CreateDocumentView: View {
     @EnvironmentObject private var entitlementStore: EntitlementStore
     @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
 
+    @Query private var documents: [DocumentRecord]
+    @Query private var attachments: [AttachmentRecord]
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
 
     let preselectedVehicle: Vehicle?
@@ -98,8 +100,21 @@ struct CreateDocumentView: View {
         selectedVehicle?.sortedServices.first(where: { $0.id == selectedServiceID })
     }
 
+    private var savedDocumentCount: Int {
+        documents.count + attachments.count
+    }
+
+    private var hasReachedFreeDocumentLimit: Bool {
+        !entitlementStore.canAddSavedDocuments(existingCount: savedDocumentCount)
+    }
+
     private func presentAddFiles() {
         guard entitlementStore.canUseDocumentVault() else {
+            paywallCoordinator.present(.documentVault)
+            return
+        }
+
+        guard entitlementStore.canAddSavedDocuments(existingCount: savedDocumentCount) else {
             paywallCoordinator.present(.documentVault)
             return
         }
@@ -142,6 +157,12 @@ struct CreateDocumentView: View {
                 Text("Add photos or PDFs to create a document for this vehicle.")
                     .font(.footnote)
                     .foregroundStyle(AppTheme.tertiaryText)
+
+                if let maxSavedDocuments = entitlementStore.maxSavedDocuments, !entitlementStore.canUseUnlimitedDocuments() {
+                    Text("Free includes up to \(maxSavedDocuments) saved documents. Upgrade to keep adding more and unlock OCR workflows.")
+                        .font(.caption)
+                        .foregroundStyle(hasReachedFreeDocumentLimit ? AppTheme.accent : AppTheme.secondaryText)
+                }
             }
         }
     }
@@ -267,6 +288,11 @@ struct CreateDocumentView: View {
     @MainActor
     private func saveDocument() async {
         guard let vehicle = selectedVehicle, !pages.isEmpty else { return }
+
+        guard entitlementStore.canAddSavedDocuments(existingCount: savedDocumentCount) else {
+            paywallCoordinator.present(.documentVault)
+            return
+        }
 
         isSaving = true
         defer { isSaving = false }

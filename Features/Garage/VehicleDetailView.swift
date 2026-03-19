@@ -381,12 +381,8 @@ struct VehicleDetailView: View {
             quickActionButton(title: "Reminder", icon: "bell.fill") {
                 showingReminderForm = true
             }
-            quickActionButton(title: "Fuel", icon: "fuelpump.fill", isLocked: !entitlementStore.canUseFuelTracking()) {
-                if entitlementStore.canUseFuelTracking() {
-                    showingFuelTracking = true
-                } else {
-                    paywallCoordinator.present(.fuelTracking)
-                }
+            quickActionButton(title: "Fuel", icon: "fuelpump.fill") {
+                showingFuelTracking = true
             }
             quickActionButton(title: "Add Service", icon: "wrench.and.screwdriver.fill") {
                 showingServiceForm = true
@@ -419,92 +415,93 @@ struct VehicleDetailView: View {
                 Text("Fuel Log")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(AppTheme.primaryText)
+
+                if !entitlementStore.canUseDetailedFuelTracking() {
+                    Text("Pro")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
+                }
+
                 Spacer()
                 Button {
-                    if entitlementStore.canUseFuelTracking() {
-                        showingFuelTracking = true
-                    } else {
-                        paywallCoordinator.present(.fuelTracking)
-                    }
+                    showingFuelTracking = true
                 } label: {
-                    Text("See All")
+                    Text(entitlementStore.canUseDetailedFuelTracking() ? "See All" : "Open Log")
                         .font(.system(size: 14))
-                        .foregroundStyle(entitlementStore.canUseFuelTracking() ? AppTheme.accent : AppTheme.tertiaryText)
+                        .foregroundStyle(AppTheme.accent)
                 }
-                .disabled(!entitlementStore.canUseFuelTracking())
             }
 
-            ZStack {
-                VStack(spacing: 14) {
-                    if vehicle.fuelEntries.isEmpty {
-                        SurfaceCard(padding: 20) {
-                            HStack(spacing: 14) {
-                                Image(systemName: "fuelpump")
-                                    .font(.system(size: 28))
-                                    .foregroundStyle(AppTheme.tertiaryText)
+            VStack(spacing: 14) {
+                if vehicle.fuelEntries.isEmpty {
+                    SurfaceCard(padding: 20) {
+                        HStack(spacing: 14) {
+                            Image(systemName: "fuelpump")
+                                .font(.system(size: 28))
+                                .foregroundStyle(AppTheme.tertiaryText)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("No fuel entries yet")
+                                    .foregroundStyle(AppTheme.secondaryText)
+                                Button("Start tracking") {
+                                    showingFuelTracking = true
+                                }
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(AppTheme.accent)
+                            }
+                            Spacer()
+                        }
+                    }
+                } else {
+                    let fuelAnalysis = FuelAnalyticsService.analysis(for: vehicle.fuelEntries)
+
+                    SurfaceCard(padding: 16) {
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack(alignment: .top) {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("No fuel entries yet")
-                                        .foregroundStyle(AppTheme.secondaryText)
-                                    Button("Start tracking") {
-                                        if entitlementStore.canUseFuelTracking() {
-                                            showingFuelTracking = true
-                                        } else {
-                                            paywallCoordinator.present(.fuelTracking)
-                                        }
-                                    }
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(AppTheme.accent)
+                                    Text("Fuel Snapshot")
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundStyle(AppTheme.primaryText)
+                                    Text(entitlementStore.canUseDetailedFuelTracking() ? "Detailed overview" : "Basic totals and recent activity")
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.tertiaryText)
                                 }
                                 Spacer()
+                                Image(systemName: "fuelpump.fill")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(AppTheme.accent)
+                                    .padding(8)
+                                    .background(Circle().fill(AppTheme.surfaceSecondary))
                             }
-                        }
-                    } else {
-                        let fuelAnalysis = FuelAnalyticsService.analysis(for: vehicle.fuelEntries)
 
-                        SurfaceCard(padding: 16) {
-                            VStack(alignment: .leading, spacing: 14) {
-                                HStack(alignment: .top) {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Ownership Fuel Snapshot")
-                                            .font(.system(size: 15, weight: .semibold))
-                                            .foregroundStyle(AppTheme.primaryText)
-                                        Text("Compact overview")
+                            HStack {
+                                statPill(title: "Total Fuel", value: AppFormatters.fuelVolume(fuelAnalysis.insights.totalLiters))
+                                Spacer()
+                                statPill(title: "Fuel Cost", value: AppFormatters.currency(fuelAnalysis.insights.totalCost, code: vehicle.currencyCode))
+                            }
+
+                            Divider().background(AppTheme.separator)
+
+                            if let latest = fuelAnalysis.insights.lastFillUp {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Last fill-up")
                                             .font(.caption)
                                             .foregroundStyle(AppTheme.tertiaryText)
-                                    }
-                                    Spacer()
-                                    Image(systemName: "fuelpump.fill")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(AppTheme.accent)
-                                        .padding(8)
-                                        .background(Circle().fill(AppTheme.surfaceSecondary))
-                                }
-
-                                HStack {
-                                    statPill(title: "Total Fuel", value: AppFormatters.fuelVolume(fuelAnalysis.insights.totalLiters))
-                                    Spacer()
-                                    statPill(title: "Fuel Cost", value: AppFormatters.currency(fuelAnalysis.insights.totalCost, code: vehicle.currencyCode))
-                                }
-
-                                Divider().background(AppTheme.separator)
-
-                                if let latest = fuelAnalysis.insights.lastFillUp {
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text("Last fill-up")
-                                                .font(.caption)
-                                                .foregroundStyle(AppTheme.tertiaryText)
-                                            Text(AppFormatters.mediumDate.string(from: latest.date))
-                                                .font(.system(size: 14, weight: .semibold))
-                                                .foregroundStyle(AppTheme.primaryText)
-                                        }
-                                        Spacer()
-                                        Text(latest.liters.map { AppFormatters.fuelVolume($0) } ?? "—")
+                                        Text(AppFormatters.mediumDate.string(from: latest.date))
                                             .font(.system(size: 14, weight: .semibold))
                                             .foregroundStyle(AppTheme.primaryText)
                                     }
+                                    Spacer()
+                                    Text(latest.liters.map { AppFormatters.fuelVolume($0) } ?? "—")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(AppTheme.primaryText)
                                 }
+                            }
 
+                            if entitlementStore.canUseDetailedFuelTracking() {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Last valid tank")
@@ -528,38 +525,38 @@ struct VehicleDetailView: View {
                                             .multilineTextAlignment(.trailing)
                                     }
                                 }
+                            } else {
+                                Divider().background(AppTheme.separator)
+
+                                HStack(alignment: .top, spacing: 10) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack(spacing: 8) {
+                                            Text("Detailed Fuel Tracking")
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(AppTheme.primaryText)
+
+                                            Text("Pro")
+                                                .font(.caption2.weight(.semibold))
+                                                .foregroundStyle(AppTheme.accent)
+                                                .padding(.horizontal, 7)
+                                                .padding(.vertical, 3)
+                                                .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
+                                        }
+
+                                        Text("Consumption, charts, filters, OCR receipts, export, and advanced analytics.")
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.secondaryText)
+                                    }
+
+                                    Spacer(minLength: 10)
+
+                                    Button("Upgrade") {
+                                        paywallCoordinator.present(.fuelTracking)
+                                    }
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(AppTheme.accent)
+                                }
                             }
-                        }
-                    }
-                }
-                .blur(radius: entitlementStore.canUseFuelTracking() ? 0 : 3)
-                .allowsHitTesting(entitlementStore.canUseFuelTracking())
-
-                if !entitlementStore.canUseFuelTracking() {
-                    VStack(spacing: 12) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 12))
-                            Text("PRO")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(AppTheme.accent))
-
-                        Text("Unlock Fuel Tracking & Analytics with Pro")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(AppTheme.primaryText)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
-
-                        Button {
-                            paywallCoordinator.present(.fuelTracking)
-                        } label: {
-                            Text("Upgrade Now")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(AppTheme.accent)
                         }
                     }
                 }
@@ -842,14 +839,6 @@ struct VehicleDetailView: View {
                             .font(.system(size: 11))
                             .foregroundStyle(AppTheme.secondaryText)
                         Spacer()
-                        if let trailingBadge {
-                            Text(trailingBadge)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(AppTheme.primaryText)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Capsule().fill(AppTheme.surfaceSecondary))
-                        }
                         Image(systemName: "chevron.right")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(AppTheme.tertiaryText)
@@ -861,10 +850,24 @@ struct VehicleDetailView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
 
-                    Text(helperText)
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.secondaryText)
+                    HStack(spacing: 8) {
+                        Text(helperText)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+
+                        if let trailingBadge {
+                            Text(trailingBadge)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(AppTheme.accent)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
+                        }
+                    }
                 }
+                .frame(maxWidth: .infinity, minHeight: 112, maxHeight: 112, alignment: .topLeading)
             }
         }
         .buttonStyle(.plain)
