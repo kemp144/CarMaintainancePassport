@@ -8,6 +8,20 @@ final class EntitlementStore: ObservableObject {
         static let freeSavedDocuments = 10
     }
 
+    enum PremiumPreviewModule: String, CaseIterable, Codable {
+        case finance
+        case fuel
+        case service
+        case resale
+    }
+
+    struct PremiumPreviewState: Codable {
+        let module: PremiumPreviewModule
+        var hasUsedPreview: Bool
+        var unlockedByMilestone: Bool
+        var lastMilestoneValueShown: Int?
+    }
+
     enum ProPlan: String, CaseIterable {
         case monthly
         case yearly
@@ -28,6 +42,7 @@ final class EntitlementStore: ObservableObject {
     @Published private(set) var products: [String: Product] = [:]
     @Published private(set) var isProUnlocked: Bool
     @Published private(set) var isBusy = false
+    @Published private(set) var premiumPreviewStates: [PremiumPreviewModule: PremiumPreviewState]
     @Published var purchaseErrorMessage: String?
 
     #if DEBUG
@@ -40,12 +55,14 @@ final class EntitlementStore: ObservableObject {
     private enum Keys {
         static let cachedProUnlocked = "entitlement.cachedProUnlocked"
         static let debugProOverride = "entitlement.debugProOverride"
+        static let premiumPreviewStates = "entitlement.premiumPreviewStates"
     }
 
     init() {
         let cached = UserDefaults.standard.bool(forKey: Keys.cachedProUnlocked)
         cachedProAccess = cached
         isProUnlocked = cached
+        premiumPreviewStates = Self.loadPremiumPreviewStates()
     }
 
     deinit {
@@ -144,6 +161,51 @@ final class EntitlementStore: ObservableObject {
 
     func canUseVINLookup() -> Bool {
         hasProAccess
+    }
+
+    func previewState(for module: PremiumPreviewModule) -> PremiumPreviewState {
+        premiumPreviewStates[module] ?? Self.defaultPreviewState(for: module)
+    }
+
+    func hasUsedPreview(for module: PremiumPreviewModule) -> Bool {
+        previewState(for: module).hasUsedPreview
+    }
+
+    func isPreviewUnlocked(for module: PremiumPreviewModule) -> Bool {
+        hasProAccess || previewState(for: module).unlockedByMilestone
+    }
+
+    func canShowPreview(for module: PremiumPreviewModule) -> Bool {
+        guard !hasProAccess else { return true }
+        let state = previewState(for: module)
+        return state.unlockedByMilestone && !state.hasUsedPreview
+    }
+
+    func unlockPreviewMilestone(for module: PremiumPreviewModule, milestoneValue: Int? = nil) {
+        var state = previewState(for: module)
+        state.unlockedByMilestone = true
+        if let milestoneValue {
+            state.lastMilestoneValueShown = milestoneValue
+        }
+        updatePreviewState(state)
+    }
+
+    func lockPreviewMilestone(for module: PremiumPreviewModule) {
+        guard !hasProAccess else { return }
+        var state = previewState(for: module)
+        state.unlockedByMilestone = false
+        updatePreviewState(state)
+    }
+
+    @discardableResult
+    func consumePreview(for module: PremiumPreviewModule) -> Bool {
+        guard !hasProAccess else { return true }
+        guard canShowPreview(for: module) else { return false }
+
+        var state = previewState(for: module)
+        state.hasUsedPreview = true
+        updatePreviewState(state)
+        return true
     }
 
     func canImportData() -> Bool {
@@ -258,6 +320,41 @@ final class EntitlementStore: ObservableObject {
         case .unverified:
             throw StoreError.failedVerification
         }
+    }
+
+    private func updatePreviewState(_ state: PremiumPreviewState) {
+        premiumPreviewStates[state.module] = state
+        persistPreviewStates()
+    }
+
+    private func persistPreviewStates() {
+        let states = PremiumPreviewModule.allCases.map { previewState(for: $0) }
+        guard let encoded = try? JSONEncoder().encode(states) else { return }
+        UserDefaults.standard.set(encoded, forKey: Keys.premiumPreviewStates)
+    }
+
+    private static func loadPremiumPreviewStates() -> [PremiumPreviewModule: PremiumPreviewState] {
+        guard
+            let data = UserDefaults.standard.data(forKey: Keys.premiumPreviewStates),
+            let decoded = try? JSONDecoder().decode([PremiumPreviewState].self, from: data)
+        else {
+            return Dictionary(uniqueKeysWithValues: PremiumPreviewModule.allCases.map { ($0, defaultPreviewState(for: $0)) })
+        }
+
+        var states = Dictionary(uniqueKeysWithValues: decoded.map { ($0.module, $0) })
+        for module in PremiumPreviewModule.allCases where states[module] == nil {
+            states[module] = defaultPreviewState(for: module)
+        }
+        return states
+    }
+
+    private static func defaultPreviewState(for module: PremiumPreviewModule) -> PremiumPreviewState {
+        PremiumPreviewState(
+            module: module,
+            hasUsedPreview: false,
+            unlockedByMilestone: false,
+            lastMilestoneValueShown: nil
+        )
     }
 }
 

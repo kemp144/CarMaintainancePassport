@@ -7,9 +7,14 @@ struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var entitlementStore: EntitlementStore
+    @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
 
     @State private var selectedPlan: EntitlementStore.ProPlan = .yearly
     @State private var scrollOffset: CGFloat = 0
+
+    private var paywallCopy: PaywallCopy {
+        PaywallCopyBuilder.build(for: reason, context: paywallCoordinator.context)
+    }
 
     var body: some View {
         NavigationStack {
@@ -95,12 +100,12 @@ struct PaywallView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(reason.title)
+                Text(paywallCopy.title)
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(2)
 
-                Text(reason.message)
+                Text(paywallCopy.message)
                     .font(.body)
                     .foregroundStyle(Color.white.opacity(0.82))
                     .fixedSize(horizontal: false, vertical: true)
@@ -497,6 +502,34 @@ struct PaywallView: View {
 
     private var paywallBenefits: [PaywallBenefit] {
         switch reason {
+        case .financeBreakdown:
+            return [
+                PaywallBenefit(icon: "chart.pie.fill", title: "Category breakdowns", message: "See which costs actually drive ownership."),
+                PaywallBenefit(icon: "chart.bar.xaxis", title: "Trend context", message: "Track how categories shift over time."),
+                PaywallBenefit(icon: "magnifyingglass", title: "Smarter cost insight", message: "Spot the categories that quietly become expensive."),
+                PaywallBenefit(icon: "doc.richtext.fill", title: "Cleaner ownership story", message: "Turn raw totals into useful financial context.")
+            ]
+        case .servicePrediction:
+            return [
+                PaywallBenefit(icon: "wrench.and.screwdriver.fill", title: "Likely due next", message: "See what may need attention before costs creep up."),
+                PaywallBenefit(icon: "clock.badge.exclamationmark.fill", title: "Smarter prioritization", message: "Focus on the service items that deserve attention first."),
+                PaywallBenefit(icon: "chart.line.uptrend.xyaxis", title: "Maintenance trends", message: "Understand timing patterns across your service history."),
+                PaywallBenefit(icon: "list.bullet.rectangle.portrait", title: "Calmer planning", message: "Keep service planning useful, not overwhelming.")
+            ]
+        case .fuelTrend:
+            return [
+                PaywallBenefit(icon: "gauge.with.dots.needle.33percent", title: "Long-term averages", message: "See how your car performs beyond the latest fill-up."),
+                PaywallBenefit(icon: "chart.xyaxis.line", title: "Trend charts", message: "Track fuel history visually without guesswork."),
+                PaywallBenefit(icon: "line.3.horizontal.decrease.circle.fill", title: "Flexible filtering", message: "Focus on the periods that matter most."),
+                PaywallBenefit(icon: "doc.text.viewfinder", title: "Receipt OCR", message: "Capture fill-ups faster with less manual entry.")
+            ]
+        case .resaleReport:
+            return [
+                PaywallBenefit(icon: "checkmark.seal.fill", title: "Buyer-ready report", message: "Turn your records into a cleaner story for buyers."),
+                PaywallBenefit(icon: "text.book.closed.fill", title: "Confidence strengths", message: "See what already supports resale confidence."),
+                PaywallBenefit(icon: "exclamationmark.triangle.fill", title: "Weakness signals", message: "Spot what still reduces buyer trust."),
+                PaywallBenefit(icon: "doc.richtext.fill", title: "Shareable exports", message: "Keep resale prep polished when you need it.")
+            ]
         case .analytics:
             return [
                 PaywallBenefit(icon: "chart.pie.fill", title: "Full cost breakdown", message: "See where your money really goes."),

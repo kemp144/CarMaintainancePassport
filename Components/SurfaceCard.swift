@@ -375,6 +375,78 @@ struct DataConfidenceFootnote: View {
     }
 }
 
+struct PremiumPreviewCard: View {
+    let title: String
+    let message: String
+    let actionTitle: String
+    var footnote: String? = nil
+    let action: () -> Void
+
+    var body: some View {
+        SurfaceCard(tier: .compact, padding: 14) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.primaryText)
+
+                        Text(message)
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 12)
+
+                    Button(actionTitle, action: action)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                }
+
+                if let footnote {
+                    DataConfidenceFootnote(message: footnote, icon: "sparkles")
+                }
+            }
+        }
+    }
+}
+
+struct PartialRevealCard<Content: View>: View {
+    let title: String
+    let message: String
+    var footnote: String? = nil
+    @ViewBuilder let content: Content
+
+    init(title: String, message: String, footnote: String? = nil, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.message = message
+        self.footnote = footnote
+        self.content = content()
+    }
+
+    var body: some View {
+        SurfaceCard(tier: .primary) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(AppTheme.primaryText)
+
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.tertiaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                content
+
+                if let footnote {
+                    DataConfidenceFootnote(message: footnote, icon: "sparkles")
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Floating Add Button
 
 struct FloatingAddButton: View {

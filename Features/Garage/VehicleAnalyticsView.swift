@@ -50,6 +50,10 @@ struct VehicleAnalyticsView: View {
     
     @StateObject private var viewModel: VehicleIntelligenceViewModel
     @State private var selectedTab: AnalyticsTab = .financials
+    @State private var showingFinancePreview = false
+    @State private var showingServicePreview = false
+    @State private var showingFuelPreview = false
+    @State private var showingResalePreview = false
     
     enum AnalyticsTab: String, CaseIterable, Identifiable {
         case financials = "Finance"
@@ -67,6 +71,46 @@ struct VehicleAnalyticsView: View {
 
     private var hasAdvancedInsights: Bool {
         entitlementStore.canViewAdvancedInsights()
+    }
+
+    private var canRevealFinancePreview: Bool {
+        !hasAdvancedInsights &&
+        entitlementStore.canShowPreview(for: .finance) &&
+        !viewModel.financePreviewTopCategories.isEmpty
+    }
+
+    private var hasUsedFinancePreview: Bool {
+        !hasAdvancedInsights && entitlementStore.hasUsedPreview(for: .finance)
+    }
+
+    private var canRevealServicePreview: Bool {
+        !hasAdvancedInsights &&
+        entitlementStore.canShowPreview(for: .service) &&
+        viewModel.servicePreviewAvailable
+    }
+
+    private var hasUsedServicePreview: Bool {
+        !hasAdvancedInsights && entitlementStore.hasUsedPreview(for: .service)
+    }
+
+    private var canRevealFuelPreview: Bool {
+        !hasAdvancedInsights &&
+        entitlementStore.canShowPreview(for: .fuel) &&
+        viewModel.validFuelCycleCount >= 3
+    }
+
+    private var hasUsedFuelPreview: Bool {
+        !hasAdvancedInsights && entitlementStore.hasUsedPreview(for: .fuel)
+    }
+
+    private var canRevealResalePreview: Bool {
+        !hasAdvancedInsights &&
+        entitlementStore.canShowPreview(for: .resale) &&
+        viewModel.resalePreviewAvailable
+    }
+
+    private var hasUsedResalePreview: Bool {
+        !hasAdvancedInsights && entitlementStore.hasUsedPreview(for: .resale)
     }
 
     var body: some View {
@@ -113,6 +157,7 @@ struct VehicleAnalyticsView: View {
         }
         .task(id: appState.dataRefreshToken) {
             await viewModel.calculateIntelligence(allVehicles: allVehicles)
+            syncPreviewMilestones()
         }
     }
     
@@ -289,9 +334,24 @@ struct VehicleAnalyticsView: View {
                     }
                 }
             } else {
+                if showingFinancePreview {
+                    financeBreakdownPreviewCard
+                } else {
+                    PremiumPreviewCard(
+                        title: "Where does your money go?",
+                        message: "See which categories drive your ownership costs.",
+                        actionTitle: hasUsedFinancePreview ? "Unlock Pro" : (canRevealFinancePreview ? "Reveal Preview" : "Not Yet"),
+                        footnote: financePreviewPromptText
+                    ) {
+                        revealFinancePreview()
+                    }
+                }
+
                 LockedInsightCard(
-                    title: "Full cost breakdown",
-                    message: "Understand where your money goes and spot the patterns that quietly raise ownership costs.",
+                    title: showingFinancePreview ? "Keep this insight available" : "Full cost breakdown",
+                    message: showingFinancePreview
+                        ? "Your preview is unlocked for now. Pro keeps category breakdowns, trends, and deeper cost patterns ready anytime."
+                        : "Understand where your money goes and spot the patterns that quietly raise ownership costs.",
                     highlights: [
                         "Spending trends over time",
                         "Category-by-category totals",
@@ -300,7 +360,7 @@ struct VehicleAnalyticsView: View {
                     ctaTitle: "Unlock Pro",
                     previewText: financePreviewText
                 ) {
-                    paywallCoordinator.present(.analytics)
+                    paywallCoordinator.present(.financeBreakdown, context: paywallContext)
                 }
             }
         }
@@ -394,6 +454,19 @@ struct VehicleAnalyticsView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
             } else {
+                PremiumPreviewCard(
+                    title: "Likely due next",
+                    message: servicePreviewPromptText,
+                    actionTitle: hasUsedServicePreview ? "Unlock Pro" : (canRevealServicePreview ? "Preview Insight" : "Not Yet"),
+                    footnote: servicePreviewFootnote
+                ) {
+                    revealServicePreview()
+                }
+
+                if showingServicePreview {
+                    servicePredictionPreviewCard
+                }
+
                 DataConfidenceFootnote(message: viewModel.maintenanceConfidenceText)
                     .padding(.horizontal, 2)
 
@@ -408,7 +481,7 @@ struct VehicleAnalyticsView: View {
                     ctaTitle: "Unlock Pro",
                     previewText: maintenancePreviewText
                 ) {
-                    paywallCoordinator.present(.analytics)
+                    paywallCoordinator.present(.servicePrediction, context: paywallContext)
                 }
             }
         }
@@ -443,7 +516,7 @@ struct VehicleAnalyticsView: View {
             
             HStack(spacing: 12) {
                 InsightTile(title: "Average Fuel Price", state: viewModel.averageFuelPrice, icon: "dollarsign.circle")
-                InsightTile(title: "Recent Avg (Up to 3 valid fill-ups)", state: viewModel.recentAverageConsumption, icon: "gauge.medium")
+                InsightTile(title: "Recent Avg (Last 3 valid fill-ups)", state: viewModel.recentAverageConsumption, icon: "gauge.medium")
             }
 
             if let last = viewModel.lastValidTank {
@@ -491,9 +564,24 @@ struct VehicleAnalyticsView: View {
                     InsightTile(title: "Fuel Cost / 100 km", state: viewModel.costPer100Km, icon: "road.lanes")
                 }
             } else {
+                if showingFuelPreview {
+                    fuelTrendPreviewCard
+                } else if viewModel.validFuelCycleCount >= 3 {
+                    PremiumPreviewCard(
+                        title: "Long-term trend ready",
+                        message: "You now have enough valid fill-up history to reveal one real fuel trend preview.",
+                        actionTitle: hasUsedFuelPreview ? "Unlock Pro" : (canRevealFuelPreview ? "Reveal Trend" : "Not Yet"),
+                        footnote: fuelPreviewPromptText
+                    ) {
+                        revealFuelPreview()
+                    }
+                }
+
                 LockedInsightCard(
-                    title: "See your real fuel efficiency",
-                    message: "Start with the basics for free, then track the long-term patterns that actually reveal how your car is performing.",
+                    title: showingFuelPreview ? "Keep long-term trends available" : "See your real fuel efficiency",
+                    message: showingFuelPreview
+                        ? "Your preview is unlocked for now. Pro keeps long-term averages, charts, and period filters available whenever you need them."
+                        : "Start with the basics for free, then track the long-term patterns that actually reveal how your car is performing.",
                     highlights: [
                         "Long-term average consumption",
                         "Trend chart across fill-ups",
@@ -502,7 +590,7 @@ struct VehicleAnalyticsView: View {
                     ctaTitle: "Unlock Pro",
                     previewText: fuelPreviewText
                 ) {
-                    paywallCoordinator.present(.fuelTracking)
+                    paywallCoordinator.present(.fuelTrend, context: paywallContext)
                 }
             }
         }
@@ -573,6 +661,21 @@ struct VehicleAnalyticsView: View {
                 .padding(.horizontal, 2)
 
             if !hasAdvancedInsights {
+                if viewModel.resalePreviewAvailable {
+                    PremiumPreviewCard(
+                        title: "Resale value is starting to take shape",
+                        message: "See how your records support buyer confidence.",
+                        actionTitle: hasUsedResalePreview ? "Unlock Pro" : (canRevealResalePreview ? "Preview Buyer Report" : "Not Yet"),
+                        footnote: resalePreviewPromptText
+                    ) {
+                        revealResalePreview()
+                    }
+                }
+
+                if showingResalePreview {
+                    resalePreviewCard
+                }
+
                 LockedInsightCard(
                     title: "Resale insights",
                     message: "Know what strengthens buyer confidence before you decide to sell.",
@@ -584,7 +687,7 @@ struct VehicleAnalyticsView: View {
                     ctaTitle: "Unlock Pro",
                     previewText: resalePreviewText
                 ) {
-                    paywallCoordinator.present(.analytics)
+                    paywallCoordinator.present(.resaleReport, context: paywallContext)
                 }
             }
         }
@@ -731,50 +834,41 @@ struct VehicleAnalyticsView: View {
                     ctaTitle: "Unlock Pro",
                     previewText: garagePreviewText
                 ) {
-                    paywallCoordinator.present(.secondVehicle)
+                    paywallCoordinator.present(.secondVehicle, context: paywallContext)
                 }
             }
         }
     }
 
-    private var financePreviewText: String? {
-        if viewModel.spendingByCategory.isEmpty {
-            return "Log more service history to reveal cost patterns."
-        }
-
-        if let insight = viewModel.financialCategoryInsight {
-            return insight
-        }
-
-        guard viewModel.totalLifetimeSpend > 0 else { return nil }
-        return "You have logged \(AppFormatters.currency(viewModel.totalLifetimeSpend, code: vehicle.currencyCode)) so far."
-    }
-
     private var maintenancePreviewText: String? {
+        if showingServicePreview {
+            return "One-time service prediction preview unlocked."
+        }
+
+        if hasUsedServicePreview {
+            return "Service prediction preview used."
+        }
+
+        if let likelyDueNextItem = viewModel.likelyDueNextItem {
+            return "\(likelyDueNextItem) may need attention next."
+        }
+
         if viewModel.overdueMaintenanceCount > 0 || viewModel.upcomingMaintenanceCount > 0 {
             return viewModel.maintenanceHealthText
-        }
-
-        if let category = viewModel.mostExpensiveMaintenanceCategory.readyValue {
-            return "Highest service cost so far: \(category)"
         }
 
         return viewModel.maintenanceInsightText
     }
 
-    private var fuelPreviewText: String? {
-        if let average = viewModel.recentAverageConsumption.readyValue {
-            return "Recent average: \(average)"
-        }
-
-        if let note = viewModel.recentAverageConsumption.placeholderText {
-            return note
-        }
-
-        return nil
-    }
-
     private var resalePreviewText: String? {
+        if showingResalePreview {
+            return "Buyer report preview unlocked."
+        }
+
+        if hasUsedResalePreview {
+            return "Buyer report preview used."
+        }
+
         if viewModel.resaleReadinessScore > 0 {
             return "\(viewModel.resaleReadinessScore)% buyer-ready today."
         }
@@ -792,6 +886,309 @@ struct VehicleAnalyticsView: View {
         }
 
         return "Your first vehicle is ready. Add another to compare ownership costs side by side."
+    }
+
+    private var paywallContext: PaywallPresentationContext {
+        PaywallPresentationContext(
+            totalOwnershipSpend: viewModel.totalLifetimeSpend,
+            currencyCode: vehicle.currencyCode,
+            buyerReadyScore: viewModel.resaleReadinessScore,
+            validFuelCycleCount: viewModel.validFuelCycleCount,
+            maintenanceHistoryCount: viewModel.maintenanceHistoryCount,
+            vehicleCount: allVehicles.count
+        )
+    }
+
+    private var financePreviewPromptText: String? {
+        if hasUsedFinancePreview {
+            return "Preview already used. Pro keeps cost category insight available any time."
+        }
+        if viewModel.financePreviewTopCategories.isEmpty {
+            return "Available once more ownership costs are logged."
+        }
+        return "One-time preview available once you tap in."
+    }
+
+    private var servicePreviewPromptText: String {
+        viewModel.servicePreviewAvailable
+            ? "See what may need attention next"
+            : "Available once more service history is logged"
+    }
+
+    private var servicePreviewFootnote: String? {
+        if hasUsedServicePreview {
+            return "Preview already used. Pro keeps smarter predictions and longer-term planning available."
+        }
+        return viewModel.servicePreviewAvailable ? "One-time preview available." : viewModel.maintenanceConfidenceText
+    }
+
+    private var fuelPreviewPromptText: String? {
+        if hasUsedFuelPreview {
+            return "Preview already used. Pro keeps long-term fuel trends available."
+        }
+        return "One-time preview available once your fuel trend is ready."
+    }
+
+    private var resalePreviewPromptText: String? {
+        if hasUsedResalePreview {
+            return "Preview already used. Pro keeps buyer-facing resale tools available."
+        }
+        return "One-time preview available once buyer confidence starts to take shape."
+    }
+
+    private var financePreviewText: String? {
+        if showingFinancePreview {
+            return "One-time cost preview unlocked."
+        }
+
+        if hasUsedFinancePreview {
+            return "One-time cost preview used."
+        }
+
+        if let insight = viewModel.financePreviewInsightText {
+            return insight
+        }
+
+        guard viewModel.totalLifetimeSpend > 0 else { return nil }
+        return "You've logged \(AppFormatters.currency(viewModel.totalLifetimeSpend, code: vehicle.currencyCode)) so far."
+    }
+
+    private var fuelPreviewText: String? {
+        if showingFuelPreview {
+            return "One-time fuel trend preview unlocked."
+        }
+
+        if hasUsedFuelPreview {
+            return "One-time fuel trend preview used."
+        }
+
+        if let insight = viewModel.fuelPreviewInsightText {
+            return insight
+        }
+
+        if let average = viewModel.recentAverageConsumption.readyValue {
+            return "Recent average: \(average)"
+        }
+
+        if let note = viewModel.recentAverageConsumption.placeholderText {
+            return note
+        }
+
+        return nil
+    }
+
+    private var financeBreakdownPreviewCard: some View {
+        PartialRevealCard(
+            title: "Category Breakdown Preview",
+            message: "A small first look at what currently stands out in your ownership costs.",
+            footnote: "One-time preview only. Pro unlocks the full breakdown, yearly trends, and deeper cost context."
+        ) {
+            Chart {
+                ForEach(viewModel.financePreviewTopCategories, id: \.title) { item in
+                    BarMark(
+                        x: .value("Category", item.title),
+                        y: .value("Amount", item.amount)
+                    )
+                    .foregroundStyle(AppTheme.accent.gradient)
+                    .cornerRadius(4)
+                }
+            }
+            .frame(height: 120)
+
+            VStack(spacing: 0) {
+                ForEach(Array(viewModel.financePreviewTopCategories.enumerated()), id: \.element.title) { index, item in
+                    AnalyticsDetailRow(
+                        title: item.title,
+                        value: AppFormatters.currency(item.amount, code: vehicle.currencyCode)
+                    )
+
+                    if index < viewModel.financePreviewTopCategories.count - 1 {
+                        Divider().overlay(AppTheme.separator)
+                    }
+                }
+            }
+
+            if let financePreviewInsightText = viewModel.financePreviewInsightText {
+                Text(financePreviewInsightText)
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.tertiaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var servicePredictionPreviewCard: some View {
+        PartialRevealCard(
+            title: "Likely Due Next Preview",
+            message: "A soft estimate based on your logged maintenance history.",
+            footnote: "One-time preview only. Pro keeps this prediction layer and deeper service planning available."
+        ) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(viewModel.servicePredictionPreviewTitle ?? "Maintenance history is still taking shape")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.primaryText)
+
+                Text(viewModel.servicePredictionPreviewText)
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let servicePredictionConfidenceText = viewModel.servicePredictionConfidenceText {
+                    DataConfidenceFootnote(message: servicePredictionConfidenceText)
+                }
+            }
+        }
+    }
+
+    private var fuelTrendPreviewCard: some View {
+        PartialRevealCard(
+            title: "Fuel Trend Preview",
+            message: "A compact look at how your long-term fuel pattern compares with your recent average.",
+            footnote: "One-time preview only. Pro unlocks full fuel trend history, filters, and deeper analysis."
+        ) {
+            HStack(spacing: 12) {
+                InsightTile(title: "Recent Avg (Last 3 valid fill-ups)", state: viewModel.recentAverageConsumption, icon: "gauge.medium")
+                InsightTile(title: "All-Time Avg", state: viewModel.allTimeAverageConsumption, icon: "gauge.with.dots.needle.67percent")
+            }
+
+            Chart {
+                ForEach(viewModel.fuelConsumptionPreviewPoints) { point in
+                    LineMark(
+                        x: .value("Cycle", point.label),
+                        y: .value("Consumption", point.value)
+                    )
+                    .foregroundStyle(AppTheme.accent.gradient)
+                    .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round))
+
+                    PointMark(
+                        x: .value("Cycle", point.label),
+                        y: .value("Consumption", point.value)
+                    )
+                    .foregroundStyle(AppTheme.accent)
+                }
+            }
+            .frame(height: 120)
+
+            if let fuelPreviewInsightText = viewModel.fuelPreviewInsightText {
+                Text(fuelPreviewInsightText)
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.tertiaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var resalePreviewCard: some View {
+        PartialRevealCard(
+            title: "Buyer Report Preview",
+            message: "A short look at how your records currently support buyer confidence.",
+            footnote: "One-time preview only. Pro keeps buyer-ready reports, deeper risk context, and export tools available."
+        ) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(viewModel.resalePreviewSummary)
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(viewModel.resalePreviewStrengths, id: \.self) { strength in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(AppTheme.accent)
+                                .font(.caption.weight(.semibold))
+                                .padding(.top, 2)
+                            Text(strength)
+                                .font(.footnote)
+                                .foregroundStyle(AppTheme.primaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+
+                if let resalePreviewWeakness = viewModel.resalePreviewWeakness {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .foregroundStyle(Color.orange)
+                            .font(.caption.weight(.semibold))
+                            .padding(.top, 2)
+                        Text(resalePreviewWeakness)
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                if let resalePreviewConfidenceNote = viewModel.resalePreviewConfidenceNote {
+                    DataConfidenceFootnote(message: resalePreviewConfidenceNote)
+                }
+            }
+        }
+    }
+
+    private func revealFinancePreview() {
+        guard hasUsedFinancePreview || canRevealFinancePreview else { return }
+
+        if canRevealFinancePreview, entitlementStore.consumePreview(for: .finance) {
+            showingFinancePreview = true
+        } else {
+            paywallCoordinator.present(.financeBreakdown, context: paywallContext)
+        }
+    }
+
+    private func revealServicePreview() {
+        guard hasUsedServicePreview || canRevealServicePreview else { return }
+
+        if canRevealServicePreview, entitlementStore.consumePreview(for: .service) {
+            showingServicePreview = true
+        } else {
+            paywallCoordinator.present(.servicePrediction, context: paywallContext)
+        }
+    }
+
+    private func revealFuelPreview() {
+        guard hasUsedFuelPreview || canRevealFuelPreview else { return }
+
+        if canRevealFuelPreview, entitlementStore.consumePreview(for: .fuel) {
+            showingFuelPreview = true
+        } else {
+            paywallCoordinator.present(.fuelTrend, context: paywallContext)
+        }
+    }
+
+    private func revealResalePreview() {
+        guard hasUsedResalePreview || canRevealResalePreview else { return }
+
+        if canRevealResalePreview, entitlementStore.consumePreview(for: .resale) {
+            showingResalePreview = true
+        } else {
+            paywallCoordinator.present(.resaleReport, context: paywallContext)
+        }
+    }
+
+    private func syncPreviewMilestones() {
+        if !viewModel.financePreviewTopCategories.isEmpty {
+            entitlementStore.unlockPreviewMilestone(for: .finance)
+        } else {
+            entitlementStore.lockPreviewMilestone(for: .finance)
+        }
+
+        if viewModel.servicePreviewAvailable {
+            entitlementStore.unlockPreviewMilestone(for: .service, milestoneValue: viewModel.maintenanceHistoryCount)
+        } else {
+            entitlementStore.lockPreviewMilestone(for: .service)
+        }
+
+        if viewModel.validFuelCycleCount >= 3 {
+            entitlementStore.unlockPreviewMilestone(for: .fuel, milestoneValue: viewModel.validFuelCycleCount)
+        } else {
+            entitlementStore.lockPreviewMilestone(for: .fuel)
+        }
+
+        if viewModel.resalePreviewAvailable {
+            entitlementStore.unlockPreviewMilestone(for: .resale, milestoneValue: viewModel.resaleReadinessScore)
+        } else {
+            entitlementStore.lockPreviewMilestone(for: .resale)
+        }
     }
 }
 
@@ -920,6 +1317,12 @@ struct AnalyticsDetailRow: View {
     }
 }
 
+struct FuelConsumptionPreviewPoint: Identifiable {
+    let id = UUID()
+    let label: String
+    let value: Double
+}
+
 private extension MetricState where T == String {
     var readyValue: String? {
         guard case .ready(let value) = self else { return nil }
@@ -964,6 +1367,8 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     @Published var spendingByYear: [(year: Int, amount: Double)] = []
     @Published var spendingByCategory: [(category: EntryCategory, amount: Double)] = []
     @Published var financialCategoryInsight: String? = nil
+    @Published var financePreviewTopCategories: [(title: String, amount: Double)] = []
+    @Published var financePreviewInsightText: String? = nil
     
     // Fuel Intelligence
     @Published var lastValidTank: FuelEntry?
@@ -976,6 +1381,8 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     @Published var fuelSpendTrendText: String = "Add more full fill-ups to reveal fuel patterns."
     @Published var fuelDataConfidenceText: String = "Useful now, smarter over time."
     @Published var validFuelCycleCount: Int = 0
+    @Published var fuelConsumptionPreviewPoints: [FuelConsumptionPreviewPoint] = []
+    @Published var fuelPreviewInsightText: String? = nil
     
     // Maintenance Intelligence
     @Published var mostExpensiveMaintenanceCategory: MetricState<String> = .neverRecorded
@@ -990,6 +1397,12 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     @Published var maintenanceInsightText: String = "Maintenance insights improve as you log more service history."
     @Published var maintenanceConfidenceText: String = "Useful now, smarter over time."
     @Published var policyReminderSummaryText: String? = nil
+    @Published var maintenanceHistoryCount: Int = 0
+    @Published var servicePreviewAvailable: Bool = false
+    @Published var likelyDueNextItem: String? = nil
+    @Published var servicePredictionPreviewTitle: String? = nil
+    @Published var servicePredictionPreviewText: String = "Available once more service history is logged."
+    @Published var servicePredictionConfidenceText: String? = nil
 
     // Garage Intelligence
     @Published var garageSpendByVehicle: [(title: String, amount: Double)] = []
@@ -1013,6 +1426,11 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     @Published var vaultDocumentCount: Int = 0
     @Published var buyerSupportDocumentCount: Int = 0
     @Published var resaleConfidenceText: String = "More supporting records improve buyer confidence."
+    @Published var resalePreviewAvailable: Bool = false
+    @Published var resalePreviewSummary: String = ""
+    @Published var resalePreviewStrengths: [String] = []
+    @Published var resalePreviewWeakness: String? = nil
+    @Published var resalePreviewConfidenceNote: String? = nil
 
     init(vehicle: Vehicle) {
         self.vehicle = vehicle
@@ -1143,6 +1561,24 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 } else {
                     res.financialCategoryInsight = "Early pattern: \(largestCat.category.title) is your largest service cost so far."
                 }
+            }
+
+            var financePreviewCategories: [(title: String, amount: Double)] = []
+            if totalFuel > 0 {
+                financePreviewCategories.append((title: "Fuel", amount: totalFuel))
+            }
+            financePreviewCategories.append(contentsOf: res.spendingByCategory.map { ($0.category.title, $0.amount) })
+            res.financePreviewTopCategories = financePreviewCategories
+                .sorted { $0.amount > $1.amount }
+                .prefix(2)
+                .map { $0 }
+
+            if res.financePreviewTopCategories.count >= 2 {
+                let first = res.financePreviewTopCategories[0].title
+                let second = res.financePreviewTopCategories[1].title
+                res.financePreviewInsightText = "\(first) and \(second) currently stand out as your largest ownership costs."
+            } else if let first = res.financePreviewTopCategories.first {
+                res.financePreviewInsightText = "\(first.title) currently stands out as your largest ownership cost."
             }
             
             // Forecast Engine
@@ -1288,10 +1724,27 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                     let recentWindow = Array(consumptions.prefix(min(3, consumptions.count)))
                     let recentAverage = recentWindow.reduce(0, +) / Double(recentWindow.count)
                     res.recentAverageConsumption = .ready(AppFormatters.consumption(recentAverage))
+                    let chronologicalWindow = recentWindow.reversed()
+                    res.fuelConsumptionPreviewPoints = Array(chronologicalWindow.enumerated()).map { index, value in
+                        let isLatest = index == recentWindow.count - 1
+                        return FuelConsumptionPreviewPoint(
+                            label: isLatest ? "Latest" : "Cycle \(index + 1)",
+                            value: value
+                        )
+                    }
                 }
-                if consumptions.count >= 4 {
+                if consumptions.count >= 3 {
                     let allTimeAverage = consumptions.reduce(0, +) / Double(consumptions.count)
                     res.allTimeAverageConsumption = .ready(AppFormatters.consumption(allTimeAverage))
+                    let recentAverageValue = consumptions.prefix(min(3, consumptions.count)).reduce(0, +) / Double(min(3, consumptions.count))
+                    let delta = allTimeAverage - recentAverageValue
+                    if abs(delta) < 0.2 {
+                        res.fuelPreviewInsightText = "Your long-term fuel trend is close to your recent average."
+                    } else if delta > 0 {
+                        res.fuelPreviewInsightText = "Your long-term fuel trend is slightly above your recent average."
+                    } else {
+                        res.fuelPreviewInsightText = "Your long-term fuel trend is slightly below your recent average."
+                    }
                 }
                 if consumptions.count >= 3 {
                     res.threeTankAverageConsumption = .ready(AppFormatters.consumption(consumptions.prefix(3).reduce(0, +) / 3.0))
@@ -1347,6 +1800,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             
             // Maintenance Engine (Mapped to Component)
             let maintenanceServices = sortedServices.filter { $0.category == .maintenance || $0.category == .repair }
+            res.maintenanceHistoryCount = maintenanceServices.count
             
             if maintenanceServices.count < 3 {
                 res.maintenanceInsightText = "Add more maintenance records to improve status tracking, due-soon alerts, and replacement insights."
@@ -1382,6 +1836,27 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 res.distanceSinceLastBrakes = VehicleIntelligenceViewModel.evaluateHealth(items: groupedByComponent[.brakes] ?? [], vehicleMileage: vehicleMileage, byDistance: true)
                 res.distanceSinceLastTires = VehicleIntelligenceViewModel.evaluateHealth(items: groupedByComponent[.tires] ?? [], vehicleMileage: vehicleMileage, byDistance: true)
                 res.distanceSinceLastBattery = VehicleIntelligenceViewModel.evaluateHealth(items: groupedByComponent[.battery] ?? [], vehicleMileage: vehicleMileage, byDistance: true)
+
+                let servicePreviewCandidates: [(title: String, state: MetricState<String>)] = [
+                    ("Oil Change", res.daysSinceLastOilChange),
+                    ("Brakes", res.distanceSinceLastBrakes),
+                    ("Tires", res.distanceSinceLastTires),
+                    ("Battery", res.distanceSinceLastBattery)
+                ]
+
+                if let candidate = servicePreviewCandidates.first(where: {
+                    guard case .ready(let value) = $0.state else { return false }
+                    return value.contains("Overdue") || value.contains("Due soon")
+                }) ?? servicePreviewCandidates.first(where: {
+                    if case .ready = $0.state { return true }
+                    return false
+                }) {
+                    res.likelyDueNextItem = candidate.title
+                    res.servicePreviewAvailable = maintenanceServices.count >= 3
+                    res.servicePredictionPreviewTitle = "\(candidate.title) may need attention next"
+                    res.servicePredictionPreviewText = "\(candidate.title) may need attention next based on your recent service intervals."
+                    res.servicePredictionConfidenceText = "This is an estimate based on your logged maintenance history."
+                }
             }
             
             // Garage Engine
@@ -1484,6 +1959,31 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             } else {
                 res.resaleConfidenceText = "More supporting records improve buyer confidence and resale readiness."
             }
+
+            res.resalePreviewAvailable = res.resaleReadinessScore >= 55
+            if res.resalePreviewAvailable {
+                var strengths: [String] = []
+                if res.serviceRecordCount > 3 {
+                    strengths.append("Your service history already shows repeated maintenance records.")
+                }
+                if res.receiptCoveragePercentage >= 70 {
+                    strengths.append("Receipt coverage is strong enough to support buyer confidence.")
+                } else if res.buyerSupportDocumentCount > 0 {
+                    strengths.append("Buyer-supporting documents are already stored in your vault.")
+                }
+                res.resalePreviewStrengths = Array(strengths.prefix(2))
+
+                if res.receiptCoveragePercentage < 70 {
+                    res.resalePreviewWeakness = "Receipt coverage still leaves some gaps in the ownership story."
+                } else if res.buyerSupportDocumentCount == 0 {
+                    res.resalePreviewWeakness = "Buyer-supporting documents would make the resale story feel more complete."
+                } else {
+                    res.resalePreviewWeakness = "A few more supporting records would make the resale story even stronger."
+                }
+
+                res.resalePreviewSummary = "Your ownership record is starting to feel easier for a buyer to trust."
+                res.resalePreviewConfidenceNote = "Preview based on your current buyer-ready score and supporting records."
+            }
             
             return res
         }.value
@@ -1500,6 +2000,8 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         self.spendingByYear = result.spendingByYear
         self.spendingByCategory = result.spendingByCategory
         self.financialCategoryInsight = result.financialCategoryInsight
+        self.financePreviewTopCategories = result.financePreviewTopCategories
+        self.financePreviewInsightText = result.financePreviewInsightText
         self.upcomingPlannedCost = result.upcomingPlannedCost
         self.upcomingPlannedCost3Months = result.upcomingPlannedCost3Months
         self.upcomingPlannedCost6Months = result.upcomingPlannedCost6Months
@@ -1514,6 +2016,8 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         self.fuelSpendTrendText = result.fuelSpendTrendText
         self.fuelDataConfidenceText = result.fuelDataConfidenceText
         self.validFuelCycleCount = result.validFuelCycleCount
+        self.fuelConsumptionPreviewPoints = result.fuelConsumptionPreviewPoints
+        self.fuelPreviewInsightText = result.fuelPreviewInsightText
         
         self.mostExpensiveMaintenanceCategory = result.mostExpensiveMaintenanceCategory
         self.averageServiceIntervalDays = result.averageServiceIntervalDays
@@ -1527,6 +2031,12 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         self.maintenanceInsightText = result.maintenanceInsightText
         self.maintenanceConfidenceText = result.maintenanceConfidenceText
         self.policyReminderSummaryText = result.policyReminderSummaryText
+        self.maintenanceHistoryCount = result.maintenanceHistoryCount
+        self.servicePreviewAvailable = result.servicePreviewAvailable
+        self.likelyDueNextItem = result.likelyDueNextItem
+        self.servicePredictionPreviewTitle = result.servicePredictionPreviewTitle
+        self.servicePredictionPreviewText = result.servicePredictionPreviewText
+        self.servicePredictionConfidenceText = result.servicePredictionConfidenceText
         
         self.garageSpendByVehicle = result.garageSpendByVehicle
         self.costPerKmByVehicle = result.costPerKmByVehicle
@@ -1546,6 +2056,11 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         self.vaultDocumentCount = result.vaultDocumentCount
         self.buyerSupportDocumentCount = result.buyerSupportDocumentCount
         self.resaleConfidenceText = result.resaleConfidenceText
+        self.resalePreviewAvailable = result.resalePreviewAvailable
+        self.resalePreviewSummary = result.resalePreviewSummary
+        self.resalePreviewStrengths = result.resalePreviewStrengths
+        self.resalePreviewWeakness = result.resalePreviewWeakness
+        self.resalePreviewConfidenceNote = result.resalePreviewConfidenceNote
     }
 }
 
@@ -1562,6 +2077,8 @@ private struct IntelligenceResult {
     var spendingByYear: [(year: Int, amount: Double)] = []
     var spendingByCategory: [(category: EntryCategory, amount: Double)] = []
     var financialCategoryInsight: String? = nil
+    var financePreviewTopCategories: [(title: String, amount: Double)] = []
+    var financePreviewInsightText: String? = nil
     var upcomingPlannedCost: Double = 0
     var upcomingPlannedCost3Months: Double = 0
     var upcomingPlannedCost6Months: Double = 0
@@ -1576,6 +2093,8 @@ private struct IntelligenceResult {
     var fuelSpendTrendText: String = "Add more full fill-ups to reveal fuel patterns."
     var fuelDataConfidenceText: String = "Useful now, smarter over time."
     var validFuelCycleCount: Int = 0
+    var fuelConsumptionPreviewPoints: [FuelConsumptionPreviewPoint] = []
+    var fuelPreviewInsightText: String? = nil
     
     var mostExpensiveMaintenanceCategory: MetricState<String> = .neverRecorded
     var averageServiceIntervalDays: MetricState<String> = .notEnoughHistory("Needs 2+ services")
@@ -1589,6 +2108,12 @@ private struct IntelligenceResult {
     var maintenanceInsightText: String = "Maintenance insights improve as you log more service history."
     var maintenanceConfidenceText: String = "Useful now, smarter over time."
     var policyReminderSummaryText: String? = nil
+    var maintenanceHistoryCount: Int = 0
+    var servicePreviewAvailable: Bool = false
+    var likelyDueNextItem: String? = nil
+    var servicePredictionPreviewTitle: String? = nil
+    var servicePredictionPreviewText: String = "Available once more service history is logged."
+    var servicePredictionConfidenceText: String? = nil
     
     var garageSpendByVehicle: [(title: String, amount: Double)] = []
     var costPerKmByVehicle: [(title: String, cost: Double)] = []
@@ -1609,6 +2134,11 @@ private struct IntelligenceResult {
     var vaultDocumentCount: Int = 0
     var buyerSupportDocumentCount: Int = 0
     var resaleConfidenceText: String = "More supporting records improve buyer confidence."
+    var resalePreviewAvailable: Bool = false
+    var resalePreviewSummary: String = ""
+    var resalePreviewStrengths: [String] = []
+    var resalePreviewWeakness: String? = nil
+    var resalePreviewConfidenceNote: String? = nil
 }
 
 private extension Date {

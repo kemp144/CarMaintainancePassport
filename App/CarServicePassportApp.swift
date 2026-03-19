@@ -36,9 +36,12 @@ struct CarServicePassportApp: App {
             .task {
                 await entitlementStore.prepare()
             }
-            .sheet(item: $paywallCoordinator.reason) { reason in
+            .sheet(item: $paywallCoordinator.reason, onDismiss: {
+                paywallCoordinator.dismiss()
+            }) { reason in
                 PaywallView(reason: reason)
                     .environmentObject(entitlementStore)
+                    .environmentObject(paywallCoordinator)
             }
             .alert(
                 "Storage Recovered",

@@ -6,7 +6,7 @@
 	<integer>12</integer>
 	<key>logs</key>
 	<dict>
-		<key>D5BC8DEA-96E3-4C7E-A916-E4201CD621F8</key>
+		<key>F1E21CA7-066B-461C-8A39-AC15CB2A0F48</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -15,7 +15,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>D5BC8DEA-96E3-4C7E-A916-E4201CD621F8.xcactivitylog</string>
+			<string>F1E21CA7-066B-461C-8A39-AC15CB2A0F48.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -40,13 +40,13 @@
 			<key>signature</key>
 			<string>Building project CarServicePassport with scheme CarServicePassport</string>
 			<key>timeStartedRecording</key>
-			<real>795636112.71591902</real>
+			<real>795638408.09633899</real>
 			<key>timeStoppedRecording</key>
-			<real>795636130.18347502</real>
+			<real>795638422.55301797</real>
 			<key>title</key>
 			<string>Building project CarServicePassport with scheme CarServicePassport</string>
 			<key>uniqueIdentifier</key>
-			<string>D5BC8DEA-96E3-4C7E-A916-E4201CD621F8</string>
+			<string>F1E21CA7-066B-461C-8A39-AC15CB2A0F48</string>
 		</dict>
 	</dict>
 </dict>

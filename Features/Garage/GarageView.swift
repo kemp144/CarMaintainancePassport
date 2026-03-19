@@ -19,6 +19,10 @@ struct GarageView: View {
     @State private var sortOption: SortOption = .updated
     @State private var showingVehicleForm = false
 
+    private var singleTrackedVehicle: Vehicle? {
+        vehicles.count == 1 ? vehicles.first : nil
+    }
+
     private var filteredVehicles: [Vehicle] {
         let searched = vehicles.filter { vehicle in
             guard !searchText.isEmpty else { return true }
@@ -122,6 +126,11 @@ struct GarageView: View {
                         }
                     } else {
                         LazyVStack(spacing: 14) {
+                            if let vehicle = singleTrackedVehicle, !entitlementStore.hasProAccess {
+                                singleVehicleGarageSnapshot(for: vehicle)
+                                singleVehicleComparisonTeaser
+                            }
+
                             ForEach(filteredVehicles) { vehicle in
                                 NavigationLink {
                                     VehicleDetailView(vehicle: vehicle)
@@ -156,8 +165,91 @@ struct GarageView: View {
         if entitlementStore.canAddVehicle(existingCount: vehicles.count) {
             showingVehicleForm = true
         } else {
-            paywallCoordinator.present(.secondVehicle)
+            paywallCoordinator.present(
+                .secondVehicle,
+                context: PaywallPresentationContext(vehicleCount: vehicles.count)
+            )
         }
+    }
+
+    private func singleVehicleGarageSnapshot(for vehicle: Vehicle) -> some View {
+        SurfaceCard(tier: .primary) {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Garage Snapshot")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(AppTheme.primaryText)
+
+                VStack(spacing: 0) {
+                    garageTeaserRow(
+                        title: "Vehicles tracked",
+                        value: "1 vehicle tracked"
+                    )
+                    Divider().overlay(AppTheme.separator)
+                    garageTeaserRow(
+                        title: "Garage spend this year",
+                        value: AppFormatters.currency(vehicle.spentThisYear, code: vehicle.currencyCode)
+                    )
+                    Divider().overlay(AppTheme.separator)
+                    garageTeaserRow(
+                        title: "Latest service",
+                        value: vehicle.latestServiceDate.map { AppFormatters.mediumDate.string(from: $0) } ?? "No service history yet"
+                    )
+                }
+
+            }
+        }
+    }
+
+    private var singleVehicleComparisonTeaser: some View {
+        SurfaceCard(tier: .primary) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Compare vehicles side by side")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(AppTheme.primaryText)
+
+                        Text("Add another vehicle to compare ownership costs, fuel spend, and maintenance history.")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 12)
+
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(AppTheme.accent)
+                        .padding(10)
+                        .background(Circle().fill(AppTheme.accent.opacity(0.14)))
+                }
+
+                Button("Unlock Pro") {
+                    paywallCoordinator.present(
+                        .secondVehicle,
+                        context: PaywallPresentationContext(vehicleCount: vehicles.count)
+                    )
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
+            }
+        }
+    }
+
+    private func garageTeaserRow(title: String, value: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.secondaryText)
+
+            Spacer(minLength: 12)
+
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.primaryText)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.vertical, 8)
     }
 }
 
