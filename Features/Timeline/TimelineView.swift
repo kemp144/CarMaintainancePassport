@@ -118,14 +118,19 @@ struct TimelineView: View {
     }
 
     private var timelineSummary: some View {
-        let totalSpent = events.filter { $0.cost > 0 }.reduce(0) { $0 + $1.cost }
-        let eventsThisYear = events.filter { Calendar.current.isDate($0.date, equalTo: .now, toGranularity: .year) }.count
+        let calendar = Calendar.current
+        let currentYear = calendar.component(.year, from: .now)
+        let spendingThisYear = events.filter { 
+            $0.cost > 0 && calendar.isDate($0.date, equalTo: .now, toGranularity: .year)
+        }.reduce(0) { $0 + $1.cost }
+        
+        let eventsThisYear = events.filter { calendar.isDate($0.date, equalTo: .now, toGranularity: .year) }.count
         let latestDate = events.first?.date
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 timelineSummaryTile(title: "This year", value: "\(eventsThisYear) events", icon: "chart.bar.fill")
-                timelineSummaryTile(title: "Spending", value: AppFormatters.currency(totalSpent, code: primaryCurrencyCode), icon: "dollarsign.circle.fill")
+                timelineSummaryTile(title: "Spending (\(String(currentYear)))", value: AppFormatters.currency(spendingThisYear, code: primaryCurrencyCode), icon: "dollarsign.circle.fill")
                 timelineSummaryTile(title: "Latest", value: latestDate.map { AppFormatters.mediumDate.string(from: $0) } ?? "No history", icon: "clock.fill")
             }
 

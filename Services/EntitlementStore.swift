@@ -30,6 +30,7 @@ final class EntitlementStore: ObservableObject {
     #endif
 
     private var updatesTask: Task<Void, Never>?
+    private let cachedProAccess: Bool
 
     private enum Keys {
         static let cachedProUnlocked = "entitlement.cachedProUnlocked"
@@ -37,7 +38,9 @@ final class EntitlementStore: ObservableObject {
     }
 
     init() {
-        isProUnlocked = UserDefaults.standard.bool(forKey: Keys.cachedProUnlocked)
+        let cached = UserDefaults.standard.bool(forKey: Keys.cachedProUnlocked)
+        cachedProAccess = cached
+        isProUnlocked = cached
     }
 
     deinit {
@@ -46,9 +49,9 @@ final class EntitlementStore: ObservableObject {
 
     var hasProAccess: Bool {
         #if DEBUG
-        return isProUnlocked || debugProOverride
+        return cachedProAccess || isProUnlocked || debugProOverride
         #else
-        return isProUnlocked
+        return cachedProAccess || isProUnlocked
         #endif
     }
 
@@ -194,7 +197,9 @@ final class EntitlementStore: ObservableObject {
         }
 
         isProUnlocked = unlocked
-        UserDefaults.standard.set(unlocked, forKey: Keys.cachedProUnlocked)
+        if unlocked {
+            UserDefaults.standard.set(true, forKey: Keys.cachedProUnlocked)
+        }
     }
 
     private func verify<T>(_ result: VerificationResult<T>) throws -> T {

@@ -383,7 +383,7 @@ struct VehicleDetailView: View {
             quickActionButton(title: "Reminder", icon: "bell.fill") {
                 showingReminderForm = true
             }
-            quickActionButton(title: "Fuel", icon: "fuelpump.fill") {
+            quickActionButton(title: "Fuel", icon: "fuelpump.fill", isLocked: !entitlementStore.canUseFuelTracking()) {
                 if entitlementStore.canUseFuelTracking() {
                     showingFuelTracking = true
                 } else {
@@ -431,54 +431,90 @@ struct VehicleDetailView: View {
                 } label: {
                     Text("See All")
                         .font(.system(size: 14))
-                        .foregroundStyle(AppTheme.accent)
+                        .foregroundStyle(entitlementStore.canUseFuelTracking() ? AppTheme.accent : AppTheme.tertiaryText)
                 }
+                .disabled(!entitlementStore.canUseFuelTracking())
             }
 
-            if vehicle.fuelEntries.isEmpty {
-                SurfaceCard(padding: 20) {
-                    HStack(spacing: 14) {
-                        Image(systemName: "fuelpump")
-                            .font(.system(size: 28))
-                            .foregroundStyle(AppTheme.tertiaryText)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("No fuel entries yet")
-                                .foregroundStyle(AppTheme.secondaryText)
-                            Button("Start tracking") {
-                                if entitlementStore.canUseFuelTracking() {
-                                    showingFuelTracking = true
-                                } else {
-                                    paywallCoordinator.present(.fuelTracking)
+            ZStack {
+                VStack(spacing: 14) {
+                    if vehicle.fuelEntries.isEmpty {
+                        SurfaceCard(padding: 20) {
+                            HStack(spacing: 14) {
+                                Image(systemName: "fuelpump")
+                                    .font(.system(size: 28))
+                                    .foregroundStyle(AppTheme.tertiaryText)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("No fuel entries yet")
+                                        .foregroundStyle(AppTheme.secondaryText)
+                                    Button("Start tracking") {
+                                        if entitlementStore.canUseFuelTracking() {
+                                            showingFuelTracking = true
+                                        } else {
+                                            paywallCoordinator.present(.fuelTracking)
+                                        }
+                                    }
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(AppTheme.accent)
+                                }
+                                Spacer()
+                            }
+                        }
+                    } else {
+                        SurfaceCard(padding: 16) {
+                            VStack(spacing: 12) {
+                                HStack {
+                                    statPill(title: "Total Liters", value: String(format: "%.1f L", vehicle.totalFuelLiters))
+                                    Spacer()
+                                    statPill(title: "Fuel Cost", value: AppFormatters.currency(vehicle.totalFuelCost, code: vehicle.currencyCode))
+                                }
+                                Divider().background(AppTheme.separator)
+                                if let latest = vehicle.sortedFuelEntries.first {
+                                    HStack {
+                                        Image(systemName: "fuelpump.fill")
+                                            .foregroundStyle(AppTheme.accent)
+                                            .font(.system(size: 14))
+                                        Text("Last fill-up: \(AppFormatters.mediumDate.string(from: latest.date))")
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(AppTheme.secondaryText)
+                                        Spacer()
+                                        Text(String(format: "%.2f L", latest.liters))
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundStyle(AppTheme.primaryText)
+                                    }
                                 }
                             }
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(AppTheme.accent)
                         }
-                        Spacer()
                     }
                 }
-            } else {
-                SurfaceCard(padding: 16) {
+                .blur(radius: entitlementStore.canUseFuelTracking() ? 0 : 3)
+                .allowsHitTesting(entitlementStore.canUseFuelTracking())
+
+                if !entitlementStore.canUseFuelTracking() {
                     VStack(spacing: 12) {
-                        HStack {
-                            statPill(title: "Total Liters", value: String(format: "%.1f L", vehicle.totalFuelLiters))
-                            Spacer()
-                            statPill(title: "Fuel Cost", value: AppFormatters.currency(vehicle.totalFuelCost, code: vehicle.currencyCode))
+                        HStack(spacing: 6) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 12))
+                            Text("PRO")
+                                .font(.system(size: 10, weight: .bold))
                         }
-                        Divider().background(AppTheme.separator)
-                        if let latest = vehicle.sortedFuelEntries.first {
-                            HStack {
-                                Image(systemName: "fuelpump.fill")
-                                    .foregroundStyle(AppTheme.accent)
-                                    .font(.system(size: 14))
-                                Text("Last fill-up: \(AppFormatters.mediumDate.string(from: latest.date))")
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(AppTheme.secondaryText)
-                                Spacer()
-                                Text(String(format: "%.2f L", latest.liters))
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(AppTheme.primaryText)
-                            }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(AppTheme.accent))
+
+                        Text("Unlock Fuel Tracking & Analytics with Pro")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(AppTheme.primaryText)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+
+                        Button {
+                            paywallCoordinator.present(.fuelTracking)
+                        } label: {
+                            Text("Upgrade Now")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(AppTheme.accent)
                         }
                     }
                 }
@@ -497,16 +533,25 @@ struct VehicleDetailView: View {
         }
     }
 
-    private func quickActionLabel(title: String, icon: String) -> some View {
+    private func quickActionLabel(title: String, icon: String, isLocked: Bool = false) -> some View {
         VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .medium))
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .medium))
+
+                if isLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 8))
+                        .offset(x: 8, y: -4)
+                }
+            }
             Text(title)
                 .font(.system(size: 11, weight: .medium))
                 .lineLimit(1)
                 .minimumScaleFactor(0.9)
         }
         .foregroundStyle(AppTheme.primaryText)
+        .opacity(isLocked ? 0.6 : 1.0)
         .frame(maxWidth: .infinity, minHeight: 58)
         .padding(.vertical, 8)
         .background(
@@ -620,9 +665,9 @@ struct VehicleDetailView: View {
         return count == 1 ? "1 file" : "\(count) files"
     }
 
-    private func quickActionButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
+    private func quickActionButton(title: String, icon: String, isLocked: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            quickActionLabel(title: title, icon: icon)
+            quickActionLabel(title: title, icon: icon, isLocked: isLocked)
         }
         .buttonStyle(.plain)
     }
