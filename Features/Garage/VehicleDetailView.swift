@@ -33,7 +33,7 @@ struct VehicleDetailView: View {
                     ZStack(alignment: .top) {
                         GeometryReader { proxy in
                             let minY = proxy.frame(in: .global).minY
-                            let height = max(224, 224 + (minY > 0 ? minY : 0))
+                            let height = max(186, 186 + (minY > 0 ? minY : 0))
                             let offset = minY > 0 ? -minY : 0
                             
                             ZStack {
@@ -45,7 +45,7 @@ struct VehicleDetailView: View {
                                 } else {
                                     LinearGradient(colors: [AppTheme.surfaceSecondary, AppTheme.surface], startPoint: .top, endPoint: .bottom)
                                     Image(systemName: "car.fill")
-                                        .font(.system(size: 50))
+                                        .font(.system(size: 42))
                                         .foregroundStyle(AppTheme.tertiaryText.opacity(0.42))
                                 }
                             }
@@ -53,7 +53,7 @@ struct VehicleDetailView: View {
                             .clipped()
                             .offset(y: offset)
                         }
-                        .frame(height: 224)
+                        .frame(height: 186)
                     }
 
                     VStack(spacing: 14) {
@@ -63,37 +63,46 @@ struct VehicleDetailView: View {
                                 Text("\(vehicle.make) \(vehicle.model)")
                                     .font(.system(size: 22, weight: .bold))
                                     .foregroundStyle(AppTheme.primaryText)
-                                    .padding(.bottom, 2)
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.86)
+                                    .padding(.bottom, 4)
 
                                 Text(vehicle.year > 0 ? String(vehicle.year) : "Unknown Year")
                                     .font(.system(size: 14))
                                     .foregroundStyle(AppTheme.secondaryText)
+                                    .padding(.bottom, 6)
+
+                                Text(ownershipSnapshotText)
+                                    .font(.footnote.weight(.medium))
+                                    .foregroundStyle(AppTheme.secondaryText)
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.82)
                                     .padding(.bottom, 10)
 
                                 HStack(spacing: 8) {
                                     if !vehicle.licensePlate.isEmpty {
                                         Text(vehicle.licensePlate)
                                             .font(.system(size: 11, design: .monospaced))
-                                            .foregroundStyle(Color(hex: "CBD5E1"))
+                                            .foregroundStyle(AppTheme.secondaryText)
                                             .padding(.horizontal, 9)
                                             .padding(.vertical, 3)
-                                            .background(RoundedRectangle(cornerRadius: 6).fill(AppTheme.surfaceSecondary))
+                                            .background(RoundedRectangle(cornerRadius: 6).fill(AppTheme.surfaceSecondary.opacity(0.75)))
                                     }
                                     if !vehicle.vin.isEmpty {
                                         Text("VIN: \(vehicle.vin)")
                                             .font(.system(size: 10.5, design: .monospaced))
-                                            .foregroundStyle(AppTheme.secondaryText)
+                                            .foregroundStyle(AppTheme.tertiaryText)
                                             .padding(.horizontal, 9)
                                             .padding(.vertical, 3)
-                                            .background(RoundedRectangle(cornerRadius: 6).fill(AppTheme.surfaceSecondary))
+                                            .background(RoundedRectangle(cornerRadius: 6).fill(AppTheme.surfaceSecondary.opacity(0.75)))
                                             .lineLimit(1)
                                     }
                                 }
                             }
                         }
-                        .offset(y: -24)
+                        .offset(y: -18)
                         .padding(.horizontal, AppTheme.Spacing.pageEdge)
-                        .padding(.bottom, -24)
+                        .padding(.bottom, -18)
 
                         // Stats
                         HStack(spacing: 12) {
@@ -101,7 +110,7 @@ struct VehicleDetailView: View {
                                 title: "Services",
                                 value: "\(vehicle.serviceEntries.count)",
                                 icon: "doc.text.fill",
-                                helperText: "Open history"
+                                helperText: "View history"
                             ) {
                                 openServiceHistory()
                             }
@@ -110,7 +119,7 @@ struct VehicleDetailView: View {
                                 title: "Total Cost",
                                 value: AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode),
                                 icon: "dollarsign.circle.fill",
-                                helperText: "View insights",
+                                helperText: "See insights",
                                 trailingBadge: entitlementStore.canSeeAnalytics() ? nil : "Pro"
                             ) {
                                 openAnalytics()
@@ -123,7 +132,7 @@ struct VehicleDetailView: View {
 
                         quickActions
                             .padding(.horizontal, AppTheme.Spacing.pageEdge)
-                            .padding(.top, 2)
+                            .padding(.top, 10)
 
                         // Reminders
                         VStack(alignment: .leading, spacing: 14) {
@@ -137,22 +146,28 @@ struct VehicleDetailView: View {
                                         .foregroundStyle(AppTheme.secondaryText)
                                 } else {
                                     ForEach(vehicle.sortedReminders.prefix(3)) { reminder in
-                                        HStack {
+                                        HStack(alignment: .top, spacing: 12) {
                                             VStack(alignment: .leading, spacing: 4) {
-                                                Text(reminder.title)
+                                                Text(reminderRowTitle(for: reminder))
+                                                    .font(.subheadline.weight(.semibold))
                                                     .foregroundStyle(AppTheme.primaryText)
-                                                Text(reminder.dateDue.map(AppFormatters.mediumDate.string) ?? reminder.mileageDue.map(AppFormatters.mileage) ?? "Custom")
+                                                    .lineLimit(2)
+                                                    .minimumScaleFactor(0.86)
+                                                Text(reminderRowSubtitle(for: reminder))
                                                     .font(.caption)
                                                     .foregroundStyle(AppTheme.secondaryText)
                                             }
+                                            .frame(maxWidth: .infinity, alignment: .leading)
                                             Spacer()
                                             ReminderBadge(status: reminder.status(for: vehicle))
                                         }
+                                        .padding(.vertical, 2)
                                     }
                                 }
                             }
                         }
                         .padding(.horizontal, AppTheme.Spacing.pageEdge)
+                        .padding(.top, 6)
 
                         // Fuel section
                         fuelSection.padding(.horizontal, AppTheme.Spacing.pageEdge)
@@ -167,7 +182,7 @@ struct VehicleDetailView: View {
                                 Button {
                                     openServiceHistory()
                                 } label: {
-                                    Text("See all")
+                                    Text("View history")
                                         .font(.system(size: 12.5, weight: .semibold))
                                         .foregroundStyle(AppTheme.accent)
                                 }
@@ -378,13 +393,13 @@ struct VehicleDetailView: View {
     private let quickActionColumns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 2)
     private var quickActions: some View {
         LazyVGrid(columns: quickActionColumns, spacing: 10) {
-            quickActionButton(title: "Add Service", icon: "wrench.and.screwdriver.fill", isPrimary: true) {
+            quickActionButton(title: "Add Service", icon: "wrench.and.screwdriver.fill", priority: .primary) {
                 showingServiceForm = true
             }
-            quickActionButton(title: "Fuel", icon: "fuelpump.fill") {
+            quickActionButton(title: "Log Fuel", icon: "fuelpump.fill", priority: .secondary) {
                 showingFuelTracking = true
             }
-            quickActionButton(title: "Reminder", icon: "bell.fill") {
+            quickActionButton(title: "Reminder", icon: "bell.fill", priority: .tertiary) {
                 showingReminderForm = true
             }
             Menu {
@@ -404,7 +419,7 @@ struct VehicleDetailView: View {
                     Label("Export CSV Data", systemImage: "tablecells.fill")
                 }
             } label: {
-                quickActionLabel(title: "Export", icon: "square.and.arrow.up.fill")
+                quickActionLabel(title: "Export", icon: "square.and.arrow.up.fill", priority: .tertiary)
             }
         }
     }
@@ -429,7 +444,7 @@ struct VehicleDetailView: View {
                 Button {
                     showingFuelTracking = true
                 } label: {
-                    Text(entitlementStore.canUseDetailedFuelTracking() ? "See All" : "Open Log")
+                    Text(entitlementStore.canUseDetailedFuelTracking() ? "See all" : "Open log")
                         .font(.system(size: 14))
                         .foregroundStyle(AppTheme.accent)
                 }
@@ -575,35 +590,63 @@ struct VehicleDetailView: View {
         }
     }
 
-    private func quickActionLabel(title: String, icon: String, isLocked: Bool = false, isPrimary: Bool = false) -> some View {
-        VStack(spacing: 4) {
+    private enum QuickActionPriority {
+        case primary
+        case secondary
+        case tertiary
+    }
+
+    private func quickActionLabel(title: String, icon: String, priority: QuickActionPriority, isLocked: Bool = false) -> some View {
+        let background: Color
+        let foreground: Color
+        let iconColor: Color
+
+        switch priority {
+        case .primary:
+            background = AppTheme.accent.opacity(0.16)
+            foreground = AppTheme.primaryText
+            iconColor = AppTheme.accent
+        case .secondary:
+            background = AppTheme.surfaceSecondary
+            foreground = AppTheme.primaryText
+            iconColor = AppTheme.accent
+        case .tertiary:
+            background = AppTheme.surfaceSecondary.opacity(0.75)
+            foreground = AppTheme.secondaryText
+            iconColor = AppTheme.secondaryText
+        }
+
+        return VStack(spacing: 5) {
             ZStack(alignment: .topTrailing) {
                 Image(systemName: icon)
                     .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(iconColor)
 
                 if isLocked {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 8))
                         .offset(x: 8, y: -4)
+                        .foregroundStyle(AppTheme.tertiaryText)
                 }
             }
+
             Text(title)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11, weight: .semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.9)
+                .foregroundStyle(foreground)
         }
-        .foregroundStyle(isPrimary ? AppTheme.accent : AppTheme.primaryText)
         .opacity(isLocked ? 0.6 : 1.0)
-        .frame(maxWidth: .infinity, minHeight: 50)
+        .frame(maxWidth: .infinity, minHeight: 52)
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(isPrimary ? AppTheme.accent.opacity(0.12) : AppTheme.surfaceSecondary)
+                .fill(background)
         )
     }
 
     private var vehicleSummarySection: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 12) {
             nextDueSummaryCard
 
             VStack(spacing: 8) {
@@ -615,11 +658,11 @@ struct VehicleDetailView: View {
                     }
                 }
 
-                summaryActionTile(title: "Docs", value: documentsSummaryText, icon: "doc.fill", highlight: vehicle.documentsCount > 0, compact: true) {
+                summaryActionTile(title: "Documents", value: documentsSummaryText, icon: "doc.fill", highlight: vehicle.documentsCount > 0, compact: true) {
                     openDocuments()
                 }
             }
-            .frame(maxWidth: 118)
+            .frame(maxWidth: 124)
         }
     }
 
@@ -636,7 +679,7 @@ struct VehicleDetailView: View {
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: "bell.badge.fill")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(nextDueIsUrgent ? AppTheme.accent : AppTheme.secondaryText)
+                            .foregroundStyle(nextDueAccentColor)
 
                         Text("Next due")
                             .font(.system(size: 10.5, weight: .medium))
@@ -656,21 +699,21 @@ struct VehicleDetailView: View {
                             .foregroundStyle(AppTheme.tertiaryText)
                     }
 
-                    Text(nextDueMainText)
-                        .font(.system(size: 14.5, weight: .semibold))
-                        .foregroundStyle(AppTheme.primaryText)
+                    Text(nextDuePrimaryText)
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundStyle(nextDueAccentColor)
                         .lineLimit(2)
-                        .minimumScaleFactor(0.82)
+                        .minimumScaleFactor(0.78)
 
-                    if let nextDueSupportText {
-                        Text(nextDueSupportText)
-                            .font(.system(size: 11.5, weight: .medium))
+                    if let nextDueSecondaryText {
+                        Text(nextDueSecondaryText)
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(AppTheme.secondaryText)
                             .lineLimit(2)
                             .minimumScaleFactor(0.85)
                     }
                 }
-                .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading)
+                .frame(maxWidth: .infinity, minHeight: 98, alignment: .topLeading)
             }
         }
         .buttonStyle(.plain)
@@ -678,7 +721,7 @@ struct VehicleDetailView: View {
 
     private func summaryActionTile(title: String, value: String, icon: String, highlight: Bool, compact: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            SurfaceCard(padding: compact ? 6 : 10) {
+            SurfaceCard(padding: compact ? 8 : 10) {
                 VStack(alignment: .leading, spacing: compact ? 4 : 6) {
                     HStack(spacing: 4) {
                         Image(systemName: icon)
@@ -703,7 +746,7 @@ struct VehicleDetailView: View {
                         .minimumScaleFactor(0.82)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(minHeight: compact ? 38 : 60, alignment: .topLeading)
+                .frame(minHeight: compact ? 48 : 60, alignment: .topLeading)
             }
         }
         .buttonStyle(.plain)
@@ -713,43 +756,79 @@ struct VehicleDetailView: View {
         vehicle.nextDueReminder
     }
 
-    private var nextDueMainText: String {
+    private var nextDuePrimaryText: String {
         guard let reminder = nextDueReminder else { return "No active reminders" }
 
-        switch reminder.status(for: vehicle) {
-        case .disabled:
+        if reminder.status(for: vehicle) == .disabled {
             return "Reminder paused"
-        case .overdue, .dueSoon, .upcoming:
-            if let dateDue = reminder.dateDue {
-                return AppFormatters.mediumDate.string(from: dateDue)
-            }
-            if let mileageDue = reminder.mileageDue {
-                return AppFormatters.mileage(mileageDue)
-            }
-            return reminder.title
         }
+
+        if let dateDue = reminder.dateDue {
+            let days = daysUntil(dateDue)
+            if days < 0 {
+                return "Overdue by \(abs(days)) \(abs(days) == 1 ? "day" : "days")"
+            }
+            if days == 0 {
+                return "Due today"
+            }
+            return "Due in \(days) \(days == 1 ? "day" : "days")"
+        }
+
+        if let mileageDue = reminder.mileageDue {
+            if vehicle.currentMileage >= mileageDue {
+                return "Over by \(AppFormatters.mileage(vehicle.currentMileage - mileageDue))"
+            }
+            return "Due at \(AppFormatters.mileage(mileageDue))"
+        }
+
+        return reminder.title
     }
 
-    private var nextDueSupportText: String? {
+    private var nextDueSecondaryText: String? {
         guard let reminder = nextDueReminder else {
             return "Add a reminder for service, tires, or registration."
         }
 
-        switch reminder.status(for: vehicle) {
-        case .disabled:
+        if reminder.status(for: vehicle) == .disabled {
             return "Tap to review this reminder."
-        case .overdue:
-            return nextDueDetailText(for: reminder, overdue: true, dueSoon: false)
-        case .dueSoon:
-            return nextDueDetailText(for: reminder, overdue: false, dueSoon: true)
-        case .upcoming:
-            return nextDueDetailText(for: reminder, overdue: false, dueSoon: false)
         }
+
+        if let dateDue = reminder.dateDue {
+            return AppFormatters.mediumDate.string(from: dateDue)
+        }
+
+        if let mileageDue = reminder.mileageDue {
+            let remaining = mileageDue - vehicle.currentMileage
+            if remaining <= 0 {
+                return "Over by \(AppFormatters.mileage(abs(remaining)))"
+            }
+            return "\(AppFormatters.mileage(remaining)) remaining"
+        }
+
+        return reminder.notes.isEmpty ? "Custom reminder" : reminder.notes
     }
 
-    private var nextDueIsUrgent: Bool {
-        guard let reminder = nextDueReminder else { return false }
-        return reminder.status(for: vehicle) != .upcoming
+    private var nextDueAccentColor: Color {
+        guard let reminder = nextDueReminder else { return AppTheme.secondaryText }
+
+        switch reminder.status(for: vehicle) {
+        case .disabled:
+            return AppTheme.secondaryText
+        case .overdue:
+            return Color.red
+        case .dueSoon:
+            if let dateDue = reminder.dateDue {
+                return daysUntil(dateDue) <= 7 ? Color.red : Color.orange
+            }
+            return Color.orange
+        case .upcoming:
+            if let dateDue = reminder.dateDue {
+                let days = daysUntil(dateDue)
+                if days <= 7 { return Color.red }
+                if days <= 30 { return Color.orange }
+            }
+            return AppTheme.secondaryText
+        }
     }
 
     private var lastServiceText: String {
@@ -759,70 +838,51 @@ struct VehicleDetailView: View {
 
     private var documentsSummaryText: String {
         let count = vehicle.documentsCount
-        return count == 1 ? "1 file" : "\(count) files"
+        return count == 1 ? "1 document" : "\(count) documents"
     }
 
-    private func nextDueDetailText(for reminder: ReminderItem, overdue: Bool, dueSoon: Bool) -> String? {
-        var parts: [String] = []
+    private var ownershipSnapshotText: String {
+        let total = AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode)
+        let serviceCount = vehicle.serviceEntries.count
+        let serviceText = serviceCount == 1 ? "1 service" : "\(serviceCount) services"
 
+        if let lastDate = vehicle.latestServiceDate {
+            return "\(total) total · \(serviceText) · Last service \(AppFormatters.monthYear.string(from: lastDate))"
+        }
+
+        return "\(total) total · \(serviceText) · No service history yet"
+    }
+
+    private func reminderRowTitle(for reminder: ReminderItem) -> String {
+        let baseTitle: String
+        if reminder.type == .custom {
+            baseTitle = reminder.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            baseTitle = reminder.type.title
+        }
+        return "\(baseTitle) · \(vehicle.model)"
+    }
+
+    private func reminderRowSubtitle(for reminder: ReminderItem) -> String {
         if let dateDue = reminder.dateDue {
-            parts.append(dateRemainingText(for: dateDue, overdue: overdue, dueSoon: dueSoon))
+            return AppFormatters.mediumDate.string(from: dateDue)
         }
-
         if let mileageDue = reminder.mileageDue {
-            parts.append(mileageRemainingText(for: mileageDue, overdue: overdue, dueSoon: dueSoon))
+            return "Due at \(AppFormatters.mileage(mileageDue))"
         }
-
-        if parts.isEmpty {
-            return reminder.notes.isEmpty ? "Custom reminder" : reminder.notes
-        }
-
-        return parts.joined(separator: " • ")
+        return reminder.notes.isEmpty ? "Custom reminder" : reminder.notes
     }
 
-    private func dateRemainingText(for dateDue: Date, overdue: Bool, dueSoon: Bool) -> String {
+    private func daysUntil(_ dateDue: Date) -> Int {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: .now)
         let dueDate = calendar.startOfDay(for: dateDue)
-        let days = calendar.dateComponents([.day], from: start, to: dueDate).day ?? 0
-
-        if overdue {
-            return days < 0 ? "Overdue by \(abs(days)) \(abs(days) == 1 ? "day" : "days")" : "Due today"
-        }
-
-        if dueSoon {
-            if days <= 0 {
-                return "Due today"
-            }
-            return "Due in \(days) \(days == 1 ? "day" : "days")"
-        }
-
-        if days < 0 {
-            return "Overdue by \(abs(days)) \(abs(days) == 1 ? "day" : "days")"
-        }
-        if days == 0 {
-            return "Due today"
-        }
-        return "Due in \(days) \(days == 1 ? "day" : "days")"
+        return calendar.dateComponents([.day], from: start, to: dueDate).day ?? 0
     }
 
-    private func mileageRemainingText(for mileageDue: Int, overdue: Bool, dueSoon: Bool) -> String {
-        let remaining = mileageDue - vehicle.currentMileage
-
-        if overdue || remaining < 0 {
-            return "Over by \(AppFormatters.mileage(abs(remaining)))"
-        }
-
-        if dueSoon || remaining <= 1_000 {
-            return "\(AppFormatters.mileage(remaining)) remaining"
-        }
-
-        return "Due at \(AppFormatters.mileage(mileageDue))"
-    }
-
-    private func quickActionButton(title: String, icon: String, isLocked: Bool = false, isPrimary: Bool = false, action: @escaping () -> Void) -> some View {
+    private func quickActionButton(title: String, icon: String, priority: QuickActionPriority = .tertiary, isLocked: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            quickActionLabel(title: title, icon: icon, isLocked: isLocked, isPrimary: isPrimary)
+            quickActionLabel(title: title, icon: icon, priority: priority, isLocked: isLocked)
         }
         .buttonStyle(.plain)
     }
