@@ -2,8 +2,46 @@ import Charts
 import SwiftData
 import SwiftUI
 
+enum MetricState<T> {
+    case ready(T)
+    case notEnoughHistory(String)
+    case neverRecorded
+    case incompleteRecord
+}
+
+enum MaintenanceComponent: String, CaseIterable, Identifiable {
+    case oilChange = "Oil Change"
+    case brakes = "Brakes"
+    case tires = "Tires"
+    case battery = "Battery"
+    case inspection = "Inspection"
+    case fluids = "Fluids & Filters"
+    case repair = "Repair"
+    case cleaning = "Detailing & Wash"
+    case admin = "Registration & Insurance"
+    case other = "Other"
+    
+    var id: String { rawValue }
+    
+    static func from(serviceType: ServiceType) -> MaintenanceComponent {
+        switch serviceType {
+        case .oilChange: return .oilChange
+        case .brakes: return .brakes
+        case .tires: return .tires
+        case .battery: return .battery
+        case .inspection: return .inspection
+        case .registration, .insurance: return .admin
+        case .repair: return .repair
+        case .washDetailing: return .cleaning
+        case .filters, .airConditioning: return .fluids
+        default: return .other
+        }
+    }
+}
+
 struct VehicleAnalyticsView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var appState: AppState
     let vehicle: Vehicle
     
     @Query private var allVehicles: [Vehicle]
@@ -13,7 +51,7 @@ struct VehicleAnalyticsView: View {
     
     enum AnalyticsTab: String, CaseIterable, Identifiable {
         case financials = "Finance"
-        case maintenance = "Maint"
+        case service = "Service"
         case fuel = "Fuel"
         case resale = "Resale"
         case garage = "Garage"
@@ -45,7 +83,7 @@ struct VehicleAnalyticsView: View {
                         switch selectedTab {
                         case .financials:
                             financialsTab
-                        case .maintenance:
+                        case .service:
                             maintenanceTab
                         case .fuel:
                             fuelTab
@@ -67,7 +105,7 @@ struct VehicleAnalyticsView: View {
                 Button("Done") { dismiss() }
             }
         }
-        .task {
+        .task(id: appState.dataRefreshToken) {
             await viewModel.calculateIntelligence(allVehicles: allVehicles)
         }
     }
@@ -89,8 +127,8 @@ struct VehicleAnalyticsView: View {
             }
             
             HStack(spacing: 12) {
-                InsightTile(title: "This Year", value: AppFormatters.currency(viewModel.thisYearSpend, code: vehicle.currencyCode), icon: "calendar")
-                InsightTile(title: "Last 12 Mo", value: AppFormatters.currency(viewModel.last12MonthsSpend, code: vehicle.currencyCode), icon: "clock.arrow.circlepath")
+                InsightTile(title: "This Year", state: .ready(AppFormatters.currency(viewModel.thisYearSpend, code: vehicle.currencyCode)), icon: "calendar")
+                InsightTile(title: "Last 12 Months", state: .ready(AppFormatters.currency(viewModel.last12MonthsSpend, code: vehicle.currencyCode)), icon: "clock.arrow.circlepath")
             }
             
             SurfaceCard {
@@ -122,29 +160,35 @@ struct VehicleAnalyticsView: View {
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(AppTheme.primaryText)
                         
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Next 3 Mo")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.secondaryText)
-                            Text(AppFormatters.currency(viewModel.upcomingPlannedCost3Months, code: vehicle.currencyCode))
-                                .font(.subheadline.weight(.semibold))
-                        }
-                        Spacer()
-                        VStack(alignment: .leading) {
-                            Text("Next 6 Mo")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.secondaryText)
-                            Text(AppFormatters.currency(viewModel.upcomingPlannedCost6Months, code: vehicle.currencyCode))
-                                .font(.subheadline.weight(.semibold))
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing) {
-                            Text("Next 12 Mo")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.secondaryText)
-                            Text(AppFormatters.currency(viewModel.upcomingPlannedCost, code: vehicle.currencyCode))
-                                .font(.subheadline.weight(.semibold))
+                    if viewModel.upcomingPlannedCost == 0 {
+                        Text("No planned costs detected")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.secondaryText)
+                    } else {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text("Next 3 Mo")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                                Text(AppFormatters.currency(viewModel.upcomingPlannedCost3Months, code: vehicle.currencyCode))
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            Spacer()
+                            VStack(alignment: .leading) {
+                                Text("Next 6 Mo")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                                Text(AppFormatters.currency(viewModel.upcomingPlannedCost6Months, code: vehicle.currencyCode))
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            Spacer()
+                            VStack(alignment: .trailing) {
+                                Text("Next 12 Mo")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                                Text(AppFormatters.currency(viewModel.upcomingPlannedCost, code: vehicle.currencyCode))
+                                    .font(.subheadline.weight(.semibold))
+                            }
                         }
                     }
                 }
@@ -222,6 +266,13 @@ struct VehicleAnalyticsView: View {
                             }
                         }
                         .padding(.top, 8)
+                        
+                        if let insight = viewModel.financialCategoryInsight {
+                            Text(insight)
+                                .font(.footnote)
+                                .foregroundStyle(AppTheme.tertiaryText)
+                                .padding(.top, 4)
+                        }
                     }
                 }
             }
@@ -242,7 +293,7 @@ struct VehicleAnalyticsView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Maintenance Health")
+                        Text("Service Health")
                             .font(.headline.weight(.semibold))
                             .foregroundStyle(AppTheme.primaryText)
                         
@@ -255,44 +306,39 @@ struct VehicleAnalyticsView: View {
             }
             
             HStack(spacing: 12) {
-                if let interval = viewModel.averageServiceIntervalDays {
-                    InsightTile(title: "Avg Interval", value: "\(interval) days", icon: "clock.arrow.2.circlepath")
-                } else {
-                    InsightTile(title: "Avg Interval", value: "--", icon: "clock.arrow.2.circlepath")
-                }
-                
-                InsightTile(title: "Highest Cost", value: viewModel.mostExpensiveMaintenanceCategory ?? "No data", icon: "exclamationmark.triangle.fill")
+                InsightTile(title: "Average Interval", state: viewModel.averageServiceIntervalDays, icon: "clock.arrow.2.circlepath")
+                InsightTile(title: "Highest Cost Category", state: viewModel.mostExpensiveMaintenanceCategory, icon: "exclamationmark.triangle.fill")
             }
             
             SurfaceCard(tier: .primary) {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Wear & Tear Status")
+                    Text("Maintenance Tracking")
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(AppTheme.primaryText)
+
+                    Text("Health is based on mileage or time since the last service for each item. Healthy means you are still under the typical interval, Due soon means you are close, and Overdue means you have passed it.")
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.tertiaryText)
+                        .fixedSize(horizontal: false, vertical: true)
                     
                     VStack(spacing: 12) {
-                        wearAndTearRow(title: "Oil Change", value: viewModel.daysSinceLastOilChange.map { "\($0) days ago" } ?? "Never recorded")
+                        AnalyticsRow(title: "Oil Change", state: viewModel.daysSinceLastOilChange)
                         Divider().overlay(AppTheme.separator)
-                        wearAndTearRow(title: "Brakes", value: viewModel.distanceSinceLastBrakes.map { "\(AppFormatters.mileage($0)) ago" } ?? "Never recorded")
+                        AnalyticsRow(title: "Brakes", state: viewModel.distanceSinceLastBrakes)
                         Divider().overlay(AppTheme.separator)
-                        wearAndTearRow(title: "Tires", value: viewModel.distanceSinceLastTires.map { "\(AppFormatters.mileage($0)) ago" } ?? "Never recorded")
+                        AnalyticsRow(title: "Tires", state: viewModel.distanceSinceLastTires)
                         Divider().overlay(AppTheme.separator)
-                        wearAndTearRow(title: "Battery", value: viewModel.distanceSinceLastBattery.map { "\(AppFormatters.mileage($0)) ago" } ?? "Never recorded")
+                        AnalyticsRow(title: "Battery", state: viewModel.distanceSinceLastBattery)
                     }
                 }
             }
-        }
-    }
-    
-    private func wearAndTearRow(title: String, value: String) -> some View {
-        HStack {
-            Text(title)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(AppTheme.primaryText)
-            Spacer()
-            Text(value)
-                .font(.subheadline)
-                .foregroundStyle(AppTheme.secondaryText)
+            
+            Text(viewModel.maintenanceInsightText)
+                .font(.footnote)
+                .foregroundStyle(AppTheme.tertiaryText)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
         }
     }
     
@@ -323,31 +369,13 @@ struct VehicleAnalyticsView: View {
             }
             
             HStack(spacing: 12) {
-                if let cp100 = viewModel.costPer100Km {
-                    InsightTile(title: UnitSettings.currentDistanceUnit == .miles ? "Cost / 100 mi" : "Cost / 100 km", value: UnitFormatter.costPerDistanceCurrency(cp100, currencyCode: vehicle.currencyCode), icon: "road.lanes")
-                } else {
-                    InsightTile(title: UnitSettings.currentDistanceUnit == .miles ? "Cost / 100 mi" : "Cost / 100 km", value: "--", icon: "road.lanes")
-                }
-                
-                if let avgP = viewModel.averageFuelPrice {
-                    InsightTile(title: "Avg Price", value: UnitFormatter.costPerFuelUnitCurrency(avgP, currencyCode: vehicle.currencyCode), icon: "dollarsign.circle")
-                } else {
-                    InsightTile(title: "Avg Price", value: "--", icon: "dollarsign.circle")
-                }
+                InsightTile(title: UnitFormatter.costRateTitle(), state: viewModel.costPer100Km, icon: "road.lanes")
+                InsightTile(title: "Avg Price", state: viewModel.averageFuelPrice, icon: "dollarsign.circle")
             }
             
             HStack(spacing: 12) {
-                if let t3 = viewModel.threeTankAverageConsumption {
-                    InsightTile(title: "3-Tank Avg", value: AppFormatters.consumption(t3), icon: "gauge.medium")
-                } else {
-                    InsightTile(title: "3-Tank Avg", value: "--", icon: "gauge.medium")
-                }
-                
-                if let t6 = viewModel.sixTankAverageConsumption {
-                    InsightTile(title: "6-Tank Avg", value: AppFormatters.consumption(t6), icon: "gauge.high")
-                } else {
-                    InsightTile(title: "6-Tank Avg", value: "--", icon: "gauge.high")
-                }
+                InsightTile(title: "3-Tank Avg", state: viewModel.threeTankAverageConsumption, icon: "gauge.medium")
+                InsightTile(title: "6-Tank Avg", state: viewModel.sixTankAverageConsumption, icon: "gauge.high")
             }
             
             if let last = viewModel.lastValidTank {
@@ -405,7 +433,7 @@ struct VehicleAnalyticsView: View {
                             
                             Circle()
                                 .trim(from: 0, to: CGFloat(viewModel.resaleReadinessScore) / 100.0)
-                                .stroke(viewModel.resaleReadinessScore > 70 ? AppTheme.accent : Color.orange, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                                .stroke(viewModel.resaleReadinessColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                                 .frame(width: 80, height: 80)
                                 .rotationEffect(.degrees(-90))
                                 
@@ -415,7 +443,7 @@ struct VehicleAnalyticsView: View {
                         }
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(viewModel.resaleReadinessScore > 70 ? "Excellent" : (viewModel.resaleReadinessScore > 40 ? "Good" : "Needs Work"))
+                            Text(viewModel.resaleReadinessTier)
                                 .font(.title3.weight(.bold))
                                 .foregroundStyle(AppTheme.primaryText)
                             
@@ -428,8 +456,8 @@ struct VehicleAnalyticsView: View {
             }
             
             HStack(spacing: 12) {
-                InsightTile(title: "Service Records", value: "\(viewModel.serviceRecordCount)", icon: "doc.text.fill")
-                InsightTile(title: "Receipt Coverage", value: String(format: "%.0f%%", viewModel.receiptCoveragePercentage), icon: "paperclip")
+                InsightTile(title: "Service Records", state: .ready("\(viewModel.serviceRecordCount)"), icon: "doc.text.fill")
+                InsightTile(title: "Receipt Coverage", state: .ready(String(format: "%.0f%%", viewModel.receiptCoveragePercentage)), icon: "paperclip")
             }
             
             SurfaceCard {
@@ -507,6 +535,8 @@ struct VehicleAnalyticsView: View {
                                     Text(item.title)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundStyle(AppTheme.primaryText)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
                                     Spacer()
                                     Text(UnitFormatter.costPerDistanceCurrency(item.cost, currencyCode: vehicle.currencyCode))
                                         .font(.subheadline.weight(.bold))
@@ -547,7 +577,7 @@ struct VehicleAnalyticsView: View {
 
 struct InsightTile: View {
     let title: String
-    let value: String
+    let state: MetricState<String>
     let icon: String
     
     var body: some View {
@@ -564,13 +594,67 @@ struct InsightTile: View {
                         .minimumScaleFactor(0.8)
                 }
                 
-                Text(value)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(AppTheme.primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                switch state {
+                case .ready(let value):
+                    Text(value)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(AppTheme.primaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                case .notEnoughHistory(let msg):
+                    Text(msg)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(AppTheme.tertiaryText)
+                        .lineLimit(2)
+                case .neverRecorded:
+                    Text("No data")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppTheme.tertiaryText)
+                case .incompleteRecord:
+                    Text("Incomplete")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppTheme.tertiaryText)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 54)
+        }
+    }
+}
+
+struct AnalyticsRow: View {
+    let title: String
+    let state: MetricState<String>
+    
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(AppTheme.primaryText)
+            Spacer()
+            
+            switch state {
+            case .ready(let value):
+                Text(value)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(
+                        value.contains("Overdue") ? Color.red :
+                        value.contains("Due soon") ? Color.orange :
+                        AppTheme.secondaryText
+                    )
+            case .notEnoughHistory(let msg):
+                Text(msg)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.tertiaryText)
+            case .neverRecorded:
+                Text("Never recorded")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.tertiaryText)
+            case .incompleteRecord:
+                Text("Incomplete record")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.tertiaryText)
+            }
         }
     }
 }
@@ -616,25 +700,27 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     // Breakdown
     @Published var spendingByYear: [(year: Int, amount: Double)] = []
     @Published var spendingByCategory: [(category: EntryCategory, amount: Double)] = []
+    @Published var financialCategoryInsight: String? = nil
     
     // Fuel Intelligence
     @Published var lastValidTank: FuelEntry?
-    @Published var threeTankAverageConsumption: Double?
-    @Published var sixTankAverageConsumption: Double?
-    @Published var costPer100Km: Double?
-    @Published var averageFuelPrice: Double?
+    @Published var threeTankAverageConsumption: MetricState<String> = .notEnoughHistory("Requires 3 valid fill-ups")
+    @Published var sixTankAverageConsumption: MetricState<String> = .notEnoughHistory("Requires 6 valid fill-ups")
+    @Published var costPer100Km: MetricState<String> = .notEnoughHistory("Not enough history")
+    @Published var averageFuelPrice: MetricState<String> = .notEnoughHistory("Not enough history")
     @Published var fuelSpendTrendText: String = "Not enough data to calculate fuel trends."
     
     // Maintenance Intelligence
-    @Published var mostExpensiveMaintenanceCategory: String?
-    @Published var averageServiceIntervalDays: Int?
-    @Published var daysSinceLastOilChange: Int?
-    @Published var distanceSinceLastBrakes: Int?
-    @Published var distanceSinceLastTires: Int?
-    @Published var distanceSinceLastBattery: Int?
+    @Published var mostExpensiveMaintenanceCategory: MetricState<String> = .neverRecorded
+    @Published var averageServiceIntervalDays: MetricState<String> = .notEnoughHistory("Needs 2+ services")
+    @Published var daysSinceLastOilChange: MetricState<String> = .neverRecorded
+    @Published var distanceSinceLastBrakes: MetricState<String> = .neverRecorded
+    @Published var distanceSinceLastTires: MetricState<String> = .neverRecorded
+    @Published var distanceSinceLastBattery: MetricState<String> = .neverRecorded
     @Published var upcomingMaintenanceCount: Int = 0
     @Published var overdueMaintenanceCount: Int = 0
     @Published var maintenanceHealthText: String = "All maintenance is up to date."
+    @Published var maintenanceInsightText: String = "Maintenance insights improve as you log more service history."
 
     // Garage Intelligence
     @Published var garageSpendByVehicle: [(title: String, amount: Double)] = []
@@ -647,10 +733,63 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     @Published var serviceRecordCount: Int = 0
     @Published var receiptCoveragePercentage: Double = 0
     @Published var resaleReadinessScore: Int = 0
+    @Published var resaleReadinessTier: String = "Needs Work"
+    @Published var resaleReadinessColor: Color = Color.orange
     @Published var resaleNextStepGuidance: String = "A complete history improves resale value."
 
     init(vehicle: Vehicle) {
         self.vehicle = vehicle
+    }
+    
+    nonisolated private static func evaluateHealth(items: [ServiceEntry], vehicleMileage: Int, byDistance: Bool) -> MetricState<String> {
+        guard !items.isEmpty else { return .neverRecorded }
+        
+        let validItems = items.filter { byDistance ? $0.mileage > 0 : true }
+        
+        if validItems.isEmpty {
+            return .incompleteRecord
+        }
+        
+        if validItems.count == 1 {
+            return .notEnoughHistory("Recorded once")
+        }
+        
+        let sorted = validItems.sorted { byDistance ? $0.mileage < $1.mileage : $0.date < $1.date }
+        let first = sorted.first!
+        let last = sorted.last!
+        
+        if byDistance {
+            let totalDist = last.mileage - first.mileage
+            if totalDist <= 0 { return .incompleteRecord }
+            let avgInterval = totalDist / (sorted.count - 1)
+            let elapsed = vehicleMileage - last.mileage
+            
+            if elapsed < 0 { return .incompleteRecord }
+            
+            if elapsed >= avgInterval {
+                return .ready("Overdue · \(AppFormatters.mileage(elapsed)) ago")
+            } else if elapsed >= Int(Double(avgInterval) * 0.85) {
+                return .ready("Due soon · \(AppFormatters.mileage(elapsed)) ago")
+            } else {
+                return .ready("Healthy · \(AppFormatters.mileage(elapsed)) ago")
+            }
+        } else {
+            let calendar = Calendar.current
+            let totalDays = calendar.dateComponents([.day], from: first.date, to: last.date).day ?? 0
+            if totalDays <= 0 { return .incompleteRecord }
+            let avgInterval = totalDays / (sorted.count - 1)
+            let elapsed = calendar.dateComponents([.day], from: last.date, to: Date()).day ?? 0
+            
+            if elapsed < 0 { return .incompleteRecord }
+            
+            if elapsed >= avgInterval {
+                return .ready("Overdue · \(elapsed) days ago")
+            } else if elapsed >= Int(Double(avgInterval) * 0.85) {
+                return .ready("Due soon · \(elapsed) days ago")
+            } else {
+                return .ready("Healthy · \(elapsed) days ago")
+            }
+        }
     }
     
     func calculateIntelligence(allVehicles: [Vehicle] = []) async {
@@ -659,6 +798,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         let reminders = vehicle.reminders
         let docs = vehicle.documents
         let vehicleMileage = vehicle.currentMileage
+        let currencyCode = vehicle.currencyCode
         
         let now = Date()
         let calendar = Calendar.current
@@ -670,6 +810,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         let result = await Task.detached { () -> IntelligenceResult in
             var res = IntelligenceResult()
             
+            // Financials Engine
             let totalService = sortedServices.reduce(0) { $0 + $1.price }
             let totalFuel = sortedFuel.reduce(0) { $0 + $1.totalCost }
             res.totalLifetimeSpend = totalService + totalFuel
@@ -681,20 +822,6 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             let last12MonthsStart = calendar.date(byAdding: .month, value: -12, to: now) ?? .distantPast
             res.last12MonthsSpend = sortedServices.filter { $0.date >= last12MonthsStart }.reduce(0) { $0 + $1.price } +
                                     sortedFuel.filter { $0.date >= last12MonthsStart }.reduce(0) { $0 + $1.totalCost }
-            
-            let earliestService = sortedServices.last?.date
-            let earliestFuel = sortedFuel.last?.date
-            var firstDate = now
-            if let es = earliestService, let ef = earliestFuel {
-                firstDate = min(es, ef)
-            } else if let es = earliestService {
-                firstDate = es
-            } else if let ef = earliestFuel {
-                firstDate = ef
-            }
-            let components = calendar.dateComponents([.month], from: firstDate, to: now)
-            let monthsOwned = max(1, components.month ?? 1)
-            res.averageMonthlyCost = res.totalLifetimeSpend / Double(monthsOwned)
             
             let last90DaysStart = calendar.date(byAdding: .day, value: -90, to: now) ?? .distantPast
             let previous90DaysStart = calendar.date(byAdding: .day, value: -180, to: now) ?? .distantPast
@@ -710,12 +837,16 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             if res.previous90DaysSpend > 0 {
                 res.spendTrend90Days = ((res.last90DaysSpend - res.previous90DaysSpend) / res.previous90DaysSpend) * 100.0
                 let direction = res.spendTrend90Days > 0 ? "up" : "down"
-                res.financialSpendTrendText = "Spending is \(direction) \(abs(Int(res.spendTrend90Days)))% vs previous 90 days."
+                if abs(res.spendTrend90Days) < 1.0 {
+                    res.financialSpendTrendText = "No meaningful change vs previous 90 days."
+                } else {
+                    res.financialSpendTrendText = "Spending is \(direction) \(abs(Int(res.spendTrend90Days)))% vs previous 90 days."
+                }
             } else if res.last90DaysSpend > 0 {
                 res.spendTrend90Days = 100.0
                 res.financialSpendTrendText = "Spending is up vs previous 90 days."
             } else {
-                res.financialSpendTrendText = "Not enough data to calculate spending trends."
+                res.financialSpendTrendText = "Not enough history for comparison."
             }
             
             let groupedByYear = Dictionary(grouping: sortedServices) { calendar.component(.year, from: $0.date) }
@@ -726,60 +857,88 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             res.spendingByCategory = groupedByCategory.map { (category: $0.key, amount: $0.value.reduce(0) { $0 + $1.price }) }
                 .sorted { $0.amount > $1.amount }
                 
+            if let largestCat = res.spendingByCategory.first {
+                res.financialCategoryInsight = "\(largestCat.category.title) is your largest cost category."
+            }
+            
+            // Forecast Engine
             let threeMonthsFromNow = calendar.date(byAdding: .month, value: 3, to: now) ?? now
             let sixMonthsFromNow = calendar.date(byAdding: .month, value: 6, to: now) ?? now
             let oneYearFromNow = calendar.date(byAdding: .year, value: 1, to: now) ?? now
             
-            var expectedCost3M: Double = 0
-            var expectedCost6M: Double = 0
-            var expectedCost12M: Double = 0
+            var overdueReminders: [ReminderItem] = []
+            var upcomingReminders: [ReminderItem] = []
             
             for reminder in reminders where reminder.isEnabled {
                 if let due = reminder.dateDue {
                     if due >= now && due <= oneYearFromNow {
                         let relatedServices = sortedServices.filter { $0.serviceType.rawValue == reminder.typeRaw }
                         let avg = relatedServices.isEmpty ? 100.0 : relatedServices.reduce(0) { $0 + $1.price } / Double(relatedServices.count)
-                        expectedCost12M += avg
+                        res.upcomingPlannedCost += avg
                         if due <= sixMonthsFromNow {
-                            expectedCost6M += avg
+                            res.upcomingPlannedCost6Months += avg
                             res.upcomingMaintenanceCount += 1
+                            upcomingReminders.append(reminder)
                         }
                         if due <= threeMonthsFromNow {
-                            expectedCost3M += avg
+                            res.upcomingPlannedCost3Months += avg
                         }
                     }
                     if due < now.startOfDay {
                         res.overdueMaintenanceCount += 1
+                        overdueReminders.append(reminder)
                     }
                 } else if let milDue = reminder.mileageDue {
                     if vehicleMileage >= milDue {
                         res.overdueMaintenanceCount += 1
+                        overdueReminders.append(reminder)
                     } else if milDue - vehicleMileage <= 5000 {
                         let relatedServices = sortedServices.filter { $0.serviceType.rawValue == reminder.typeRaw }
                         let avg = relatedServices.isEmpty ? 100.0 : relatedServices.reduce(0) { $0 + $1.price } / Double(relatedServices.count)
-                        expectedCost12M += avg
+                        res.upcomingPlannedCost += avg
                         
                         if milDue - vehicleMileage <= 2500 {
-                            expectedCost6M += avg
+                            res.upcomingPlannedCost6Months += avg
                             res.upcomingMaintenanceCount += 1
+                            upcomingReminders.append(reminder)
                         }
                     }
                 }
             }
-            res.upcomingPlannedCost = expectedCost12M
-            res.upcomingPlannedCost6Months = expectedCost6M
-            res.upcomingPlannedCost3Months = expectedCost3M
             
-            if res.overdueMaintenanceCount > 0 {
-                res.maintenanceHealthText = "You have \(res.overdueMaintenanceCount) overdue items requiring attention."
-            } else if res.upcomingMaintenanceCount > 0 {
-                res.maintenanceHealthText = "\(res.upcomingMaintenanceCount) maintenance items are due in the next 6 months."
-            } else {
-                res.maintenanceHealthText = "All maintenance is currently up to date."
+            func getCleanTitle(for reminder: ReminderItem) -> String? {
+                if let type = ServiceType(rawValue: reminder.typeRaw), type != .custom {
+                    return type.title
+                }
+                return nil
             }
             
-            res.lastValidTank = sortedFuel.first(where: { $0.isFullTank && $0.liters > 0 })
+            if res.overdueMaintenanceCount > 0 {
+                if res.overdueMaintenanceCount == 1, let first = overdueReminders.first {
+                    if let cleanTitle = getCleanTitle(for: first) {
+                        res.maintenanceHealthText = "1 item is overdue: \(cleanTitle)"
+                    } else {
+                        res.maintenanceHealthText = "1 service item is overdue."
+                    }
+                } else {
+                    res.maintenanceHealthText = "\(res.overdueMaintenanceCount) service items appear overdue."
+                }
+            } else if res.upcomingMaintenanceCount > 0 {
+                if res.upcomingMaintenanceCount == 1, let first = upcomingReminders.first {
+                    if let cleanTitle = getCleanTitle(for: first) {
+                        res.maintenanceHealthText = "1 item due soon: \(cleanTitle)"
+                    } else {
+                        res.maintenanceHealthText = "1 service item due soon."
+                    }
+                } else {
+                    res.maintenanceHealthText = "\(res.upcomingMaintenanceCount) service items need attention in the next 6 months."
+                }
+            } else {
+                res.maintenanceHealthText = "Track upcoming service items and replacement history."
+            }
             
+            // Fuel Engine
+            res.lastValidTank = sortedFuel.first(where: { $0.isFullTank && $0.liters > 0 })
             let fullTanks = sortedFuel.filter { $0.isFullTank }
             if fullTanks.count >= 2 {
                 var consumptions: [Double] = []
@@ -792,10 +951,10 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                     }
                 }
                 if consumptions.count >= 3 {
-                    res.threeTankAverageConsumption = consumptions.prefix(3).reduce(0, +) / 3.0
+                    res.threeTankAverageConsumption = .ready(AppFormatters.consumption(consumptions.prefix(3).reduce(0, +) / 3.0))
                 }
                 if consumptions.count >= 6 {
-                    res.sixTankAverageConsumption = consumptions.prefix(6).reduce(0, +) / 6.0
+                    res.sixTankAverageConsumption = .ready(AppFormatters.consumption(consumptions.prefix(6).reduce(0, +) / 6.0))
                 }
             }
             
@@ -804,11 +963,11 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 let lastMil = sortedFuel.first?.mileage ?? 0
                 let dist = lastMil - firstMil
                 if dist > 0 {
-                    res.costPer100Km = (totalFuel / Double(dist)) * 100.0
+                    res.costPer100Km = .ready(UnitFormatter.costPerDistanceCurrency((totalFuel / Double(dist)) * 100.0, currencyCode: currencyCode))
                 }
                 let totalLiters = sortedFuel.reduce(0) { $0 + $1.liters }
                 if totalLiters > 0 {
-                    res.averageFuelPrice = totalFuel / totalLiters
+                    res.averageFuelPrice = .ready(UnitFormatter.costPerFuelUnitCurrency(totalFuel / totalLiters, currencyCode: currencyCode))
                 }
             }
             
@@ -825,46 +984,49 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 res.fuelSpendTrendText = "Track more fuel to unlock trend comparisons."
             }
             
+            // Maintenance Engine (Mapped to Component)
             let maintenanceServices = sortedServices.filter { $0.category == .maintenance || $0.category == .repair }
+            
+            if maintenanceServices.count < 3 {
+                res.maintenanceInsightText = "Add more maintenance records to improve status tracking, due-soon alerts, and replacement insights."
+            } else if maintenanceServices.count < 6 {
+                res.maintenanceInsightText = "Maintenance insights improve as you log more service history."
+            } else {
+                res.maintenanceInsightText = "More service history = smarter maintenance insights."
+            }
+            
             if !maintenanceServices.isEmpty {
-                let grouped = Dictionary(grouping: maintenanceServices, by: \.serviceType)
-                if let highest = grouped.max(by: { lhs, rhs in
+                let groupedByComponent = Dictionary(grouping: maintenanceServices, by: { MaintenanceComponent.from(serviceType: $0.serviceType) })
+                
+                if let highest = groupedByComponent.max(by: { lhs, rhs in
                     lhs.value.reduce(0) { $0 + $1.price } < rhs.value.reduce(0) { $0 + $1.price }
                 }) {
-                    res.mostExpensiveMaintenanceCategory = highest.key.title
+                    let total = highest.value.reduce(0) { $0 + $1.price }
+                    res.mostExpensiveMaintenanceCategory = .ready("\(highest.key.rawValue) · \(AppFormatters.currency(total, code: currencyCode))")
                 }
+                
                 let ascendingMaint = maintenanceServices.sorted { $0.date < $1.date }
                 if ascendingMaint.count >= 2 {
                     let first = ascendingMaint.first!.date
                     let last = ascendingMaint.last!.date
                     let days = calendar.dateComponents([.day], from: first, to: last).day ?? 0
-                    res.averageServiceIntervalDays = max(0, days / (ascendingMaint.count - 1))
+                    let interval = max(0, days / (ascendingMaint.count - 1))
+                    res.averageServiceIntervalDays = .ready("\(interval) days")
                 }
+                
+                res.daysSinceLastOilChange = VehicleIntelligenceViewModel.evaluateHealth(items: groupedByComponent[.oilChange] ?? [], vehicleMileage: vehicleMileage, byDistance: false)
+                res.distanceSinceLastBrakes = VehicleIntelligenceViewModel.evaluateHealth(items: groupedByComponent[.brakes] ?? [], vehicleMileage: vehicleMileage, byDistance: true)
+                res.distanceSinceLastTires = VehicleIntelligenceViewModel.evaluateHealth(items: groupedByComponent[.tires] ?? [], vehicleMileage: vehicleMileage, byDistance: true)
+                res.distanceSinceLastBattery = VehicleIntelligenceViewModel.evaluateHealth(items: groupedByComponent[.battery] ?? [], vehicleMileage: vehicleMileage, byDistance: true)
             }
             
-            if let lastOil = sortedServices.first(where: { $0.serviceType == .oilChange }) {
-                res.daysSinceLastOilChange = max(0, calendar.dateComponents([.day], from: lastOil.date, to: now).day ?? 0)
-            }
-            if let lastBrakes = sortedServices.first(where: { $0.serviceType == .brakes }) {
-                let dist = vehicleMileage - lastBrakes.mileage
-                res.distanceSinceLastBrakes = dist >= 0 ? dist : nil
-            }
-            if let lastTires = sortedServices.first(where: { $0.serviceType == .tires }) {
-                let dist = vehicleMileage - lastTires.mileage
-                res.distanceSinceLastTires = dist >= 0 ? dist : nil
-            }
-            if let lastBattery = sortedServices.first(where: { $0.serviceType == .battery }) {
-                let dist = vehicleMileage - lastBattery.mileage
-                res.distanceSinceLastBattery = dist >= 0 ? dist : nil
-            }
-            
+            // Garage Engine
             if !vehiclesData.isEmpty {
                 var highestYearSpend: Double = 0
                 for v in vehiclesData {
                     let sTotal = v.services.reduce(0) { $0 + $1.price }
                     let fTotal = v.fuel.reduce(0) { $0 + $1.totalCost }
                     res.garageSpendByVehicle.append((v.title, sTotal + fTotal))
-                    res.garageFuelSpendByVehicle.append((v.title, fTotal))
                     
                     let sYear = v.services.filter { $0.date >= thisYearStart }.reduce(0) { $0 + $1.price }
                     let fYear = v.fuel.filter { $0.date >= thisYearStart }.reduce(0) { $0 + $1.totalCost }
@@ -877,12 +1039,11 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                     let lastMil = v.currentMileage
                     let dist = max(0, lastMil - (firstMil == Int.max ? 0 : firstMil))
                     
-                    if dist > 50 && (sTotal + fTotal) > 0 {
+                    if dist > 500 && (sTotal + fTotal) > 0 {
                         res.costPerKmByVehicle.append((v.title, ((sTotal + fTotal) / Double(dist)) * 100.0))
                     }
                 }
                 res.garageSpendByVehicle.sort { $0.amount > $1.amount }
-                res.garageFuelSpendByVehicle.sort { $0.amount > $1.amount }
                 res.costPerKmByVehicle.sort { $0.cost > $1.cost }
                 
                 if let costliest = res.costliestVehicleThisYear {
@@ -892,6 +1053,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 }
             }
             
+            // Resale Engine
             res.serviceRecordCount = sortedServices.count
             let servicesWithReceipts = sortedServices.filter { !$0.attachments.isEmpty }.count
             if sortedServices.count > 0 {
@@ -899,24 +1061,28 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             }
             
             var score = 0
-            if sortedServices.count > 3 { score += 30 }
-            else if sortedServices.count > 0 { score += 10 }
-            
-            if res.receiptCoveragePercentage > 70 { score += 40 }
-            else if res.receiptCoveragePercentage > 30 { score += 20 }
-            
+            if sortedServices.count > 3 { score += 30 } else if sortedServices.count > 0 { score += 10 }
+            if res.receiptCoveragePercentage > 70 { score += 40 } else if res.receiptCoveragePercentage > 30 { score += 20 }
             if docs.count > 0 { score += 30 }
             
             res.resaleReadinessScore = min(100, score)
             
-            if sortedServices.count < 3 {
-                res.resaleNextStepGuidance = "Add more service records to build a complete history."
-            } else if res.receiptCoveragePercentage < 70 {
-                res.resaleNextStepGuidance = "Attach photos of receipts to your service entries."
-            } else if docs.isEmpty {
-                res.resaleNextStepGuidance = "Add registration or insurance documents to the Vault."
-            } else {
+            if res.resaleReadinessScore >= 90 {
+                res.resaleReadinessTier = "Buyer-Ready"
+                res.resaleReadinessColor = AppTheme.accent
                 res.resaleNextStepGuidance = "Your vehicle's history is highly complete."
+            } else if res.resaleReadinessScore >= 70 {
+                res.resaleReadinessTier = "Strong"
+                res.resaleReadinessColor = AppTheme.accent.opacity(0.8)
+                res.resaleNextStepGuidance = docs.isEmpty ? "Add registration or insurance documents." : "Attach remaining photos of receipts."
+            } else if res.resaleReadinessScore >= 40 {
+                res.resaleReadinessTier = "Fair"
+                res.resaleReadinessColor = Color.orange
+                res.resaleNextStepGuidance = "Improve receipt coverage to raise buyer readiness."
+            } else {
+                res.resaleReadinessTier = "Needs Work"
+                res.resaleReadinessColor = Color.red
+                res.resaleNextStepGuidance = "Add more service records to build a history."
             }
             
             return res
@@ -932,6 +1098,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         self.financialSpendTrendText = result.financialSpendTrendText
         self.spendingByYear = result.spendingByYear
         self.spendingByCategory = result.spendingByCategory
+        self.financialCategoryInsight = result.financialCategoryInsight
         self.upcomingPlannedCost = result.upcomingPlannedCost
         self.upcomingPlannedCost3Months = result.upcomingPlannedCost3Months
         self.upcomingPlannedCost6Months = result.upcomingPlannedCost6Months
@@ -952,16 +1119,17 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         self.upcomingMaintenanceCount = result.upcomingMaintenanceCount
         self.overdueMaintenanceCount = result.overdueMaintenanceCount
         self.maintenanceHealthText = result.maintenanceHealthText
+        self.maintenanceInsightText = result.maintenanceInsightText
         
         self.garageSpendByVehicle = result.garageSpendByVehicle
-        self.garageFuelSpendByVehicle = result.garageFuelSpendByVehicle
-        self.costliestVehicleThisYear = result.costliestVehicleThisYear
         self.costPerKmByVehicle = result.costPerKmByVehicle
         self.garageIntelligenceText = result.garageIntelligenceText
 
         self.serviceRecordCount = result.serviceRecordCount
         self.receiptCoveragePercentage = result.receiptCoveragePercentage
         self.resaleReadinessScore = result.resaleReadinessScore
+        self.resaleReadinessTier = result.resaleReadinessTier
+        self.resaleReadinessColor = result.resaleReadinessColor
         self.resaleNextStepGuidance = result.resaleNextStepGuidance
     }
 }
@@ -977,36 +1145,39 @@ private struct IntelligenceResult {
     var financialSpendTrendText: String = "Not enough data"
     var spendingByYear: [(year: Int, amount: Double)] = []
     var spendingByCategory: [(category: EntryCategory, amount: Double)] = []
+    var financialCategoryInsight: String? = nil
     var upcomingPlannedCost: Double = 0
     var upcomingPlannedCost3Months: Double = 0
     var upcomingPlannedCost6Months: Double = 0
     
     var lastValidTank: FuelEntry? = nil
-    var threeTankAverageConsumption: Double? = nil
-    var sixTankAverageConsumption: Double? = nil
-    var costPer100Km: Double? = nil
-    var averageFuelPrice: Double? = nil
+    var threeTankAverageConsumption: MetricState<String> = .notEnoughHistory("Requires 3 valid fill-ups")
+    var sixTankAverageConsumption: MetricState<String> = .notEnoughHistory("Requires 6 valid fill-ups")
+    var costPer100Km: MetricState<String> = .notEnoughHistory("Not enough history")
+    var averageFuelPrice: MetricState<String> = .notEnoughHistory("Not enough history")
     var fuelSpendTrendText: String = "Not enough data to calculate fuel trends."
     
-    var mostExpensiveMaintenanceCategory: String? = nil
-    var averageServiceIntervalDays: Int? = nil
-    var daysSinceLastOilChange: Int? = nil
-    var distanceSinceLastBrakes: Int? = nil
-    var distanceSinceLastTires: Int? = nil
-    var distanceSinceLastBattery: Int? = nil
+    var mostExpensiveMaintenanceCategory: MetricState<String> = .neverRecorded
+    var averageServiceIntervalDays: MetricState<String> = .notEnoughHistory("Needs 2+ services")
+    var daysSinceLastOilChange: MetricState<String> = .neverRecorded
+    var distanceSinceLastBrakes: MetricState<String> = .neverRecorded
+    var distanceSinceLastTires: MetricState<String> = .neverRecorded
+    var distanceSinceLastBattery: MetricState<String> = .neverRecorded
     var upcomingMaintenanceCount: Int = 0
     var overdueMaintenanceCount: Int = 0
-    var maintenanceHealthText: String = "All maintenance is up to date."
+    var maintenanceHealthText: String = "Track upcoming service items and replacement history."
+    var maintenanceInsightText: String = "Maintenance insights improve as you log more service history."
     
     var garageSpendByVehicle: [(title: String, amount: Double)] = []
-    var garageFuelSpendByVehicle: [(title: String, amount: Double)] = []
-    var costliestVehicleThisYear: String? = nil
     var costPerKmByVehicle: [(title: String, cost: Double)] = []
+    var costliestVehicleThisYear: String? = nil
     var garageIntelligenceText: String = "Compare your multi-vehicle fleet."
     
     var serviceRecordCount: Int = 0
     var receiptCoveragePercentage: Double = 0
     var resaleReadinessScore: Int = 0
+    var resaleReadinessTier: String = "Needs Work"
+    var resaleReadinessColor: Color = Color.orange
     var resaleNextStepGuidance: String = "A complete history improves resale value."
 }
 

@@ -412,11 +412,26 @@ struct SettingsView: View {
                 settingsDivider()
 
                 settingsActionRow(
-                    title: "Generate demo garage",
-                    subtitle: "Rebuild the sample dataset locally.",
+                    title: "Generate full demo garage",
+                    subtitle: "Replaces current data with a fully loaded demo set.",
                     icon: "wand.and.stars"
                 ) {
-                    PreviewData.generateDemoGarage(in: modelContext)
+                    PreviewData.generateFullDemoGarage(in: modelContext)
+                    selectDemoVehicle(withVIN: PreviewData.fullDemoPrimaryVIN)
+                    appState.refreshDataViews()
+                    Haptics.success()
+                }
+
+                settingsDivider()
+
+                settingsActionRow(
+                    title: "Generate partial demo garage",
+                    subtitle: "Replaces current data with a mixed-completeness demo set.",
+                    icon: "wand.and.stars"
+                ) {
+                    PreviewData.generatePartialDemoGarage(in: modelContext)
+                    selectDemoVehicle(withVIN: PreviewData.partialDemoPrimaryVIN)
+                    appState.refreshDataViews()
                     Haptics.success()
                 }
             }
@@ -501,6 +516,12 @@ struct SettingsView: View {
         } catch {
             Haptics.error()
         }
+    }
+
+    private func selectDemoVehicle(withVIN vin: String) {
+        let descriptor = FetchDescriptor<Vehicle>()
+        guard let refreshedVehicles = try? modelContext.fetch(descriptor) else { return }
+        appState.selectedVehicleID = refreshedVehicles.first(where: { $0.vin == vin })?.id
     }
 
     private func settingsGroupCard<Content: View>(

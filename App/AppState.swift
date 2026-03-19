@@ -87,6 +87,7 @@ final class PaywallCoordinator: ObservableObject {
 @MainActor
 final class AppState: ObservableObject {
     @Published var selectedTab: AppTab = .garage
+    @Published var dataRefreshToken = UUID()
     
     @AppStorage("showOnlyCurrentVehicle") var showOnlyCurrentVehicle: Bool = false
     @AppStorage("globalSelectedVehicleID") var globalSelectedVehicleIDString: String = ""
@@ -95,5 +96,9 @@ final class AppState: ObservableObject {
     var selectedVehicleID: UUID? {
         get { UUID(uuidString: globalSelectedVehicleIDString) }
         set { globalSelectedVehicleIDString = newValue?.uuidString ?? "" }
+    }
+
+    func refreshDataViews() {
+        dataRefreshToken = UUID()
     }
 }
