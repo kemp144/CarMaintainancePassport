@@ -176,7 +176,7 @@ struct FuelTrackingView: View {
 
             HStack(spacing: 12) {
                 fuelStatCard(
-                    title: "Current Average",
+                    title: "Recent Avg (Valid fill-ups)",
                     value: analysis.insights.lastValidConsumption.value.map { AppFormatters.consumption($0) } ?? "—",
                     note: analysis.insights.lastValidConsumption.note,
                     icon: "gauge.medium",
@@ -190,6 +190,12 @@ struct FuelTrackingView: View {
                     emphasis: .primary
                 )
             }
+
+            DataConfidenceFootnote(
+                message: analysis.insights.validCycleCount > 0
+                    ? "Based on \(analysis.insights.validCycleCount) valid full-to-full fill-up \(analysis.insights.validCycleCount == 1 ? "cycle" : "cycles")."
+                    : "Need more full fill-ups for a reliable consumption average."
+            )
         }
     }
 
@@ -661,7 +667,7 @@ struct FuelTrackingView: View {
 
     private var fuelPreviewText: String? {
         if let consumption = analysis.insights.lastValidConsumption.value {
-            return "Current average: \(AppFormatters.consumption(consumption))"
+            return "Recent average: \(AppFormatters.consumption(consumption))"
         }
 
         return analysis.insights.lastValidConsumption.note

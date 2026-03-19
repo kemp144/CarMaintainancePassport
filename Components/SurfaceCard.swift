@@ -356,6 +356,25 @@ struct SubtleUpgradeButton: View {
     }
 }
 
+struct DataConfidenceFootnote: View {
+    let message: String
+    var icon: String = "info.circle.fill"
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.tertiaryText)
+                .padding(.top, 1)
+
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(AppTheme.tertiaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
 // MARK: - Floating Add Button
 
 struct FloatingAddButton: View {

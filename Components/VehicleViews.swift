@@ -106,7 +106,7 @@ struct VehicleRowCard: View {
 
                     HStack(spacing: 8) {
                         compactMetric(label: "Docs", value: "\(vehicle.documentsCount)")
-                        compactMetric(label: "This year", value: AppFormatters.currency(vehicle.spentThisYear, code: vehicle.currencyCode))
+                        compactMetric(label: "Service YTD", value: AppFormatters.currency(vehicle.spentThisYear, code: vehicle.currencyCode))
                         compactMetric(label: "Reminders", value: "\(vehicle.activeRemindersCount)")
                     }
                 }

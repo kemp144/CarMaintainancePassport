@@ -121,7 +121,7 @@ struct VehicleAnalyticsView: View {
         VStack(spacing: 16) {
             SurfaceCard(tier: .primary) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("TOTAL LIFETIME SPEND")
+                    Text("TOTAL OWNERSHIP SPEND")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(AppTheme.secondaryText)
 
@@ -173,6 +173,11 @@ struct VehicleAnalyticsView: View {
                                     .font(.subheadline.weight(.semibold))
                             }
                         }
+                    }
+
+                    if let forecastConfidenceText = viewModel.forecastConfidenceText {
+                        DataConfidenceFootnote(message: forecastConfidenceText)
+                            .padding(.top, 2)
                     }
                 }
             }
@@ -292,7 +297,7 @@ struct VehicleAnalyticsView: View {
                         "Category-by-category totals",
                         "Hidden cost detection"
                     ],
-                    ctaTitle: "Unlock full insights",
+                    ctaTitle: "Unlock Pro",
                     previewText: financePreviewText
                 ) {
                     paywallCoordinator.present(.analytics)
@@ -326,6 +331,52 @@ struct VehicleAnalyticsView: View {
                     Spacer()
                 }
             }
+            
+            HStack(spacing: 12) {
+                InsightTile(title: "Due Soon", state: .ready("\(viewModel.upcomingMaintenanceCount)"), icon: "clock.badge.exclamationmark.fill")
+                InsightTile(title: "Overdue", state: .ready("\(viewModel.overdueMaintenanceCount)"), icon: "exclamationmark.circle.fill")
+            }
+
+            SurfaceCard(tier: .primary) {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(hasAdvancedInsights ? "Maintenance Tracking" : "Basic Tracking")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+
+                    Text(hasAdvancedInsights
+                         ? "Maintenance health focuses on service items only. Insurance and registration reminders stay separate so status stays clear."
+                         : "Keep an eye on the essentials. Free gives you core status tracking, while Pro adds predictions, prioritization, and deeper patterns.")
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.tertiaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    
+                    VStack(spacing: 12) {
+                        AnalyticsRow(title: "Oil Change", state: viewModel.daysSinceLastOilChange)
+                        Divider().overlay(AppTheme.separator)
+                        AnalyticsRow(title: "Brakes", state: viewModel.distanceSinceLastBrakes)
+                        Divider().overlay(AppTheme.separator)
+                        AnalyticsRow(title: "Tires", state: viewModel.distanceSinceLastTires)
+
+                        if hasAdvancedInsights {
+                            Divider().overlay(AppTheme.separator)
+                            AnalyticsRow(title: "Battery", state: viewModel.distanceSinceLastBattery)
+                        }
+                    }
+                }
+            }
+
+            if let policyReminderSummaryText = viewModel.policyReminderSummaryText {
+                SurfaceCard(tier: .compact) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Policy reminders")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.secondaryText)
+                        Text(policyReminderSummaryText)
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.tertiaryText)
+                    }
+                }
+            }
 
             if hasAdvancedInsights {
                 HStack(spacing: 12) {
@@ -333,28 +384,8 @@ struct VehicleAnalyticsView: View {
                     InsightTile(title: "Highest Cost Category", state: viewModel.mostExpensiveMaintenanceCategory, icon: "exclamationmark.triangle.fill")
                 }
 
-                SurfaceCard(tier: .primary) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Maintenance Tracking")
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(AppTheme.primaryText)
-
-                        Text("Health is based on mileage or time since the last service for each item. Healthy means you are still under the typical interval, Due soon means you are close, and Overdue means you have passed it.")
-                            .font(.footnote)
-                            .foregroundStyle(AppTheme.tertiaryText)
-                            .fixedSize(horizontal: false, vertical: true)
-                        
-                        VStack(spacing: 12) {
-                            AnalyticsRow(title: "Oil Change", state: viewModel.daysSinceLastOilChange)
-                            Divider().overlay(AppTheme.separator)
-                            AnalyticsRow(title: "Brakes", state: viewModel.distanceSinceLastBrakes)
-                            Divider().overlay(AppTheme.separator)
-                            AnalyticsRow(title: "Tires", state: viewModel.distanceSinceLastTires)
-                            Divider().overlay(AppTheme.separator)
-                            AnalyticsRow(title: "Battery", state: viewModel.distanceSinceLastBattery)
-                        }
-                    }
-                }
+                DataConfidenceFootnote(message: viewModel.maintenanceConfidenceText)
+                    .padding(.horizontal, 2)
 
                 Text(viewModel.maintenanceInsightText)
                     .font(.footnote)
@@ -363,39 +394,18 @@ struct VehicleAnalyticsView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
             } else {
-                HStack(spacing: 12) {
-                    InsightTile(title: "Due Soon", state: .ready("\(viewModel.upcomingMaintenanceCount)"), icon: "clock.badge.exclamationmark.fill")
-                    InsightTile(title: "Overdue", state: .ready("\(viewModel.overdueMaintenanceCount)"), icon: "exclamationmark.circle.fill")
-                }
-
-                SurfaceCard(tier: .primary) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Basic Tracking")
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(AppTheme.primaryText)
-
-                        Text("Keep an eye on the essentials. Pro adds predictions, patterns, and smarter due-soon guidance as your history grows.")
-                            .font(.footnote)
-                            .foregroundStyle(AppTheme.tertiaryText)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        VStack(spacing: 12) {
-                            AnalyticsRow(title: "Oil Change", state: viewModel.daysSinceLastOilChange)
-                            Divider().overlay(AppTheme.separator)
-                            AnalyticsRow(title: "Brakes", state: viewModel.distanceSinceLastBrakes)
-                        }
-                    }
-                }
+                DataConfidenceFootnote(message: viewModel.maintenanceConfidenceText)
+                    .padding(.horizontal, 2)
 
                 LockedInsightCard(
                     title: "Smarter maintenance tracking",
                     message: "Know what is likely due next before a routine service turns into an expensive surprise.",
                     highlights: [
                         "Replacement predictions",
-                        "Smart due-soon insights",
+                        "Smarter due-soon prioritization",
                         "Maintenance trends over time"
                     ],
-                    ctaTitle: "Unlock smarter maintenance tracking",
+                    ctaTitle: "Unlock Pro",
                     previewText: maintenancePreviewText
                 ) {
                     paywallCoordinator.present(.analytics)
@@ -425,14 +435,15 @@ struct VehicleAnalyticsView: View {
                         Text(viewModel.fuelSpendTrendText)
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer()
                 }
             }
             
             HStack(spacing: 12) {
-                InsightTile(title: "Avg Price", state: viewModel.averageFuelPrice, icon: "dollarsign.circle")
-                InsightTile(title: "3-Tank Avg", state: viewModel.threeTankAverageConsumption, icon: "gauge.medium")
+                InsightTile(title: "Average Fuel Price", state: viewModel.averageFuelPrice, icon: "dollarsign.circle")
+                InsightTile(title: "Recent Avg (Up to 3 valid fill-ups)", state: viewModel.recentAverageConsumption, icon: "gauge.medium")
             }
 
             if let last = viewModel.lastValidTank {
@@ -471,10 +482,13 @@ struct VehicleAnalyticsView: View {
                 }
             }
 
+            DataConfidenceFootnote(message: viewModel.fuelDataConfidenceText)
+                .padding(.horizontal, 2)
+
             if hasAdvancedInsights {
                 HStack(spacing: 12) {
-                    InsightTile(title: UnitFormatter.costRateTitle(), state: viewModel.costPer100Km, icon: "road.lanes")
-                    InsightTile(title: "6-Tank Avg", state: viewModel.sixTankAverageConsumption, icon: "gauge.high")
+                    InsightTile(title: "All-Time Avg (Valid fill-ups)", state: viewModel.allTimeAverageConsumption, icon: "chart.line.uptrend.xyaxis")
+                    InsightTile(title: "Fuel Cost / 100 km", state: viewModel.costPer100Km, icon: "road.lanes")
                 }
             } else {
                 LockedInsightCard(
@@ -535,7 +549,12 @@ struct VehicleAnalyticsView: View {
             
             HStack(spacing: 12) {
                 InsightTile(title: "Service Records", state: .ready("\(viewModel.serviceRecordCount)"), icon: "doc.text.fill")
-                InsightTile(title: "Receipt Coverage", state: .ready(String(format: "%.0f%%", viewModel.receiptCoveragePercentage)), icon: "paperclip")
+                InsightTile(title: "Service Receipt Coverage", state: .ready(String(format: "%.0f%%", viewModel.receiptCoveragePercentage)), icon: "paperclip")
+            }
+
+            HStack(spacing: 12) {
+                InsightTile(title: "Buyer Support Docs", state: .ready("\(viewModel.buyerSupportDocumentCount)"), icon: "text.book.closed.fill")
+                InsightTile(title: "Documents in Vault", state: .ready("\(viewModel.vaultDocumentCount)"), icon: "doc.on.doc.fill")
             }
             
             SurfaceCard {
@@ -545,10 +564,13 @@ struct VehicleAnalyticsView: View {
                         .foregroundStyle(AppTheme.primaryText)
                         
                     ChecklistItem(title: "More than 3 service records", isComplete: viewModel.serviceRecordCount > 3)
-                    ChecklistItem(title: "Over 70% receipt coverage", isComplete: viewModel.receiptCoveragePercentage > 70)
-                    ChecklistItem(title: "Registration or documents in Vault", isComplete: vehicle.documents.count > 0)
+                    ChecklistItem(title: "Over 70% service receipt coverage", isComplete: viewModel.receiptCoveragePercentage > 70)
+                    ChecklistItem(title: "Buyer support documents in Vault", isComplete: viewModel.buyerSupportDocumentCount > 0)
                 }
             }
+
+            DataConfidenceFootnote(message: viewModel.resaleConfidenceText)
+                .padding(.horizontal, 2)
 
             if !hasAdvancedInsights {
                 LockedInsightCard(
@@ -559,7 +581,7 @@ struct VehicleAnalyticsView: View {
                         "Buyer-ready PDF report",
                         "What reduces your resale price"
                     ],
-                    ctaTitle: "Unlock resale insights",
+                    ctaTitle: "Unlock Pro",
                     previewText: resalePreviewText
                 ) {
                     paywallCoordinator.present(.analytics)
@@ -592,6 +614,39 @@ struct VehicleAnalyticsView: View {
                     }
                     Spacer()
                 }
+            }
+
+            HStack(spacing: 12) {
+                InsightTile(title: "Vehicles in Garage", state: .ready("\(viewModel.garageVehicleCount)"), icon: "car.2.fill")
+                InsightTile(title: "Garage Spend This Year", state: .ready(AppFormatters.currency(viewModel.garageTotalSpendThisYear, code: vehicle.currencyCode)), icon: "calendar")
+            }
+
+            SurfaceCard(tier: .primary) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Garage Snapshot")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+
+                    AnalyticsDetailRow(
+                        title: "Top vehicle by total cost",
+                        value: viewModel.garageTopVehicleSummary ?? "Add more tracked costs to compare your garage."
+                    )
+                    Divider().overlay(AppTheme.separator)
+                    AnalyticsDetailRow(
+                        title: "Highest fuel spend",
+                        value: viewModel.garageHighestFuelSpendSummary ?? "Log fuel across vehicles to compare spend."
+                    )
+                    Divider().overlay(AppTheme.separator)
+                    AnalyticsDetailRow(
+                        title: "Latest serviced vehicle",
+                        value: viewModel.garageLatestServiceSummary ?? "Add service records to build a garage timeline."
+                    )
+                }
+            }
+
+            if allVehicles.count == 1 {
+                DataConfidenceFootnote(message: "Add another vehicle to unlock side-by-side ownership comparisons across your garage.")
+                    .padding(.horizontal, 2)
             }
 
             if hasAdvancedInsights {
@@ -673,7 +728,7 @@ struct VehicleAnalyticsView: View {
                         "Cost per distance across the garage",
                         "Multi-car ownership comparisons"
                     ],
-                    ctaTitle: "Unlock garage comparisons",
+                    ctaTitle: "Unlock Pro",
                     previewText: garagePreviewText
                 ) {
                     paywallCoordinator.present(.secondVehicle)
@@ -683,6 +738,10 @@ struct VehicleAnalyticsView: View {
     }
 
     private var financePreviewText: String? {
+        if viewModel.spendingByCategory.isEmpty {
+            return "Log more service history to reveal cost patterns."
+        }
+
         if let insight = viewModel.financialCategoryInsight {
             return insight
         }
@@ -704,11 +763,11 @@ struct VehicleAnalyticsView: View {
     }
 
     private var fuelPreviewText: String? {
-        if let average = viewModel.threeTankAverageConsumption.readyValue {
-            return "Current average: \(average)"
+        if let average = viewModel.recentAverageConsumption.readyValue {
+            return "Recent average: \(average)"
         }
 
-        if let note = viewModel.threeTankAverageConsumption.placeholderText {
+        if let note = viewModel.recentAverageConsumption.placeholderText {
             return note
         }
 
@@ -724,6 +783,10 @@ struct VehicleAnalyticsView: View {
     }
 
     private var garagePreviewText: String? {
+        if allVehicles.count > 1, let costliestVehicleThisYear = viewModel.costliestVehicleThisYear {
+            return "\(costliestVehicleThisYear) is your most expensive vehicle this year."
+        }
+
         if allVehicles.count > 1 {
             return viewModel.garageIntelligenceText
         }
@@ -747,18 +810,18 @@ struct InsightTile: View {
                         .font(.system(size: 13))
                         .foregroundStyle(AppTheme.accent)
                     Text(title)
-                        .font(.system(size: 11))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(AppTheme.secondaryText)
-                        .lineLimit(1)
+                        .lineLimit(2)
                         .minimumScaleFactor(0.8)
                 }
                 
                 switch state {
                 case .ready(let value):
                     Text(value)
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(AppTheme.primaryText)
-                        .lineLimit(1)
+                        .lineLimit(2)
                         .minimumScaleFactor(0.5)
                 case .notEnoughHistory(let msg):
                     Text(msg)
@@ -766,17 +829,17 @@ struct InsightTile: View {
                         .foregroundStyle(AppTheme.tertiaryText)
                         .lineLimit(2)
                 case .neverRecorded:
-                    Text("No data")
+                    Text("No recent record")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(AppTheme.tertiaryText)
                 case .incompleteRecord:
-                    Text("Incomplete")
+                    Text("Estimate only")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(AppTheme.tertiaryText)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: 54)
+            .frame(minHeight: 72, alignment: .topLeading)
         }
     }
 }
@@ -806,11 +869,11 @@ struct AnalyticsRow: View {
                     .font(.caption)
                     .foregroundStyle(AppTheme.tertiaryText)
             case .neverRecorded:
-                Text("Never recorded")
+                Text("No recent record")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.tertiaryText)
             case .incompleteRecord:
-                Text("Incomplete record")
+                Text("Estimate only")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.tertiaryText)
             }
@@ -837,6 +900,26 @@ struct ChecklistItem: View {
     }
 }
 
+struct AnalyticsDetailRow: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(AppTheme.secondaryText)
+
+            Spacer(minLength: 12)
+
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.primaryText)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+}
+
 private extension MetricState where T == String {
     var readyValue: String? {
         guard case .ready(let value) = self else { return nil }
@@ -848,9 +931,9 @@ private extension MetricState where T == String {
         case .notEnoughHistory(let message):
             return message
         case .neverRecorded:
-            return "No data yet."
+            return "No recent record found."
         case .incompleteRecord:
-            return "Complete a little more history to reveal this."
+            return "Estimate only until more history is logged."
         case .ready:
             return nil
         }
@@ -875,6 +958,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     @Published var previous90DaysSpend: Double = 0
     @Published var spendTrend90Days: Double = 0
     @Published var financialSpendTrendText: String = "Not enough data"
+    @Published var forecastConfidenceText: String? = nil
     
     // Breakdown
     @Published var spendingByYear: [(year: Int, amount: Double)] = []
@@ -883,11 +967,15 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     
     // Fuel Intelligence
     @Published var lastValidTank: FuelEntry?
+    @Published var recentAverageConsumption: MetricState<String> = .notEnoughHistory("Need valid full fill-ups")
+    @Published var allTimeAverageConsumption: MetricState<String> = .notEnoughHistory("Long-term average needs more history")
     @Published var threeTankAverageConsumption: MetricState<String> = .notEnoughHistory("Requires 3 valid fill-ups")
     @Published var sixTankAverageConsumption: MetricState<String> = .notEnoughHistory("Requires 6 valid fill-ups")
     @Published var costPer100Km: MetricState<String> = .notEnoughHistory("Not enough history")
     @Published var averageFuelPrice: MetricState<String> = .notEnoughHistory("Not enough history")
-    @Published var fuelSpendTrendText: String = "Not enough data to calculate fuel trends."
+    @Published var fuelSpendTrendText: String = "Add more full fill-ups to reveal fuel patterns."
+    @Published var fuelDataConfidenceText: String = "Useful now, smarter over time."
+    @Published var validFuelCycleCount: Int = 0
     
     // Maintenance Intelligence
     @Published var mostExpensiveMaintenanceCategory: MetricState<String> = .neverRecorded
@@ -900,6 +988,8 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     @Published var overdueMaintenanceCount: Int = 0
     @Published var maintenanceHealthText: String = "All maintenance is up to date."
     @Published var maintenanceInsightText: String = "Maintenance insights improve as you log more service history."
+    @Published var maintenanceConfidenceText: String = "Useful now, smarter over time."
+    @Published var policyReminderSummaryText: String? = nil
 
     // Garage Intelligence
     @Published var garageSpendByVehicle: [(title: String, amount: Double)] = []
@@ -907,6 +997,11 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     @Published var costliestVehicleThisYear: String?
     @Published var costPerKmByVehicle: [(title: String, cost: Double)] = []
     @Published var garageIntelligenceText: String = "Compare your multi-vehicle fleet."
+    @Published var garageVehicleCount: Int = 0
+    @Published var garageTotalSpendThisYear: Double = 0
+    @Published var garageTopVehicleSummary: String? = nil
+    @Published var garageHighestFuelSpendSummary: String? = nil
+    @Published var garageLatestServiceSummary: String? = nil
 
     // Resale Readiness
     @Published var serviceRecordCount: Int = 0
@@ -915,6 +1010,9 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     @Published var resaleReadinessTier: String = "Needs Work"
     @Published var resaleReadinessColor: Color = Color.orange
     @Published var resaleNextStepGuidance: String = "A complete history improves resale value."
+    @Published var vaultDocumentCount: Int = 0
+    @Published var buyerSupportDocumentCount: Int = 0
+    @Published var resaleConfidenceText: String = "More supporting records improve buyer confidence."
 
     init(vehicle: Vehicle) {
         self.vehicle = vehicle
@@ -930,7 +1028,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         }
         
         if validItems.count == 1 {
-            return .notEnoughHistory("Recorded once")
+            return .notEnoughHistory("Tracking needs more history")
         }
         
         let sorted = validItems.sorted { byDistance ? $0.mileage < $1.mileage : $0.date < $1.date }
@@ -1008,12 +1106,16 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             let last90Service = sortedServices.filter { $0.date >= last90DaysStart && $0.date <= now }.reduce(0) { $0 + $1.price }
             let last90Fuel = sortedFuel.filter { $0.date >= last90DaysStart && $0.date <= now }.reduce(0) { $0 + $1.totalCost }
             res.last90DaysSpend = last90Service + last90Fuel
+            let last90SpendEntryCount = sortedServices.filter { $0.date >= last90DaysStart && $0.date <= now }.count +
+                sortedFuel.filter { $0.date >= last90DaysStart && $0.date <= now }.count
             
             let prev90Service = sortedServices.filter { $0.date >= previous90DaysStart && $0.date < last90DaysStart }.reduce(0) { $0 + $1.price }
             let prev90Fuel = sortedFuel.filter { $0.date >= previous90DaysStart && $0.date < last90DaysStart }.reduce(0) { $0 + $1.totalCost }
             res.previous90DaysSpend = prev90Service + prev90Fuel
+            let previous90SpendEntryCount = sortedServices.filter { $0.date >= previous90DaysStart && $0.date < last90DaysStart }.count +
+                sortedFuel.filter { $0.date >= previous90DaysStart && $0.date < last90DaysStart }.count
             
-            if res.previous90DaysSpend > 0 {
+            if res.previous90DaysSpend > 0, last90SpendEntryCount >= 2, previous90SpendEntryCount >= 2 {
                 res.spendTrend90Days = ((res.last90DaysSpend - res.previous90DaysSpend) / res.previous90DaysSpend) * 100.0
                 let direction = res.spendTrend90Days > 0 ? "up" : "down"
                 if abs(res.spendTrend90Days) < 1.0 {
@@ -1021,9 +1123,8 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 } else {
                     res.financialSpendTrendText = "Spending is \(direction) \(abs(Int(res.spendTrend90Days)))% vs previous 90 days."
                 }
-            } else if res.last90DaysSpend > 0 {
-                res.spendTrend90Days = 100.0
-                res.financialSpendTrendText = "Spending is up vs previous 90 days."
+            } else if res.last90DaysSpend > 0 || res.previous90DaysSpend > 0 {
+                res.financialSpendTrendText = "More history will make spend trends more reliable."
             } else {
                 res.financialSpendTrendText = "Not enough history for comparison."
             }
@@ -1037,7 +1138,11 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 .sorted { $0.amount > $1.amount }
                 
             if let largestCat = res.spendingByCategory.first {
-                res.financialCategoryInsight = "\(largestCat.category.title) is your largest cost category."
+                if sortedServices.count >= 4 {
+                    res.financialCategoryInsight = "\(largestCat.category.title) is your largest service cost category."
+                } else {
+                    res.financialCategoryInsight = "Early pattern: \(largestCat.category.title) is your largest service cost so far."
+                }
             }
             
             // Forecast Engine
@@ -1045,41 +1150,72 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             let sixMonthsFromNow = calendar.date(byAdding: .month, value: 6, to: now) ?? now
             let oneYearFromNow = calendar.date(byAdding: .year, value: 1, to: now) ?? now
             
-            var overdueReminders: [ReminderItem] = []
-            var upcomingReminders: [ReminderItem] = []
+            var overdueMaintenanceReminders: [ReminderItem] = []
+            var upcomingMaintenanceReminders: [ReminderItem] = []
+            var policyReminderTitles: [String] = []
+            var forecastFallbackCount = 0
+            var forecastItemCount = 0
             
             for reminder in reminders where reminder.isEnabled {
+                let reminderType = ServiceType(rawValue: reminder.typeRaw)
+                let isMaintenanceReminder = reminderType?.countsTowardMaintenanceIntelligence ?? false
+                let isPolicyReminder = reminderType?.isPolicyReminder ?? false
+
                 if let due = reminder.dateDue {
                     if due >= now && due <= oneYearFromNow {
                         let relatedServices = sortedServices.filter { $0.serviceType.rawValue == reminder.typeRaw }
-                        let avg = relatedServices.isEmpty ? 100.0 : relatedServices.reduce(0) { $0 + $1.price } / Double(relatedServices.count)
+                        let avg: Double
+                        if relatedServices.isEmpty {
+                            avg = 100.0
+                            forecastFallbackCount += 1
+                        } else {
+                            avg = relatedServices.reduce(0) { $0 + $1.price } / Double(relatedServices.count)
+                        }
+                        forecastItemCount += 1
                         res.upcomingPlannedCost += avg
                         if due <= sixMonthsFromNow {
                             res.upcomingPlannedCost6Months += avg
-                            res.upcomingMaintenanceCount += 1
-                            upcomingReminders.append(reminder)
+                            if isMaintenanceReminder {
+                                res.upcomingMaintenanceCount += 1
+                                upcomingMaintenanceReminders.append(reminder)
+                            }
                         }
                         if due <= threeMonthsFromNow {
                             res.upcomingPlannedCost3Months += avg
                         }
                     }
                     if due < now.startOfDay {
-                        res.overdueMaintenanceCount += 1
-                        overdueReminders.append(reminder)
+                        if isMaintenanceReminder {
+                            res.overdueMaintenanceCount += 1
+                            overdueMaintenanceReminders.append(reminder)
+                        } else if isPolicyReminder, let reminderType {
+                            policyReminderTitles.append(reminderType.title)
+                        }
                     }
                 } else if let milDue = reminder.mileageDue {
                     if vehicleMileage >= milDue {
-                        res.overdueMaintenanceCount += 1
-                        overdueReminders.append(reminder)
+                        if isMaintenanceReminder {
+                            res.overdueMaintenanceCount += 1
+                            overdueMaintenanceReminders.append(reminder)
+                        }
                     } else if milDue - vehicleMileage <= 5000 {
                         let relatedServices = sortedServices.filter { $0.serviceType.rawValue == reminder.typeRaw }
-                        let avg = relatedServices.isEmpty ? 100.0 : relatedServices.reduce(0) { $0 + $1.price } / Double(relatedServices.count)
+                        let avg: Double
+                        if relatedServices.isEmpty {
+                            avg = 100.0
+                            forecastFallbackCount += 1
+                        } else {
+                            avg = relatedServices.reduce(0) { $0 + $1.price } / Double(relatedServices.count)
+                        }
+                        forecastItemCount += 1
                         res.upcomingPlannedCost += avg
                         
                         if milDue - vehicleMileage <= 2500 {
                             res.upcomingPlannedCost6Months += avg
-                            res.upcomingMaintenanceCount += 1
-                            upcomingReminders.append(reminder)
+                            if isMaintenanceReminder {
+                                res.upcomingMaintenanceCount += 1
+                                upcomingMaintenanceReminders.append(reminder)
+                            }
                         }
                     }
                 }
@@ -1093,7 +1229,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             }
             
             if res.overdueMaintenanceCount > 0 {
-                if res.overdueMaintenanceCount == 1, let first = overdueReminders.first {
+                if res.overdueMaintenanceCount == 1, let first = overdueMaintenanceReminders.first {
                     if let cleanTitle = getCleanTitle(for: first) {
                         res.maintenanceHealthText = "1 item is overdue: \(cleanTitle)"
                     } else {
@@ -1103,7 +1239,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                     res.maintenanceHealthText = "\(res.overdueMaintenanceCount) service items appear overdue."
                 }
             } else if res.upcomingMaintenanceCount > 0 {
-                if res.upcomingMaintenanceCount == 1, let first = upcomingReminders.first {
+                if res.upcomingMaintenanceCount == 1, let first = upcomingMaintenanceReminders.first {
                     if let cleanTitle = getCleanTitle(for: first) {
                         res.maintenanceHealthText = "1 item due soon: \(cleanTitle)"
                     } else {
@@ -1114,6 +1250,24 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 }
             } else {
                 res.maintenanceHealthText = "Track upcoming service items and replacement history."
+            }
+
+            if policyReminderTitles.isEmpty {
+                res.policyReminderSummaryText = nil
+            } else if policyReminderTitles.count == 1, let first = policyReminderTitles.first {
+                res.policyReminderSummaryText = "\(first) reminders stay separate from maintenance health."
+            } else {
+                res.policyReminderSummaryText = "Insurance and registration reminders stay separate from maintenance health."
+            }
+
+            if res.upcomingPlannedCost == 0 {
+                res.forecastConfidenceText = reminders.isEmpty
+                    ? "Add reminders or more service history to improve forecasts."
+                    : "No upcoming costs detected yet."
+            } else if forecastFallbackCount > 0 {
+                res.forecastConfidenceText = "Some upcoming costs are estimate-only until more history is logged."
+            } else if forecastItemCount < 2 {
+                res.forecastConfidenceText = "Forecast is based on a small number of scheduled items."
             }
             
             // Fuel Engine
@@ -1128,6 +1282,16 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                     if dist > 0 && recent.liters > 0 {
                         consumptions.append((recent.liters / Double(dist)) * 100.0)
                     }
+                }
+                res.validFuelCycleCount = consumptions.count
+                if !consumptions.isEmpty {
+                    let recentWindow = Array(consumptions.prefix(min(3, consumptions.count)))
+                    let recentAverage = recentWindow.reduce(0, +) / Double(recentWindow.count)
+                    res.recentAverageConsumption = .ready(AppFormatters.consumption(recentAverage))
+                }
+                if consumptions.count >= 4 {
+                    let allTimeAverage = consumptions.reduce(0, +) / Double(consumptions.count)
+                    res.allTimeAverageConsumption = .ready(AppFormatters.consumption(allTimeAverage))
                 }
                 if consumptions.count >= 3 {
                     res.threeTankAverageConsumption = .ready(AppFormatters.consumption(consumptions.prefix(3).reduce(0, +) / 3.0))
@@ -1150,7 +1314,10 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 }
             }
             
-            if last90Fuel > 0 && prev90Fuel > 0 {
+            let last90FuelEntryCount = sortedFuel.filter { $0.date >= last90DaysStart && $0.date <= now }.count
+            let previous90FuelEntryCount = sortedFuel.filter { $0.date >= previous90DaysStart && $0.date < last90DaysStart }.count
+
+            if last90Fuel > 0 && prev90Fuel > 0 && last90FuelEntryCount >= 2 && previous90FuelEntryCount >= 2 {
                 let diff = ((last90Fuel - prev90Fuel) / prev90Fuel) * 100
                 if diff > 5 {
                     res.fuelSpendTrendText = "Fuel spend is up \(Int(diff))% vs previous 90 days."
@@ -1159,8 +1326,23 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 } else {
                     res.fuelSpendTrendText = "Fuel spend has been stable recently."
                 }
-            } else if last90Fuel > 0 {
-                res.fuelSpendTrendText = "Track more fuel to unlock trend comparisons."
+            } else if res.validFuelCycleCount >= 3, let recentAverage = res.recentAverageConsumption.readyValue {
+                res.fuelSpendTrendText = "Recent average is \(recentAverage) based on valid full-to-full history."
+            } else if res.validFuelCycleCount > 0 {
+                res.fuelSpendTrendText = "Recent average is available, but long-term fuel trends need more valid fill-ups."
+            } else if !sortedFuel.isEmpty {
+                res.fuelSpendTrendText = "Add more full fill-ups to reveal fuel patterns."
+            }
+
+            if res.validFuelCycleCount >= 6 {
+                res.fuelDataConfidenceText = "Based on \(res.validFuelCycleCount) valid full-to-full fill-up cycles."
+            } else if res.validFuelCycleCount >= 3 {
+                res.fuelDataConfidenceText = "Recent average uses the last 3 valid full-to-full fill-up cycles."
+            } else if res.validFuelCycleCount > 0 {
+                let cycleWord = res.validFuelCycleCount == 1 ? "cycle" : "cycles"
+                res.fuelDataConfidenceText = "Based on \(res.validFuelCycleCount) valid fill-up \(cycleWord). More history improves reliability."
+            } else {
+                res.fuelDataConfidenceText = "Need more full fill-ups for a reliable consumption average."
             }
             
             // Maintenance Engine (Mapped to Component)
@@ -1168,10 +1350,13 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             
             if maintenanceServices.count < 3 {
                 res.maintenanceInsightText = "Add more maintenance records to improve status tracking, due-soon alerts, and replacement insights."
+                res.maintenanceConfidenceText = "Tracking needs more history before maintenance patterns become reliable."
             } else if maintenanceServices.count < 6 {
                 res.maintenanceInsightText = "Maintenance insights improve as you log more service history."
+                res.maintenanceConfidenceText = "Useful now, smarter with a little more service history."
             } else {
-                res.maintenanceInsightText = "More service history = smarter maintenance insights."
+                res.maintenanceInsightText = "More service history improves maintenance timing and prioritization."
+                res.maintenanceConfidenceText = "Based on repeat service history across multiple maintenance events."
             }
             
             if !maintenanceServices.isEmpty {
@@ -1202,16 +1387,34 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             // Garage Engine
             if !vehiclesData.isEmpty {
                 var highestYearSpend: Double = 0
+                var highestFuelSpend: Double = 0
+                var latestService: (title: String, date: Date)? = nil
+                res.garageVehicleCount = vehiclesData.count
                 for v in vehiclesData {
                     let sTotal = v.services.reduce(0) { $0 + $1.price }
                     let fTotal = v.fuel.reduce(0) { $0 + $1.totalCost }
                     res.garageSpendByVehicle.append((v.title, sTotal + fTotal))
+                    if (sTotal + fTotal) > 0, res.garageTopVehicleSummary == nil || (sTotal + fTotal) > (res.garageSpendByVehicle.first?.amount ?? 0) {
+                        res.garageTopVehicleSummary = "\(v.title) · \(AppFormatters.currency(sTotal + fTotal, code: currencyCode))"
+                    }
                     
                     let sYear = v.services.filter { $0.date >= thisYearStart }.reduce(0) { $0 + $1.price }
                     let fYear = v.fuel.filter { $0.date >= thisYearStart }.reduce(0) { $0 + $1.totalCost }
+                    res.garageTotalSpendThisYear += sYear + fYear
                     if (sYear + fYear) > highestYearSpend {
                         highestYearSpend = sYear + fYear
                         res.costliestVehicleThisYear = v.title
+                    }
+
+                    if fTotal > highestFuelSpend {
+                        highestFuelSpend = fTotal
+                        res.garageHighestFuelSpendSummary = fTotal > 0 ? "\(v.title) · \(AppFormatters.currency(fTotal, code: currencyCode))" : nil
+                    }
+
+                    if let latestVehicleService = v.services.max(by: { $0.date < $1.date }) {
+                        if latestService == nil || latestVehicleService.date > latestService!.date {
+                            latestService = (v.title, latestVehicleService.date)
+                        }
                     }
                     
                     let firstMil = min(v.services.min(by: { $0.mileage < $1.mileage })?.mileage ?? Int.max, v.fuel.min(by: { $0.mileage < $1.mileage })?.mileage ?? Int.max)
@@ -1224,6 +1427,12 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 }
                 res.garageSpendByVehicle.sort { $0.amount > $1.amount }
                 res.costPerKmByVehicle.sort { $0.cost > $1.cost }
+                if let first = res.garageSpendByVehicle.first {
+                    res.garageTopVehicleSummary = "\(first.title) · \(AppFormatters.currency(first.amount, code: currencyCode))"
+                }
+                if let latestService {
+                    res.garageLatestServiceSummary = "\(latestService.title) · \(AppFormatters.mediumDate.string(from: latestService.date))"
+                }
                 
                 if let costliest = res.costliestVehicleThisYear {
                     res.garageIntelligenceText = "\(costliest) is your most expensive vehicle this year."
@@ -1235,6 +1444,8 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             // Resale Engine
             res.serviceRecordCount = sortedServices.count
             let servicesWithReceipts = sortedServices.filter { !$0.attachments.isEmpty }.count
+            res.vaultDocumentCount = docs.count
+            res.buyerSupportDocumentCount = docs.filter { $0.category.supportsBuyerConfidence }.count
             if sortedServices.count > 0 {
                 res.receiptCoveragePercentage = (Double(servicesWithReceipts) / Double(sortedServices.count)) * 100.0
             }
@@ -1263,6 +1474,16 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 res.resaleReadinessColor = Color.red
                 res.resaleNextStepGuidance = "Add more service records to build a history."
             }
+
+            if res.serviceRecordCount == 0 {
+                res.resaleConfidenceText = "Add service history, receipts, and buyer-support documents to build resale confidence."
+            } else if res.receiptCoveragePercentage < 50 {
+                res.resaleConfidenceText = "Documents in Vault help, but service receipt coverage still carries the most resale weight."
+            } else if res.buyerSupportDocumentCount == 0 {
+                res.resaleConfidenceText = "Service history looks stronger when insurance, registration, or title documents are also stored."
+            } else {
+                res.resaleConfidenceText = "More supporting records improve buyer confidence and resale readiness."
+            }
             
             return res
         }.value
@@ -1275,6 +1496,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         self.previous90DaysSpend = result.previous90DaysSpend
         self.spendTrend90Days = result.spendTrend90Days
         self.financialSpendTrendText = result.financialSpendTrendText
+        self.forecastConfidenceText = result.forecastConfidenceText
         self.spendingByYear = result.spendingByYear
         self.spendingByCategory = result.spendingByCategory
         self.financialCategoryInsight = result.financialCategoryInsight
@@ -1283,11 +1505,15 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         self.upcomingPlannedCost6Months = result.upcomingPlannedCost6Months
         
         self.lastValidTank = result.lastValidTank
+        self.recentAverageConsumption = result.recentAverageConsumption
+        self.allTimeAverageConsumption = result.allTimeAverageConsumption
         self.threeTankAverageConsumption = result.threeTankAverageConsumption
         self.sixTankAverageConsumption = result.sixTankAverageConsumption
         self.costPer100Km = result.costPer100Km
         self.averageFuelPrice = result.averageFuelPrice
         self.fuelSpendTrendText = result.fuelSpendTrendText
+        self.fuelDataConfidenceText = result.fuelDataConfidenceText
+        self.validFuelCycleCount = result.validFuelCycleCount
         
         self.mostExpensiveMaintenanceCategory = result.mostExpensiveMaintenanceCategory
         self.averageServiceIntervalDays = result.averageServiceIntervalDays
@@ -1299,10 +1525,17 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         self.overdueMaintenanceCount = result.overdueMaintenanceCount
         self.maintenanceHealthText = result.maintenanceHealthText
         self.maintenanceInsightText = result.maintenanceInsightText
+        self.maintenanceConfidenceText = result.maintenanceConfidenceText
+        self.policyReminderSummaryText = result.policyReminderSummaryText
         
         self.garageSpendByVehicle = result.garageSpendByVehicle
         self.costPerKmByVehicle = result.costPerKmByVehicle
         self.garageIntelligenceText = result.garageIntelligenceText
+        self.garageVehicleCount = result.garageVehicleCount
+        self.garageTotalSpendThisYear = result.garageTotalSpendThisYear
+        self.garageTopVehicleSummary = result.garageTopVehicleSummary
+        self.garageHighestFuelSpendSummary = result.garageHighestFuelSpendSummary
+        self.garageLatestServiceSummary = result.garageLatestServiceSummary
 
         self.serviceRecordCount = result.serviceRecordCount
         self.receiptCoveragePercentage = result.receiptCoveragePercentage
@@ -1310,6 +1543,9 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         self.resaleReadinessTier = result.resaleReadinessTier
         self.resaleReadinessColor = result.resaleReadinessColor
         self.resaleNextStepGuidance = result.resaleNextStepGuidance
+        self.vaultDocumentCount = result.vaultDocumentCount
+        self.buyerSupportDocumentCount = result.buyerSupportDocumentCount
+        self.resaleConfidenceText = result.resaleConfidenceText
     }
 }
 
@@ -1322,6 +1558,7 @@ private struct IntelligenceResult {
     var previous90DaysSpend: Double = 0
     var spendTrend90Days: Double = 0
     var financialSpendTrendText: String = "Not enough data"
+    var forecastConfidenceText: String? = nil
     var spendingByYear: [(year: Int, amount: Double)] = []
     var spendingByCategory: [(category: EntryCategory, amount: Double)] = []
     var financialCategoryInsight: String? = nil
@@ -1330,11 +1567,15 @@ private struct IntelligenceResult {
     var upcomingPlannedCost6Months: Double = 0
     
     var lastValidTank: FuelEntry? = nil
+    var recentAverageConsumption: MetricState<String> = .notEnoughHistory("Need valid full fill-ups")
+    var allTimeAverageConsumption: MetricState<String> = .notEnoughHistory("Long-term average needs more history")
     var threeTankAverageConsumption: MetricState<String> = .notEnoughHistory("Requires 3 valid fill-ups")
     var sixTankAverageConsumption: MetricState<String> = .notEnoughHistory("Requires 6 valid fill-ups")
     var costPer100Km: MetricState<String> = .notEnoughHistory("Not enough history")
     var averageFuelPrice: MetricState<String> = .notEnoughHistory("Not enough history")
-    var fuelSpendTrendText: String = "Not enough data to calculate fuel trends."
+    var fuelSpendTrendText: String = "Add more full fill-ups to reveal fuel patterns."
+    var fuelDataConfidenceText: String = "Useful now, smarter over time."
+    var validFuelCycleCount: Int = 0
     
     var mostExpensiveMaintenanceCategory: MetricState<String> = .neverRecorded
     var averageServiceIntervalDays: MetricState<String> = .notEnoughHistory("Needs 2+ services")
@@ -1346,11 +1587,18 @@ private struct IntelligenceResult {
     var overdueMaintenanceCount: Int = 0
     var maintenanceHealthText: String = "Track upcoming service items and replacement history."
     var maintenanceInsightText: String = "Maintenance insights improve as you log more service history."
+    var maintenanceConfidenceText: String = "Useful now, smarter over time."
+    var policyReminderSummaryText: String? = nil
     
     var garageSpendByVehicle: [(title: String, amount: Double)] = []
     var costPerKmByVehicle: [(title: String, cost: Double)] = []
     var costliestVehicleThisYear: String? = nil
     var garageIntelligenceText: String = "Compare your multi-vehicle fleet."
+    var garageVehicleCount: Int = 0
+    var garageTotalSpendThisYear: Double = 0
+    var garageTopVehicleSummary: String? = nil
+    var garageHighestFuelSpendSummary: String? = nil
+    var garageLatestServiceSummary: String? = nil
     
     var serviceRecordCount: Int = 0
     var receiptCoveragePercentage: Double = 0
@@ -1358,10 +1606,44 @@ private struct IntelligenceResult {
     var resaleReadinessTier: String = "Needs Work"
     var resaleReadinessColor: Color = Color.orange
     var resaleNextStepGuidance: String = "A complete history improves resale value."
+    var vaultDocumentCount: Int = 0
+    var buyerSupportDocumentCount: Int = 0
+    var resaleConfidenceText: String = "More supporting records improve buyer confidence."
 }
 
 private extension Date {
     var startOfDay: Date {
         Calendar.current.startOfDay(for: self)
+    }
+}
+
+private extension ServiceType {
+    var countsTowardMaintenanceIntelligence: Bool {
+        switch self {
+        case .oilChange, .inspection, .tires, .brakes, .battery, .filters, .airConditioning, .repair:
+            return true
+        case .washDetailing, .registration, .insurance, .custom:
+            return false
+        }
+    }
+
+    var isPolicyReminder: Bool {
+        switch self {
+        case .registration, .insurance:
+            return true
+        default:
+            return false
+        }
+    }
+}
+
+private extension DocumentVaultCategory {
+    var supportsBuyerConfidence: Bool {
+        switch self {
+        case .insurance, .registration, .warranty, .inspection, .title, .roadside, .general:
+            return true
+        case .receipts:
+            return false
+        }
     }
 }

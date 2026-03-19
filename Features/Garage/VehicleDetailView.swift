@@ -116,10 +116,10 @@ struct VehicleDetailView: View {
                             }
 
                             summaryActionCard(
-                                title: "Total Cost",
+                                title: "Service Spend",
                                 value: AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode),
                                 icon: "dollarsign.circle.fill",
-                                helperText: "Explore insights"
+                                helperText: "Ownership insights"
                             ) {
                                 openAnalytics()
                             }
@@ -264,7 +264,7 @@ struct VehicleDetailView: View {
                         .padding(.horizontal, AppTheme.Spacing.pageEdge)
                         .padding(.top, 4)
 
-                        Spacer().frame(height: 120)
+                        Spacer().frame(height: 152)
                     }
                 }
             }
