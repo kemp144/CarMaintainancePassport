@@ -361,17 +361,18 @@ struct DataConfidenceFootnote: View {
     var icon: String = "info.circle.fill"
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: 6) {
             Image(systemName: icon)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(AppTheme.tertiaryText)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(AppTheme.tertiaryText.opacity(0.7))
                 .padding(.top, 1)
 
             Text(message)
-                .font(.caption)
-                .foregroundStyle(AppTheme.tertiaryText)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.tertiaryText.opacity(0.7))
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .padding(.horizontal, 4)
     }
 }
 

@@ -8,6 +8,9 @@ final class ReminderItem {
     var vehicle: Vehicle?
 
     var serviceEntry: ServiceEntry?
+    var linkedServiceEntryID: UUID?
+    var linkedServiceDate: Date?
+    var linkedServiceMileage: Int?
 
     var typeRaw: String
     var title: String
@@ -24,6 +27,9 @@ final class ReminderItem {
         id: UUID = UUID(),
         vehicle: Vehicle,
         serviceEntry: ServiceEntry? = nil,
+        linkedServiceEntryID: UUID? = nil,
+        linkedServiceDate: Date? = nil,
+        linkedServiceMileage: Int? = nil,
         type: ReminderType,
         title: String,
         notes: String = "",
@@ -38,6 +44,9 @@ final class ReminderItem {
         self.id = id
         self.vehicle = vehicle
         self.serviceEntry = serviceEntry
+        self.linkedServiceEntryID = linkedServiceEntryID
+        self.linkedServiceDate = linkedServiceDate
+        self.linkedServiceMileage = linkedServiceMileage
         self.typeRaw = type.rawValue
         self.title = title
         self.notes = notes
@@ -87,6 +96,39 @@ extension ReminderItem {
         }
 
         return .upcoming
+    }
+
+    var deduplicationKey: String {
+        guard let linkedServiceKey = linkedServiceEntryID?.uuidString ?? serviceEntry?.id.uuidString else {
+            return id.uuidString
+        }
+
+        let vehicleKey = vehicle?.id.uuidString ?? "no-vehicle"
+        return "\(vehicleKey)|\(linkedServiceKey)|\(typeRaw)"
+    }
+}
+
+extension Array where Element == ReminderItem {
+    func deduplicatedLinkedReminders() -> [ReminderItem] {
+        var seen: [String: ReminderItem] = [:]
+
+        for reminder in self {
+            let key = reminder.deduplicationKey
+            if let current = seen[key] {
+                if reminder.updatedAt > current.updatedAt {
+                    seen[key] = reminder
+                }
+            } else {
+                seen[key] = reminder
+            }
+        }
+
+        return seen.values.sorted {
+            let lhsDate = $0.dateDue ?? .distantFuture
+            let rhsDate = $1.dateDue ?? .distantFuture
+            if lhsDate != rhsDate { return lhsDate < rhsDate }
+            return $0.updatedAt > $1.updatedAt
+        }
     }
 }
 

@@ -5,6 +5,7 @@ import UIKit
 
 struct DocumentAddFilesSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
 
     let allowReceiptScan: Bool
     let onDocumentSeed: (DocumentDraftSeed) -> Void
@@ -57,7 +58,7 @@ struct DocumentAddFilesSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .height(430)])
+        .presentationDetents([.medium, .height(500)])
         .presentationDragIndicator(.visible)
         .onDisappear {
             receiptScanTask?.cancel()
@@ -152,7 +153,7 @@ struct DocumentAddFilesSheet: View {
                         Text("Add files")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundStyle(AppTheme.primaryText)
-                        Text(allowReceiptScan ? "Add photos, PDFs, or a receipt scan for this vehicle." : "Add photos or PDFs for this vehicle.")
+                        Text("Add photos, PDFs, or a receipt scan for this vehicle.")
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.secondaryText)
                     }
@@ -160,7 +161,7 @@ struct DocumentAddFilesSheet: View {
                     Spacer()
                 }
 
-                Text(allowReceiptScan ? "Multiple files can stay together in one document." : "You can keep multiple photos or PDFs together in one document.")
+                Text("Save files manually, or scan receipts automatically with Pro.")
                     .font(.footnote)
                     .foregroundStyle(AppTheme.tertiaryText)
             }
@@ -174,19 +175,6 @@ struct DocumentAddFilesSheet: View {
                 sectionLabel("Choose a source")
 
                 VStack(spacing: 10) {
-                    if allowReceiptScan {
-                        Button {
-                            showingReceiptScanner = true
-                        } label: {
-                            actionRow(
-                                title: "Scan Receipt",
-                                subtitle: "Create a service draft from a receipt.",
-                                systemImage: "doc.viewfinder"
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
-
                     Button {
                         showingPDFImporter = true
                     } label: {
@@ -217,9 +205,68 @@ struct DocumentAddFilesSheet: View {
                         )
                     }
                     .buttonStyle(.plain)
+
+                    Divider()
+                        .background(AppTheme.separator)
+                        .padding(.vertical, 2)
+
+                    Button {
+                        if allowReceiptScan {
+                            showingReceiptScanner = true
+                        } else {
+                            paywallCoordinator.present(.ocrScan)
+                        }
+                    } label: {
+                        ocrScanRow()
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
+    }
+
+    private func ocrScanRow() -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(allowReceiptScan ? AppTheme.surfaceSecondary : AppTheme.accent.opacity(0.1))
+                    .frame(width: 42, height: 42)
+
+                Image(systemName: "doc.viewfinder")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(allowReceiptScan ? AppTheme.accentSecondary : AppTheme.accent)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text("Scan Receipt")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+
+                    if !allowReceiptScan {
+                        Text("Pro")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
+                    }
+                }
+
+                Text("Extract amount, date, mileage, and notes automatically.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            Image(systemName: allowReceiptScan ? "chevron.right" : "lock.fill")
+                .font(.system(size: allowReceiptScan ? 12 : 10, weight: .semibold))
+                .foregroundStyle(allowReceiptScan ? AppTheme.tertiaryText : AppTheme.accent.opacity(0.6))
+        }
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
     }
 
     private func sectionLabel(_ text: String) -> some View {

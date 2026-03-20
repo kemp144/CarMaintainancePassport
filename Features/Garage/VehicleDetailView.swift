@@ -67,7 +67,7 @@ struct VehicleDetailView: View {
                                     .minimumScaleFactor(0.86)
                                     .padding(.bottom, 4)
 
-                                Text(vehicle.year > 0 ? String(vehicle.year) : "Unknown Year")
+                                Text(vehicleSubtitleLine)
                                     .font(.system(size: 14))
                                     .foregroundStyle(AppTheme.secondaryText)
                                     .padding(.bottom, 6)
@@ -125,6 +125,18 @@ struct VehicleDetailView: View {
                             }
                         }
                         .padding(.horizontal, AppTheme.Spacing.pageEdge)
+
+                        if !entitlementStore.hasProAccess {
+                            let serviceCount = vehicle.serviceEntries.count
+                            let message = serviceCount >= 5 
+                                ? "\(serviceCount) services logged • Unlock deeper ownership insights" 
+                                : "Unlock Pro • Deeper ownership intelligence"
+                            
+                            UpgradePillRow(message: message, cta: "Unlock") {
+                                paywallCoordinator.present(.analytics, context: PaywallPresentationContext(maintenanceHistoryCount: serviceCount))
+                            }
+                            .padding(.horizontal, AppTheme.Spacing.pageEdge)
+                        }
 
                         vehicleSummarySection
                             .padding(.horizontal, AppTheme.Spacing.pageEdge)
@@ -389,36 +401,41 @@ struct VehicleDetailView: View {
         }
     }
 
-    private let quickActionColumns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 2)
     private var quickActions: some View {
-        LazyVGrid(columns: quickActionColumns, spacing: 10) {
-            quickActionButton(title: "Add Service", icon: "wrench.and.screwdriver.fill", priority: .primary) {
-                showingServiceForm = true
-            }
-            quickActionButton(title: "Log Fuel", icon: "fuelpump.fill", priority: .secondary) {
-                showingFuelTracking = true
-            }
-            quickActionButton(title: "Reminder", icon: "bell.fill", priority: .tertiary) {
-                showingReminderForm = true
-            }
-            Menu {
-                Button {
-                    exportPDF()
-                } label: {
-                    Label("Service Passport (PDF)", systemImage: "doc.richtext.fill")
+        VStack(spacing: 12) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2), spacing: 10) {
+                quickActionButton(title: "Add Service", icon: "wrench.and.screwdriver.fill", priority: .primary) {
+                    showingServiceForm = true
                 }
-                Button {
-                    exportResaleReport()
-                } label: {
-                    Label("Resale Report (PDF)", systemImage: "tag.fill")
+                quickActionButton(title: "Log Fuel", icon: "fuelpump.fill", priority: .secondary) {
+                    showingFuelTracking = true
                 }
-                Button {
-                    exportCSV()
-                } label: {
-                    Label("Export CSV Data", systemImage: "tablecells.fill")
+            }
+            
+            HStack(spacing: 10) {
+                quickActionButton(title: "Reminder", icon: "bell.fill", priority: .tertiary) {
+                    showingReminderForm = true
                 }
-            } label: {
-                quickActionLabel(title: "Export", icon: "square.and.arrow.up.fill", priority: .tertiary)
+
+                Menu {
+                    Button {
+                        exportPDF()
+                    } label: {
+                        Label("Service Passport (PDF)", systemImage: "doc.richtext.fill")
+                    }
+                    Button {
+                        exportResaleReport()
+                    } label: {
+                        Label("Resale Report (PDF)", systemImage: "tag.fill")
+                    }
+                    Button {
+                        exportCSV()
+                    } label: {
+                        Label("Export CSV Data", systemImage: "tablecells.fill")
+                    }
+                } label: {
+                    quickActionLabel(title: "Export", icon: "square.and.arrow.up", priority: .tertiary)
+                }
             }
         }
     }
@@ -647,6 +664,7 @@ struct VehicleDetailView: View {
     private var vehicleSummarySection: some View {
         HStack(alignment: .top, spacing: 12) {
             nextDueSummaryCard
+                .frame(maxWidth: .infinity)
 
             VStack(spacing: 8) {
                 summaryActionTile(title: "Last service", value: lastServiceText, icon: "wrench.and.screwdriver.fill", highlight: false, compact: true) {
@@ -661,7 +679,7 @@ struct VehicleDetailView: View {
                     openDocuments()
                 }
             }
-            .frame(maxWidth: 124)
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -673,7 +691,7 @@ struct VehicleDetailView: View {
                 showingReminderForm = true
             }
         } label: {
-            SurfaceCard(padding: 12) {
+            SurfaceCard(padding: 10) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: "bell.badge.fill")
@@ -712,41 +730,49 @@ struct VehicleDetailView: View {
                             .minimumScaleFactor(0.85)
                     }
                 }
-                .frame(maxWidth: .infinity, minHeight: 98, alignment: .topLeading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
+            .frame(height: 118)
         }
         .buttonStyle(.plain)
     }
 
-    private func summaryActionTile(title: String, value: String, icon: String, highlight: Bool, compact: Bool = false, action: @escaping () -> Void) -> some View {
+    private func summaryActionTile(
+        title: String,
+        value: String,
+        icon: String,
+        highlight: Bool,
+        compact: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
-            SurfaceCard(padding: compact ? 8 : 10) {
-                VStack(alignment: .leading, spacing: compact ? 4 : 6) {
+            SurfaceCard(padding: 10) {
+                VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 4) {
                         Image(systemName: icon)
-                            .font(.system(size: compact ? 10 : 11, weight: .semibold))
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(highlight ? AppTheme.accent : AppTheme.secondaryText)
                         Text(title)
-                            .font(.system(size: compact ? 10 : 10.5, weight: .medium))
+                            .font(.system(size: 10.5, weight: .medium))
                             .foregroundStyle(AppTheme.secondaryText)
                             .lineLimit(1)
                             .minimumScaleFactor(0.9)
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.system(size: compact ? 8.5 : 9.5, weight: .semibold))
+                            .font(.system(size: 8.5, weight: .semibold))
                             .foregroundStyle(AppTheme.tertiaryText)
                     }
 
                     Text(value)
-                        .font(.system(size: compact ? 12 : 12.5, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(AppTheme.primaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .minimumScaleFactor(0.82)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(minHeight: compact ? 48 : 60, alignment: .topLeading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
+            .frame(height: 55)
         }
         .buttonStyle(.plain)
     }
@@ -838,6 +864,14 @@ struct VehicleDetailView: View {
     private var documentsSummaryText: String {
         let count = vehicle.documentsCount
         return count == 1 ? "1 document" : "\(count) documents"
+    }
+
+    private var vehicleSubtitleLine: String {
+        let year = vehicle.year > 0 ? String(vehicle.year) : "Unknown Year"
+        if vehicle.currentMileage > 0 {
+            return "\(year) · \(AppFormatters.mileage(vehicle.currentMileage))"
+        }
+        return year
     }
 
     private var ownershipSnapshotText: String {
@@ -959,6 +993,7 @@ struct VehicleDetailView: View {
 
     private func exportResaleReport() {
         guard entitlementStore.canExportPDF() else {
+            AnalyticsService.shared.track(event: .upgrade_from_export, properties: ["type": "resale_report"])
             paywallCoordinator.present(.exportPDF)
             return
         }
@@ -972,6 +1007,7 @@ struct VehicleDetailView: View {
 
     private func exportCSV() {
         guard entitlementStore.canExportPDF() else {
+            AnalyticsService.shared.track(event: .upgrade_from_export, properties: ["type": "csv"])
             paywallCoordinator.present(.exportPDF)
             return
         }

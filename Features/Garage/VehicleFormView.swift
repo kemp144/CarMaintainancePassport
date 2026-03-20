@@ -52,40 +52,84 @@ struct VehicleFormView: View {
 
             Form {
                 Section {
-                    HStack(spacing: 16) {
-                        ZStack(alignment: .topTrailing) {
-                            coverView
+                    if hasCoverImage {
+                        // FILLED STATE
+                        HStack(alignment: .center, spacing: 16) {
+                            ZStack(alignment: .topTrailing) {
+                                if let coverPreview {
+                                    Image(uiImage: coverPreview)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 110, height: 84)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                }
 
-                            if hasCoverImage {
                                 Button {
                                     removeCover()
                                 } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 20))
-                                        .symbolRenderingMode(.palette)
-                                        .foregroundStyle(.white, Color.black.opacity(0.6))
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(6)
+                                        .background(Circle().fill(Color.black.opacity(0.65)))
                                 }
-                                .offset(x: 6, y: -6)
+                                .offset(x: -6, y: 6)
+                                .buttonStyle(.plain)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Vehicle cover")
+                                    .font(.headline)
+                                    .foregroundStyle(AppTheme.primaryText)
+                                
+                                Text("Used on the garage card and export cover.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.bottom, 2)
+
+                                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                                    Text("Change photo")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(AppTheme.accent)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
+                        .padding(.vertical, 8)
+                    } else {
+                        // EMPTY STATE
+                        HStack(spacing: 16) {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(AppTheme.surfaceSecondary)
+                                .frame(width: 84, height: 84)
+                                .overlay {
+                                    Image(systemName: "photo.fill")
+                                        .font(.title2)
+                                        .foregroundStyle(AppTheme.tertiaryText)
+                                }
 
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Vehicle cover")
-                                .font(.headline)
-                                .foregroundStyle(AppTheme.primaryText)
-                            Text("A clean hero image for the garage card and export cover.")
-                                .font(.subheadline)
-                                .foregroundStyle(AppTheme.secondaryText)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Vehicle cover")
+                                    .font(.headline)
+                                    .foregroundStyle(AppTheme.primaryText)
+                                
+                                Text("Used on the garage card and export cover.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.bottom, 2)
 
-                            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                                Text(hasCoverImage ? "Change photo" : "Choose photo")
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(AppTheme.accent)
+                                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                                    Text("Add photo")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(AppTheme.accent)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
+                        .padding(.vertical, 8)
                     }
-                    .padding(.vertical, 8)
                 }
                 .listRowBackground(AppTheme.surface)
 
@@ -98,8 +142,19 @@ struct VehicleFormView: View {
                         }
                     }
                     TextField("License plate", text: $licensePlate)
-                    TextField("Current mileage (\(UnitSettings.currentDistanceUnit.shortTitle))", text: $currentMileage)
-                        .keyboardType(.numberPad)
+                    HStack {
+                        Text("Current mileage")
+                            .foregroundStyle(AppTheme.primaryText)
+                        Spacer()
+                        HStack(spacing: 4) {
+                            TextField("0", text: $currentMileage)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(minWidth: 60)
+                            Text(UnitSettings.currentDistanceUnit.shortTitle)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+                    }
                     Picker("Currency", selection: $currencyCode) {
                         ForEach(CurrencyPreset.allCases) { preset in
                             Text(preset.rawValue).tag(preset.rawValue)
@@ -198,24 +253,6 @@ struct VehicleFormView: View {
         coverPreview = nil
         selectedPhotoItem = nil
         coverReference = nil
-    }
-
-    private var coverView: some View {
-        RoundedRectangle(cornerRadius: 22, style: .continuous)
-            .fill(AppTheme.surfaceSecondary)
-            .frame(width: 94, height: 94)
-            .overlay {
-                if let coverPreview {
-                    Image(uiImage: coverPreview)
-                        .resizable()
-                        .scaledToFill()
-                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                } else {
-                    Image(systemName: "photo.fill")
-                        .font(.title2)
-                        .foregroundStyle(AppTheme.accentSecondary)
-                }
-            }
     }
 
     private func saveVehicle() async {

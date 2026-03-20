@@ -89,6 +89,15 @@ enum FuelEntryValidator {
             errors.append("Odometer cannot be negative.")
         }
 
+        // Warn if the odometer looks like a trip distance instead of an actual reading
+        let highestExisting = entries
+            .filter { $0.id != draft.id }
+            .map(\.mileage)
+            .max() ?? 0
+        if highestExisting > 0, odometer > 0, odometer < highestExisting / 2 {
+            warnings.append("This odometer value (\(UnitFormatter.distance(Double(odometer)))) is much lower than the last recorded reading (\(UnitFormatter.distance(Double(highestExisting)))). Make sure you're entering the full odometer, not a trip distance.")
+        }
+
         let requiresAmounts = draft.entryType.requiresFuelAmounts
         let hasLiters = (draft.liters ?? 0) > 0
         let hasTotalCost = (draft.totalCost ?? 0) > 0

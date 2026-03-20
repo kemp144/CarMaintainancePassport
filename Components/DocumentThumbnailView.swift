@@ -9,72 +9,50 @@ struct DocumentThumbnailView: View {
     @State private var image: UIImage?
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+        ZStack(alignment: .topTrailing) {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(AppTheme.surfaceSecondary)
-
-            if pageCount > 1 {
-                multiPageBackground
-            }
 
             if let image {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             } else {
-                VStack(spacing: 6) {
+                VStack(spacing: 4) {
                     Image(systemName: fallbackType.icon)
-                        .font(.system(size: 20, weight: .semibold))
-                    Text(fallbackType.title)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(AppTheme.secondaryText)
+                        .font(.system(size: 20, weight: .medium))
                 }
-                .foregroundStyle(AppTheme.primaryText)
-                .padding(12)
+                .foregroundStyle(AppTheme.tertiaryText)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
             if pageCount > 1 {
                 Text("\(pageCount)")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(Color.black)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(AppTheme.accentSecondary))
-                    .padding(8)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.black.opacity(0.65)))
+                    .padding(4)
             } else if fallbackType == .pdf {
                 Text("PDF")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(Color.black)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(AppTheme.accentSecondary))
-                    .padding(8)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.black.opacity(0.65)))
+                    .padding(4)
             }
         }
-        .frame(width: 56, height: 56)
+        .frame(width: 60, height: 60)
         .task(id: previewReference) {
             guard let previewReference else {
                 image = nil
                 return
             }
             image = UIImage(contentsOfFile: AttachmentStorageService.fileURL(for: previewReference).path)
-        }
-    }
-
-    private var multiPageBackground: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(AppTheme.surfaceSecondary.opacity(0.92))
-                .frame(width: 50, height: 50)
-                .offset(x: -6, y: -5)
-
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(AppTheme.surfaceSecondary.opacity(0.82))
-                .frame(width: 52, height: 52)
-                .offset(x: -3, y: -2)
         }
     }
 }

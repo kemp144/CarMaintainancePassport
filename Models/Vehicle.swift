@@ -93,11 +93,13 @@ extension Vehicle {
     }
 
     var activeRemindersCount: Int {
-        reminders.filter { $0.isEnabled }.count
+        reminders.deduplicatedLinkedReminders().filter { $0.isEnabled }.count
     }
 
     var sortedReminders: [ReminderItem] {
-        reminders.sorted { ($0.dateDue ?? .distantFuture) < ($1.dateDue ?? .distantFuture) }
+        reminders
+            .deduplicatedLinkedReminders()
+            .sorted { ($0.dateDue ?? .distantFuture) < ($1.dateDue ?? .distantFuture) }
     }
 
     var totalSpent: Double {
@@ -137,6 +139,13 @@ extension Vehicle {
         sortedReminders.first { reminder in
             reminder.status(for: self, referenceDate: referenceDate) != .disabled
         }
+    }
+
+    /// The date of the entry that established the current mileage high-water mark.
+    var latestMileageDate: Date? {
+        let fuelDates = fuelEntries.filter { $0.mileage == currentMileage }.map(\.date)
+        let serviceDates = serviceEntries.filter { $0.mileage == currentMileage }.map(\.date)
+        return (fuelDates + serviceDates).max()
     }
 
     var sortedFuelEntries: [FuelEntry] {

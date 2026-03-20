@@ -53,6 +53,9 @@ struct TimelineView: View {
     @State private var searchText = ""
     @State private var previewURL: URL?
 
+    @State private var showingServiceForm = false
+    @State private var pendingServiceDraft: ScannedReceiptDraft?
+
     private var currentCategory: CategoryFilter {
         CategoryFilter(rawValue: appState.timelineCategory) ?? .all
     }
@@ -149,6 +152,36 @@ struct TimelineView: View {
         )
     }
 
+    @ViewBuilder
+    private var timelineEmptyStateCard: some View {
+        if vehicles.isEmpty {
+            EmptyStateCard(
+                icon: "car.fill",
+                title: "No vehicle yet",
+                message: "Add your first vehicle to start tracking maintenance, fuel, and ownership history.",
+                actionTitle: "Open Garage"
+            ) {
+                appState.selectedTab = .garage
+            }
+        } else {
+            let vehicleContext: String = {
+                if let id = appState.selectedVehicleID, let selectedVehicle = vehicles.first(where: { $0.id == id }) {
+                    return " for \(selectedVehicle.title)"
+                }
+                return ""
+            }()
+            
+            EmptyStateCard(
+                icon: "clock.badge.xmark.fill",
+                title: "No service history yet",
+                message: "Add your first service entry\(vehicleContext) to start building a clean ownership timeline.",
+                actionTitle: "Add Service"
+            ) {
+                showingServiceForm = true
+            }
+        }
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             AppTheme.background.ignoresSafeArea()
@@ -209,17 +242,10 @@ struct TimelineView: View {
 
                 if events.isEmpty {
                     ScrollView(showsIndicators: false) {
-                        EmptyStateCard(
-                            icon: "clock.badge.xmark.fill",
-                            title: "No history yet",
-                            message: "Add your first service entry to turn this into a clean ownership timeline for maintenance, receipts, and resale.",
-                            actionTitle: "Open Garage"
-                        ) {
-                            appState.selectedTab = .garage
-                        }
-                        .padding(.horizontal, AppTheme.Spacing.pageEdge)
-                        .padding(.top, AppTheme.Spacing.filterToContent)
-                        .padding(.bottom, AppTheme.Spacing.bottomSafeArea)
+                        timelineEmptyStateCard
+                            .padding(.horizontal, AppTheme.Spacing.pageEdge)
+                            .padding(.top, AppTheme.Spacing.filterToContent)
+                            .padding(.bottom, AppTheme.Spacing.bottomSafeArea)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 } else {
@@ -253,22 +279,18 @@ struct TimelineView: View {
                                                     }
                                                 }
                                                 .buttonStyle(.plain)
-                                            case .documentModern:
-                                                Button {
-                                                    if case .documentModern(let document) = event.kind {
-                                                        if let page = document.sortedPages.first {
-                                                            previewURL = AttachmentStorageService.fileURL(for: page.storageReference)
-                                                        }
-                                                    }
+                                            case .documentModern(let doc):
+                                                NavigationLink {
+                                                    DocumentDetailView(selection: .modern(doc))
                                                 } label: {
                                                     SurfaceCard {
                                                         timelineListRow(for: event)
                                                     }
                                                 }
                                                 .buttonStyle(.plain)
-                                            case .document(let attachment):
-                                                Button {
-                                                    previewURL = AttachmentStorageService.fileURL(for: attachment.storageReference)
+                                            case .document(let att):
+                                                NavigationLink {
+                                                    DocumentDetailView(selection: .legacy(att))
                                                 } label: {
                                                     SurfaceCard {
                                                         timelineListRow(for: event)
@@ -279,23 +301,35 @@ struct TimelineView: View {
                                         }
                                     }
                                 }
+                                .padding(.top, 8)
                             }
                         }
-                        .padding(AppTheme.Spacing.pageEdge)
+                        .padding(.horizontal, AppTheme.Spacing.pageEdge)
+                        .padding(.top, AppTheme.Spacing.filterToContent)
                         .padding(.bottom, AppTheme.Spacing.bottomSafeArea)
                     }
                 }
             }
+            
         }
         .navigationBarHidden(true)
         .sheet(item: Binding(get: {
             previewURL.map(PreviewURL.init(url:))
-        }, set: { value in
-            previewURL = value?.url
+        }, set: { item in
+            previewURL = item?.url
         })) { item in
             QuickLookPreviewSheet(url: item.url)
         }
+        .sheet(isPresented: $showingServiceForm) {
+            let vehicle = appState.selectedVehicleID.flatMap { id in vehicles.first(where: { $0.id == id }) } ?? vehicles.first
+            if let vehicle {
+                NavigationStack {
+                    ServiceEntryFormView(vehicle: vehicle, ocrDraft: pendingServiceDraft)
+                }
+            }
+        }
     }
+
 
     private func timelineListRow(for event: TimelineEvent) -> some View {
         HStack(alignment: .top, spacing: 12) {

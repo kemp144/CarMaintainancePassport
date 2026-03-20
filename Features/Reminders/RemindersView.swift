@@ -6,14 +6,20 @@ struct RemindersView: View {
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
     
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var entitlementStore: EntitlementStore
+    @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
     
     @State private var showingReminderForm = false
     @State private var editingReminder: ReminderItem?
 
+    private var uniqueReminders: [ReminderItem] {
+        reminders.deduplicatedLinkedReminders()
+    }
+
     private var grouped: [(ReminderStatus, [ReminderItem])] {
         let orderedStatuses: [ReminderStatus] = [.overdue, .dueSoon, .upcoming, .disabled]
         return orderedStatuses.compactMap { status in
-            let matching = reminders.filter { reminder in
+            let matching = uniqueReminders.filter { reminder in
                 guard let vehicle = reminder.vehicle else { return false }
                 
                 if appState.showOnlyCurrentVehicle, let globalID = appState.selectedVehicleID {
@@ -30,33 +36,40 @@ struct RemindersView: View {
 
     private var reminderSummary: some View {
         let activeReminders = grouped.reduce(0) { $0 + $1.1.count }
-        let overdueCount = reminders.filter { reminder in
+        let overdueCount = uniqueReminders.filter { reminder in
             guard let vehicle = reminder.vehicle else { return false }
             return reminder.status(for: vehicle) == .overdue
         }.count
-        let mileageCount = reminders.filter { $0.mileageDue != nil }.count
+        let mileageCount = uniqueReminders.filter { $0.mileageDue != nil }.count
 
-        return SurfaceCard {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text("Reminder overview")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(AppTheme.primaryText)
-                    Spacer()
-                    Text("Smart maintenance")
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(AppTheme.secondaryText)
+        return VStack(spacing: 12) {
+            SurfaceCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Reminder overview")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(AppTheme.primaryText)
+                        Spacer()
+                        Text("Smart maintenance")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+
+                    HStack(spacing: 12) {
+                        SummaryStatTile(title: "Active", value: "\(activeReminders)", icon: "bell.fill")
+                        SummaryStatTile(title: "Overdue", value: "\(overdueCount)", icon: "exclamationmark.triangle.fill")
+                        SummaryStatTile(title: "Mileage", value: mileageCount == 0 ? "Pro" : "\(mileageCount)", icon: "speedometer")
+                    }
                 }
+            }
 
-                HStack(spacing: 12) {
-                    SummaryStatTile(title: "Active", value: "\(activeReminders)", icon: "bell.fill")
-                    SummaryStatTile(title: "Overdue", value: "\(overdueCount)", icon: "exclamationmark.triangle.fill")
-                    SummaryStatTile(title: "Mileage", value: mileageCount == 0 ? "Pro" : "\(mileageCount)", icon: "speedometer")
+            if !entitlementStore.hasProAccess {
+                UpgradePillRow(
+                    message: "Date reminders are free • Mileage requires Pro",
+                    cta: "Unlock"
+                ) {
+                    paywallCoordinator.present(.advancedReminders)
                 }
-
-                Text("Date reminders are free. Mileage-based reminders require Pro.")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.tertiaryText)
             }
         }
     }

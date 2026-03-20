@@ -22,6 +22,9 @@ struct ReminderFormView: View {
     @State private var mileageDue: String
     @State private var timing: NotificationTiming
     @State private var isEnabled: Bool
+    @State private var linkedServiceEntryID: UUID?
+    @State private var linkedServiceDate: Date?
+    @State private var linkedServiceMileage: Int?
 
     init(vehicle: Vehicle? = nil, linkedService: ServiceEntry? = nil, reminder: ReminderItem? = nil) {
         self.reminder = reminder
@@ -37,6 +40,9 @@ struct ReminderFormView: View {
         _mileageDue = State(initialValue: reminder?.mileageDue.map { UnitFormatter.distanceValue(Double($0)) } ?? "")
         _timing = State(initialValue: reminder?.notificationTiming ?? .sevenDaysBefore)
         _isEnabled = State(initialValue: reminder?.isEnabled ?? true)
+        _linkedServiceEntryID = State(initialValue: reminder?.linkedServiceEntryID ?? linkedService?.id)
+        _linkedServiceDate = State(initialValue: reminder?.linkedServiceDate ?? linkedService?.date)
+        _linkedServiceMileage = State(initialValue: reminder?.linkedServiceMileage ?? linkedService?.mileage)
     }
 
     var body: some View {
@@ -92,8 +98,19 @@ struct ReminderFormView: View {
                     }
                     
                     if includesMileage {
-                        TextField("Mileage due (\(UnitSettings.currentDistanceUnit.shortTitle))", text: $mileageDue)
-                            .keyboardType(.numberPad)
+                        HStack {
+                            Text("Mileage due")
+                                .foregroundStyle(AppTheme.primaryText)
+                            Spacer()
+                            HStack(spacing: 4) {
+                                TextField("0", text: $mileageDue)
+                                    .keyboardType(.numberPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(minWidth: 60)
+                                Text(UnitSettings.currentDistanceUnit.shortTitle)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                            }
+                        }
                     }
 
                     Toggle("Enable reminder", isOn: $isEnabled)
@@ -134,6 +151,9 @@ struct ReminderFormView: View {
         if let reminder {
             reminder.vehicle = vehicle
             reminder.serviceEntry = linkedService
+            reminder.linkedServiceEntryID = linkedServiceEntryID ?? linkedService?.id
+            reminder.linkedServiceDate = linkedServiceDate ?? linkedService?.date
+            reminder.linkedServiceMileage = linkedServiceMileage ?? linkedService?.mileage
             reminder.type = type
             reminder.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
             reminder.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -147,6 +167,9 @@ struct ReminderFormView: View {
             let newReminder = ReminderItem(
                 vehicle: vehicle,
                 serviceEntry: linkedService,
+                linkedServiceEntryID: linkedServiceEntryID ?? linkedService?.id,
+                linkedServiceDate: linkedServiceDate ?? linkedService?.date,
+                linkedServiceMileage: linkedServiceMileage ?? linkedService?.mileage,
                 type: type,
                 title: title.trimmingCharacters(in: .whitespacesAndNewlines),
                 notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),

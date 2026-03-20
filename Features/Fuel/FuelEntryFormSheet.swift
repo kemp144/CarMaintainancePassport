@@ -30,7 +30,8 @@ struct FuelEntryFormSheet: View {
         self.vehicle = vehicle
         self.entry = entry
         _date = State(initialValue: entry?.date ?? .now)
-        _mileage = State(initialValue: entry.map { UnitFormatter.distanceValue(Double($0.mileage)) } ?? UnitFormatter.distanceValue(Double(vehicle.currentMileage)))
+        _mileage = State(initialValue: entry.map { UnitFormatter.distanceValue(Double($0.mileage)) }
+            ?? (vehicle.currentMileage > 0 ? UnitFormatter.distanceValue(Double(vehicle.currentMileage)) : ""))
         _entryType = State(initialValue: entry?.entryType ?? .fullFillUp)
         _liters = State(initialValue: entry.map { $0.liters > 0 ? UnitFormatter.fuelVolumeValue($0.liters) : "" } ?? "")
         _totalCost = State(initialValue: entry.map { $0.totalCost > 0 ? String(format: "%.2f", $0.totalCost) : "" } ?? "")
@@ -49,37 +50,88 @@ struct FuelEntryFormSheet: View {
                 }
 
                 Section {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                        ForEach(FuelEntryType.allCases) { type in
-                            fuelTypeButton(for: type)
+                    VStack(alignment: .leading, spacing: 12) {
+                        LazyVGrid(columns: [GridItem(.flexible(), alignment: .top), GridItem(.flexible(), alignment: .top)], spacing: 10) {
+                            ForEach(FuelEntryType.primarySelectionCases) { type in
+                                fuelTypeButton(for: type)
+                            }
                         }
+
+                        Button {
+                            entryType = .missedFillUp
+                        } label: {
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: "clock.arrow.circlepath")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(entryType == .missedFillUp ? AppTheme.accent : AppTheme.secondaryText)
+                                    .frame(width: 18)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Forgot to log an earlier fuel stop?")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.primaryText)
+
+                                    Text(FuelEntryType.missedFillUp.selectionSubtitle)
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.secondaryText)
+                                        .multilineTextAlignment(.leading)
+                                }
+
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(entryType == .missedFillUp ? AppTheme.surfaceSecondary : Color(hex: "020617"))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .strokeBorder(entryType == .missedFillUp ? AppTheme.accent.opacity(0.45) : AppTheme.separator, lineWidth: 1)
+                                    }
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    Text(entryType.helperText)
-                        .font(.footnote)
-                        .foregroundStyle(AppTheme.secondaryText)
                 } header: {
                     Text("Entry Type").foregroundStyle(AppTheme.secondaryText)
-                }
-                .listRowBackground(AppTheme.surface)
-
-                Section {
-                    DatePicker("Date", selection: $date, displayedComponents: .date)
-
-                    TextField("Odometer (\(UnitSettings.currentDistanceUnit.shortTitle))", text: $mileage)
-                        .keyboardType(.numberPad)
-                } header: {
-                    Text("Trip Context").foregroundStyle(AppTheme.secondaryText)
                 } footer: {
-                    Text("Entries are validated against the surrounding fuel timeline to prevent backward mileage.")
+                    Text("Most drivers only need Full or Partial. Use the missed entry option to add a fuel stop that happened earlier but wasn't logged.")
                         .foregroundStyle(AppTheme.tertiaryText)
                 }
                 .listRowBackground(AppTheme.surface)
 
                 Section {
-                    TextField(entryType.requiresFuelAmounts ? UnitSettings.currentFuelVolumeUnit.title : "\(UnitSettings.currentFuelVolumeUnit.title) (optional)", text: $liters)
+                    DatePicker(entryType == .missedFillUp ? "Date of fuel stop" : "Date", selection: $date, displayedComponents: .date)
+
+                    HStack {
+                        Text(entryType == .missedFillUp ? "Odometer at stop" : "Odometer")
+                            .foregroundStyle(AppTheme.primaryText)
+                        Spacer()
+                        HStack(spacing: 4) {
+                            TextField("0", text: $mileage)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(minWidth: 60)
+                            Text(UnitSettings.currentDistanceUnit.shortTitle)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+                    }
+                } header: {
+                    Text(entryType == .missedFillUp ? "Fuel Stop Details" : "Trip Context").foregroundStyle(AppTheme.secondaryText)
+                } footer: {
+                    Text(entryType == .missedFillUp
+                         ? "Enter the date and odometer reading from that earlier fuel stop."
+                         : "Enter the odometer shown on the dashboard. We use it to validate the fuel timeline and calculate consumption.")
+                        .foregroundStyle(AppTheme.tertiaryText)
+                }
+                .listRowBackground(AppTheme.surface)
+
+                Section {
+                    TextField(entryType == .missedFillUp ? "Fuel volume (optional)" : UnitSettings.currentFuelVolumeUnit.title, text: $liters)
                         .keyboardType(.decimalPad)
 
-                    TextField(entryType.requiresFuelAmounts ? "Total price" : "Total price (optional)", text: $totalCost)
+                    TextField(entryType == .missedFillUp ? "Total price (optional)" : "Total price", text: $totalCost)
                         .keyboardType(.decimalPad)
 
                     if let pricePerUnit = draft.derivedPricePerFuelUnit(using: UnitSettings.currentFuelVolumeUnit) {
@@ -93,7 +145,7 @@ struct FuelEntryFormSheet: View {
                 } header: {
                     Text("Fuel").foregroundStyle(AppTheme.secondaryText)
                 } footer: {
-                    Text(entryType.requiresFuelAmounts ? "Both fuel volume and total price are required for fill-ups." : "You can leave these blank for an initial tank or a missed entry.")
+                    Text(entryType == .missedFillUp ? "Add any details you remember. Fuel volume and price are optional for missed fuel stops." : "Full and Partial entries need both fuel volume and total price.")
                         .foregroundStyle(AppTheme.tertiaryText)
                 }
                 .listRowBackground(AppTheme.surface)
@@ -163,10 +215,10 @@ struct FuelEntryFormSheet: View {
                     .foregroundStyle(AppTheme.accent)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Consumption becomes accurate after at least one full-to-full cycle.")
+                    Text("Your first fuel entry simply starts the vehicle's fuel history automatically.")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppTheme.primaryText)
-                    Text("Start with an initial tank if you already have a full tank, or log your next full fill-up as the starting point.")
+                    Text("Choose Full for a complete fill-up, Partial for a top-up, or add an earlier fuel stop you forgot to log.")
                         .font(.footnote)
                         .foregroundStyle(AppTheme.secondaryText)
                 }
@@ -179,24 +231,31 @@ struct FuelEntryFormSheet: View {
         Button {
             entryType = type
         } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: type.icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(entryType == type ? AppTheme.accent : AppTheme.secondaryText)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .center, spacing: 8) {
+                    Image(systemName: type.icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(displayedEntryType == type ? AppTheme.accent : AppTheme.secondaryText)
 
-                Text(type.shortTitle)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(AppTheme.primaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(type.shortTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+                }
+
+                Text(type.selectionSubtitle)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 106, alignment: .topLeading)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(entryType == type ? AppTheme.surfaceSecondary : Color(hex: "020617"))
+                    .fill(displayedEntryType == type ? AppTheme.surfaceSecondary : Color(hex: "020617"))
                     .overlay {
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .strokeBorder(entryType == type ? AppTheme.accent.opacity(0.45) : AppTheme.separator, lineWidth: 1)
+                            .strokeBorder(displayedEntryType == type ? AppTheme.accent.opacity(0.45) : AppTheme.separator, lineWidth: 1)
                     }
             )
         }
@@ -211,6 +270,10 @@ struct FuelEntryFormSheet: View {
             return entry.currencyCode
         }
         return lastCurrencyCode
+    }
+
+    private var displayedEntryType: FuelEntryType {
+        entryType == .initialTank ? .fullFillUp : entryType
     }
 
     private var parsedMileage: Int? {

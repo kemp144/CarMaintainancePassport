@@ -305,10 +305,20 @@ enum UnitFormatter {
     }
 
     static func parseDecimal(_ text: String) -> Double? {
-        let normalized = text
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: ",", with: ".")
-        guard !normalized.isEmpty else { return nil }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        // Try locale-aware parsing first — handles grouping separators correctly
+        // (e.g. "70,000" in en_US or "70.000" in de_DE → 70000)
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = .autoupdatingCurrent
+        if let number = formatter.number(from: trimmed) {
+            return number.doubleValue
+        }
+
+        // Fallback: treat comma as decimal separator for simple inputs like "45,5"
+        let normalized = trimmed.replacingOccurrences(of: ",", with: ".")
         return Double(normalized)
     }
 

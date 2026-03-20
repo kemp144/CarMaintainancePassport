@@ -256,8 +256,8 @@ enum FuelEntryType: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .initialTank: return "Initial Tank"
-        case .fullFillUp: return "Full Fill-up"
+        case .initialTank: return "First Entry"
+        case .fullFillUp: return "Full Tank Fill-up"
         case .partialFillUp: return "Partial Fill-up"
         case .missedFillUp: return "Missed Fill-up"
         }
@@ -265,10 +265,23 @@ enum FuelEntryType: String, Codable, CaseIterable, Identifiable {
 
     var shortTitle: String {
         switch self {
-        case .initialTank: return "Initial"
+        case .initialTank: return "First"
         case .fullFillUp: return "Full"
         case .partialFillUp: return "Partial"
         case .missedFillUp: return "Missed"
+        }
+    }
+
+    var selectionSubtitle: String {
+        switch self {
+        case .initialTank:
+            return "Used automatically for the first fuel entry."
+        case .fullFillUp:
+            return "Use when the tank is filled completely."
+        case .partialFillUp:
+            return "Use when the tank was not filled fully."
+        case .missedFillUp:
+            return "Add it to keep fuel history accurate."
         }
     }
 
@@ -277,7 +290,7 @@ enum FuelEntryType: String, Codable, CaseIterable, Identifiable {
         case .initialTank: return "flag.fill"
         case .fullFillUp: return "fuelpump.fill"
         case .partialFillUp: return "fuelpump"
-        case .missedFillUp: return "exclamationmark.triangle.fill"
+        case .missedFillUp: return "clock.arrow.circlepath"
         }
     }
 
@@ -302,14 +315,27 @@ enum FuelEntryType: String, Codable, CaseIterable, Identifiable {
     var helperText: String {
         switch self {
         case .initialTank:
-            return "Creates the starting point for accurate tracking."
+            return "Used automatically for the first fuel entry."
         case .fullFillUp:
             return "Use when the tank is filled completely."
         case .partialFillUp:
-            return "Adds fuel without closing a full-to-full cycle yet."
+            return "Use when fuel was added without filling the tank."
         case .missedFillUp:
-            return "Marks the sequence as incomplete until the next full fill-up."
+            return "Add a fuel stop that happened earlier but wasn't logged. This helps improve fuel history accuracy."
         }
+    }
+
+    var isPrimarySelection: Bool {
+        switch self {
+        case .fullFillUp, .partialFillUp:
+            return true
+        case .initialTank, .missedFillUp:
+            return false
+        }
+    }
+
+    static var primarySelectionCases: [FuelEntryType] {
+        [.fullFillUp, .partialFillUp]
     }
 }
 

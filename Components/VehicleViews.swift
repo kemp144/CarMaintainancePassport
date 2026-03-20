@@ -32,8 +32,24 @@ struct VehicleHeroCard: View {
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.secondaryText)
 
+                if vehicle.currentMileage > 0 {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label(AppFormatters.mileage(vehicle.currentMileage), systemImage: "speedometer")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Color.white.opacity(0.88))
+
+                        if let mileageDate = vehicle.latestMileageDate {
+                            Text("Updated \(AppFormatters.mediumDate.string(from: mileageDate))")
+                                .font(.caption2)
+                                .foregroundStyle(Color.white.opacity(0.5))
+                        }
+                    }
+                }
+
                 HStack(spacing: 10) {
-                    Label(AppFormatters.mileage(vehicle.currentMileage), systemImage: "speedometer")
+                    if vehicle.currentMileage == 0 {
+                        Label("No mileage recorded", systemImage: "speedometer")
+                    }
                     Label(AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode), systemImage: "eurosign.circle")
                 }
                 .font(.subheadline.weight(.medium))
@@ -46,74 +62,101 @@ struct VehicleHeroCard: View {
 
 struct VehicleRowCard: View {
     let vehicle: Vehicle
+    var isLocked: Bool = false
 
     var body: some View {
         SurfaceCard(padding: 0) {
-            HStack(alignment: .top, spacing: 16) {
-                // Vehicle Image (w-24 h-24 rounded-lg bg-slate-800)
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(AppTheme.surfaceSecondary)
-                    
-                    if let reference = vehicle.coverImageReference,
-                       let image = UIImage(contentsOfFile: AttachmentStorageService.fileURL(for: reference).path) {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 96, height: 96)
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    } else {
-                        Image(systemName: "car.fill")
-                            .font(.system(size: 40)) // w-10 h-10 roughly
-                            .foregroundStyle(AppTheme.tertiaryText) // text-slate-600
-                    }
-                }
-                .frame(width: 96, height: 96)
+            ZStack(alignment: .topTrailing) {
+                HStack(alignment: .top, spacing: 16) {
+                    // Vehicle Image
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(AppTheme.surfaceSecondary)
 
-                // Vehicle Info
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("\(vehicle.make) \(vehicle.model)")
-                        .font(.system(size: 18, weight: .semibold)) // text-lg font-semibold
-                        .foregroundStyle(AppTheme.primaryText) // text-white
-                        .lineLimit(1)
-
-                    HStack(spacing: 6) {
-                        Text(vehicle.year > 0 ? String(vehicle.year) : "Unknown Year")
-                        if !vehicle.licensePlate.isEmpty {
-                            Text("•")
-                            Text(vehicle.licensePlate)
+                        if let reference = vehicle.coverImageReference,
+                           let image = UIImage(contentsOfFile: AttachmentStorageService.fileURL(for: reference).path) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 96, height: 96)
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        } else {
+                            Image(systemName: "car.fill")
+                                .font(.system(size: 40))
+                                .foregroundStyle(AppTheme.tertiaryText)
                         }
                     }
-                    .font(.system(size: 13.5)) // text-sm
-                        .foregroundStyle(AppTheme.secondaryText) // text-slate-400
-                        .lineLimit(1)
+                    .frame(width: 96, height: 96)
 
-                    if let lastServiceDate = vehicle.latestServiceDate {
-                        ownershipInfoRow(
-                            icon: "wrench.and.screwdriver",
-                            title: "Last service",
-                            value: AppFormatters.mediumDate.string(from: lastServiceDate)
-                        )
-                    }
+                    // Vehicle Info
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("\(vehicle.make) \(vehicle.model)")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(AppTheme.primaryText)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .padding(.trailing, isLocked ? 24 : 0)
 
-                    if let reminder = vehicle.nextDueReminder {
-                        ownershipInfoRow(
-                            icon: "bell.badge.fill",
-                            title: reminder.status(for: vehicle) == .overdue ? "Attention" : "Next due",
-                            value: reminder.title
-                        )
-                    }
+                        HStack(spacing: 6) {
+                            Text(vehicle.year > 0 ? String(vehicle.year) : "Unknown Year")
+                            if !vehicle.licensePlate.isEmpty {
+                                Text("•")
+                                Text(vehicle.licensePlate)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                            }
+                        }
+                        .font(.system(size: 13.5))
+                        .foregroundStyle(AppTheme.secondaryText)
 
-                    HStack(spacing: 8) {
-                        compactMetric(label: "Docs", value: "\(vehicle.documentsCount)")
-                        compactMetric(label: "Service YTD", value: AppFormatters.currency(vehicle.spentThisYear, code: vehicle.currencyCode))
-                        compactMetric(label: "Reminders", value: "\(vehicle.activeRemindersCount)")
+                        if vehicle.currentMileage > 0 {
+                            ownershipInfoRow(
+                                icon: "speedometer",
+                                title: "Current mileage",
+                                value: AppFormatters.mileage(vehicle.currentMileage)
+                            )
+                        }
+
+                        if let lastServiceDate = vehicle.latestServiceDate {
+                            ownershipInfoRow(
+                                icon: "wrench.and.screwdriver",
+                                title: "Last service",
+                                value: AppFormatters.mediumDate.string(from: lastServiceDate)
+                            )
+                        }
+
+                        if let reminder = vehicle.nextDueReminder {
+                            ownershipInfoRow(
+                                icon: "bell.badge.fill",
+                                title: reminder.status(for: vehicle) == .overdue ? "Attention" : "Next due",
+                                value: reminder.title
+                            )
+                        }
+
+                        HStack(spacing: 8) {
+                            compactMetric(label: "Docs", value: "\(vehicle.documentsCount)")
+                            compactMetric(label: "Service YTD", value: AppFormatters.currency(vehicle.spentThisYear, code: vehicle.currencyCode))
+                            compactMetric(label: "Reminders", value: "\(vehicle.activeRemindersCount)")
+                        }
+                        .padding(.top, 2)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+
+                if isLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(AppTheme.accent)
+                        .padding(12)
+                        .background(
+                            UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 16, bottomTrailingRadius: 0, topTrailingRadius: 16)
+                                .fill(AppTheme.surfaceSecondary)
+                        )
+                }
             }
-            .padding(16) // p-4
         }
+        .opacity(isLocked ? 0.65 : 1.0)
     }
 
     private func ownershipInfoRow(icon: String, title: String, value: String) -> some View {
@@ -131,6 +174,7 @@ struct VehicleRowCard: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(AppTheme.primaryText)
                 .lineLimit(1)
+                .truncationMode(.tail)
         }
     }
 
@@ -143,6 +187,7 @@ struct VehicleRowCard: View {
                 .font(.system(size: 11.5, weight: .semibold))
                 .foregroundStyle(AppTheme.primaryText)
                 .lineLimit(1)
+                .truncationMode(.tail)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

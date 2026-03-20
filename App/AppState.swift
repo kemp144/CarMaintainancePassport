@@ -9,6 +9,7 @@ enum AppTab: Hashable {
 
 enum PaywallReason: String, Identifiable {
     case secondVehicle
+    case lockedVehicle
     case financeBreakdown
     case servicePrediction
     case fuelTrend
@@ -44,57 +45,34 @@ enum PaywallCopyBuilder {
     static func build(for reason: PaywallReason, context: PaywallPresentationContext?) -> PaywallCopy {
         switch reason {
         case .secondVehicle:
-            let vehicleMessage: String
-            if let vehicleCount = context?.vehicleCount, vehicleCount >= 1 {
-                vehicleMessage = "A second vehicle unlocks the real value of garage comparison."
-            } else {
-                vehicleMessage = "Free stays useful for one car. Pro lets you compare vehicles, track the full garage, and keep every history together."
-            }
             return PaywallCopy(
-                title: "Keep every car in one place",
-                message: vehicleMessage
+                title: "Compare your garage side by side",
+                message: "Unlock multi-vehicle comparisons, garage-wide spend insights, and ownership patterns across vehicles."
+            )
+        case .lockedVehicle:
+            return PaywallCopy(
+                title: "Restore access to all your vehicles",
+                message: "Pro unlocks your saved vehicles, their history, documents, reminders, and comparison tools."
             )
         case .financeBreakdown:
-            let spendText = context.flatMap { ctx -> String? in
-                guard let total = ctx.totalOwnershipSpend else { return nil }
-                return AppFormatters.currency(total, code: ctx.currencyCode ?? "EUR")
-            } ?? "your ownership costs"
             return PaywallCopy(
-                title: "See what drives ownership costs",
-                message: "You've logged \(spendText) in ownership costs. Pro shows which categories drive it."
+                title: "Find where your money really goes",
+                message: "Unlock category breakdowns, ownership cost patterns, and longer-term spend trends."
             )
         case .servicePrediction:
-            let message: String
-            if let maintenanceHistoryCount = context?.maintenanceHistoryCount, maintenanceHistoryCount >= 3 {
-                message = "Your maintenance history is ready for smarter predictions."
-            } else {
-                message = "Pro highlights what may need attention next as your maintenance history grows."
-            }
             return PaywallCopy(
-                title: "Stay ahead of maintenance",
-                message: message
+                title: "See what may need attention next",
+                message: "Unlock smarter maintenance insights, likely service needs, and deeper service health tracking."
             )
         case .fuelTrend:
-            let message: String
-            if let validFuelCycleCount = context?.validFuelCycleCount, validFuelCycleCount >= 3 {
-                message = "You now have enough valid fuel history to unlock long-term trends."
-            } else {
-                message = "Pro keeps long-term fuel trends, cleaner averages, and deeper consumption context ready as your history grows."
-            }
             return PaywallCopy(
                 title: "See your real fuel efficiency",
-                message: message
+                message: "Unlock long-term averages, trend charts, period filters, and OCR receipt tools."
             )
         case .resaleReport:
-            let message: String
-            if let buyerReadyScore = context?.buyerReadyScore {
-                message = "Your vehicle is \(buyerReadyScore)% buyer-ready. Pro shows what still lowers confidence."
-            } else {
-                message = "Pro shows what still lowers buyer confidence and helps you shape a cleaner resale story."
-            }
             return PaywallCopy(
-                title: "Turn records into buyer confidence",
-                message: message
+                title: "Improve buyer readiness",
+                message: "Unlock deeper resale confidence signals, missing proof insights, and stronger ownership records."
             )
         case .exportPDF:
             return PaywallCopy(
@@ -113,18 +91,18 @@ enum PaywallCopyBuilder {
             )
         case .analytics:
             return PaywallCopy(
-                title: "See your real cost of ownership",
-                message: "Start with the essentials for free, then unlock deeper cost breakdowns, fuel trends, maintenance insights, and resale tools."
+                title: "Find where your money really goes",
+                message: "Unlock category breakdowns, ownership cost patterns, and longer-term spend trends."
             )
         case .fuelTracking:
             return PaywallCopy(
                 title: "See your real fuel efficiency",
-                message: "Log fuel for free, then unlock long-term averages, trend charts, efficiency insights, and cleaner receipt capture with Pro."
+                message: "Unlock long-term averages, trend charts, period filters, and OCR receipt tools."
             )
         case .ocrScan:
             return PaywallCopy(
-                title: "Scan receipts automatically",
-                message: "Let the app extract receipt details so service entries take less time."
+                title: "Turn receipts into records instantly",
+                message: "Pro extracts the date, amount, mileage, vendor, and notes from a receipt photo and turns it into a structured service record — no manual entry needed."
             )
         case .vinLookup:
             return PaywallCopy(
@@ -138,7 +116,7 @@ enum PaywallCopyBuilder {
             )
         case .settings:
             return PaywallCopy(
-                title: "Upgrade to Pro",
+                title: "Unlock the full ownership experience",
                 message: "Unlock full cost breakdowns, fuel efficiency tracking, smarter maintenance insights, resale tools, polished exports, and an unlimited garage."
             )
         }
@@ -160,15 +138,16 @@ final class PaywallCoordinator: ObservableObject {
         context = nil
     }
 }
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var selectedTab: AppTab = .garage
     @Published var dataRefreshToken = UUID()
-    
+
     @AppStorage("showOnlyCurrentVehicle") var showOnlyCurrentVehicle: Bool = false
     @AppStorage("globalSelectedVehicleID") var globalSelectedVehicleIDString: String = ""
     @Published var timelineCategory: String = "All" // "All", "Maintenance", "Repairs", "Documents", "Expenses"
-    
+
     var selectedVehicleID: UUID? {
         get { UUID(uuidString: globalSelectedVehicleIDString) }
         set { globalSelectedVehicleIDString = newValue?.uuidString ?? "" }
@@ -178,3 +157,4 @@ final class AppState: ObservableObject {
         dataRefreshToken = UUID()
     }
 }
+

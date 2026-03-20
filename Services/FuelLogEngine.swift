@@ -269,7 +269,7 @@ enum FuelLogEngine {
             switch entry.entryType {
             case .initialTank:
                 status = .pending
-                note = "Starting point for accurate tracking."
+                note = "Starts the fuel log."
                 window.reset(start: entry)
 
             case .missedFillUp:
@@ -285,7 +285,7 @@ enum FuelLogEngine {
                 }
 
                 if window.start == nil {
-                    note = "Add an initial tank or full fill-up to start accurate tracking."
+                    note = "Add a full fill-up to begin consumption tracking."
                 } else if window.isBroken {
                     status = .invalid
                     note = "Sequence is incomplete until the next full fill-up."
@@ -315,7 +315,7 @@ enum FuelLogEngine {
                 }
 
                 if window.start == nil {
-                    note = "Starting point for the next accurate cycle."
+                    note = "Begins a new fuel cycle."
                     window.reset(start: entry)
                 } else if window.isBroken {
                     status = .invalid

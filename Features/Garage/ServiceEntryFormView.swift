@@ -10,6 +10,7 @@ struct ServiceEntryFormView: View {
     @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
     @Query private var attachments: [AttachmentRecord]
     @Query private var documents: [DocumentRecord]
+    @Query(sort: \ReminderItem.updatedAt, order: .reverse) private var reminders: [ReminderItem]
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
 
     private let entry: ServiceEntry?
@@ -360,11 +361,11 @@ struct ServiceEntryFormView: View {
             Button("Custom") {
                 showingCustomReminder = true
             }
-            Button("Not now", role: .cancel) {
+            Button("Skip") {
                 dismiss()
             }
         } message: {
-            Text("Keep the next \(serviceType.title.lowercased()) visible before it slips." )
+            Text("Keep the next \(serviceType.title.lowercased()) visible before it slips.")
         }
         .sheet(isPresented: $showingCustomReminder, onDismiss: {
             dismiss()
@@ -442,6 +443,10 @@ struct ServiceEntryFormView: View {
 
     private func saveEntry() async {
         guard let vehicle = selectedVehicle, let mileageValue = UnitFormatter.parseDistance(mileage) else { return }
+        let originalEntryID = entry?.id
+        let originalDate = entry?.date
+        let originalMileage = entry?.mileage
+        let originalReminderTitle = entry.map { "\($0.displayTitle) due" }
 
         let removedCount = removedAttachmentIDs.count
         let netExistingDocuments = max(0, savedDocumentCount - removedCount)
@@ -487,16 +492,30 @@ struct ServiceEntryFormView: View {
                 targetEntry = newEntry
             }
 
-            vehicle.currentMileage = max(vehicle.currentMileage, mileageValue)
+            let maxFuelMileage = vehicle.fuelEntries.map(\.mileage).max() ?? 0
+            let maxServiceMileage = vehicle.serviceEntries
+                .filter { $0.id != entry?.id }
+                .map(\.mileage)
+                .max() ?? 0
+            vehicle.currentMileage = max(max(maxFuelMileage, maxServiceMileage), mileageValue)
             vehicle.updatedAt = .now
 
             try await persistDraftAttachments(for: targetEntry, vehicle: vehicle)
             purgeRemovedAttachments(from: targetEntry)
+            if let originalEntryID, let originalDate, let originalMileage {
+                await syncLinkedReminders(
+                    for: originalEntryID,
+                    updatedEntry: targetEntry,
+                    originalDate: originalDate,
+                    originalMileage: originalMileage,
+                    originalReminderTitle: originalReminderTitle
+                )
+            }
 
             try? modelContext.save()
             Haptics.success()
 
-            if serviceType.supportsReminderSuggestion {
+            if serviceType.supportsReminderSuggestion, existingSuggestedReminder(for: targetEntry) == nil {
                 savedEntryForReminder = targetEntry
                 showingReminderSuggestion = true
             } else {
@@ -504,6 +523,74 @@ struct ServiceEntryFormView: View {
             }
         } catch {
             Haptics.error()
+        }
+    }
+
+    private func syncLinkedReminders(
+        for serviceEntryID: UUID,
+        updatedEntry: ServiceEntry,
+        originalDate: Date,
+        originalMileage: Int,
+        originalReminderTitle: String?
+    ) async {
+        let calendar = Calendar.current
+        let originalServiceDate = calendar.startOfDay(for: originalDate)
+        let updatedServiceDate = calendar.startOfDay(for: updatedEntry.date)
+        let vehicleName = updatedEntry.vehicle?.title ?? "Vehicle"
+        let generatedReminderTitle = "\(updatedEntry.displayTitle) due"
+        let originalGeneratedTitle = originalReminderTitle ?? "\(updatedEntry.displayTitle) due"
+        let linkedReminders = reminders.filter { reminder in
+            let reminderTitle = reminder.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            let titleMatches = reminderTitle == generatedReminderTitle || reminderTitle == originalGeneratedTitle
+            let serviceMatches = reminder.linkedServiceEntryID == serviceEntryID || reminder.serviceEntry?.id == serviceEntryID
+            let vehicleMatches = reminder.vehicle?.id == updatedEntry.vehicle?.id || reminder.vehicle == nil
+            let typeMatches = reminder.type == ReminderType(serviceType: updatedEntry.serviceType)
+            return vehicleMatches && typeMatches && (serviceMatches || titleMatches)
+        }
+
+        guard !linkedReminders.isEmpty else { return }
+
+        for reminder in linkedReminders {
+            if reminder.linkedServiceEntryID == nil {
+                reminder.linkedServiceEntryID = serviceEntryID
+            }
+            if reminder.linkedServiceDate == nil {
+                reminder.linkedServiceDate = originalDate
+            }
+            if reminder.linkedServiceMileage == nil {
+                reminder.linkedServiceMileage = originalMileage
+            }
+
+            var didChange = false
+
+            if let currentDateDue = reminder.dateDue {
+                let offset = calendar.dateComponents([.year, .month, .day], from: originalServiceDate, to: calendar.startOfDay(for: currentDateDue))
+                if let updatedDateDue = calendar.date(byAdding: offset, to: updatedServiceDate),
+                   updatedDateDue != currentDateDue {
+                    reminder.dateDue = updatedDateDue
+                    didChange = true
+                }
+            }
+
+            if let currentMileageDue = reminder.mileageDue {
+                let mileageOffset = currentMileageDue - originalMileage
+                let updatedMileageDue = updatedEntry.mileage + mileageOffset
+                if updatedMileageDue != currentMileageDue {
+                    reminder.mileageDue = updatedMileageDue
+                    didChange = true
+                }
+            }
+
+            guard didChange else { continue }
+            reminder.updatedAt = .now
+
+            if reminder.isEnabled, reminder.dateDue != nil {
+                NotificationService.shared.cancel(identifier: reminder.notificationIdentifier)
+                reminder.notificationIdentifier = await NotificationService.shared.schedule(for: reminder, vehicleName: vehicleName)
+            } else {
+                NotificationService.shared.cancel(identifier: reminder.notificationIdentifier)
+                reminder.notificationIdentifier = nil
+            }
         }
     }
 
@@ -559,21 +646,70 @@ struct ServiceEntryFormView: View {
 
         let dateDue = months.map { Calendar.current.date(byAdding: .month, value: $0, to: serviceEntry.date) ?? serviceEntry.date }
         let mileageDue = kilometers.map { serviceEntry.mileage + $0 }
-        let reminder = ReminderItem(
-            vehicle: vehicle,
-            serviceEntry: serviceEntry,
-            type: ReminderType(serviceType: serviceType),
-            title: "\(serviceEntry.displayTitle) due",
-            dateDue: dateDue,
-            mileageDue: mileageDue,
-            notificationTiming: .sevenDaysBefore,
-            isEnabled: true
-        )
-        modelContext.insert(reminder)
+        let matchingReminders = reminders.filter { reminder in
+            reminder.vehicle?.id == vehicle.id &&
+            reminder.type == ReminderType(serviceType: serviceType) &&
+            (
+                reminder.linkedServiceEntryID == serviceEntry.id ||
+                reminder.serviceEntry?.id == serviceEntry.id ||
+                reminder.title.trimmingCharacters(in: .whitespacesAndNewlines) == "\(serviceEntry.displayTitle) due"
+            )
+        }
+
+        let reminder: ReminderItem
+        if let existing = matchingReminders.first {
+            reminder = existing
+            for duplicate in matchingReminders.dropFirst() {
+                modelContext.delete(duplicate)
+            }
+        } else {
+            let newReminder = ReminderItem(
+                vehicle: vehicle,
+                serviceEntry: serviceEntry,
+                linkedServiceEntryID: serviceEntry.id,
+                linkedServiceDate: serviceEntry.date,
+                linkedServiceMileage: serviceEntry.mileage,
+                type: ReminderType(serviceType: serviceType),
+                title: "\(serviceEntry.displayTitle) due",
+                dateDue: dateDue,
+                mileageDue: mileageDue,
+                notificationTiming: .sevenDaysBefore,
+                isEnabled: true
+            )
+            modelContext.insert(newReminder)
+            reminder = newReminder
+        }
+
+        reminder.vehicle = vehicle
+        reminder.serviceEntry = serviceEntry
+        reminder.linkedServiceEntryID = serviceEntry.id
+        reminder.linkedServiceDate = serviceEntry.date
+        reminder.linkedServiceMileage = serviceEntry.mileage
+        reminder.type = ReminderType(serviceType: serviceType)
+        reminder.title = "\(serviceEntry.displayTitle) due"
+        reminder.dateDue = dateDue
+        reminder.mileageDue = mileageDue
+        reminder.notificationTiming = .sevenDaysBefore
+        reminder.isEnabled = true
+        reminder.updatedAt = .now
+
         Task {
+            NotificationService.shared.cancel(identifier: reminder.notificationIdentifier)
             reminder.notificationIdentifier = await NotificationService.shared.schedule(for: reminder, vehicleName: vehicle.title)
             try? modelContext.save()
         }
         dismiss()
+    }
+
+    private func existingSuggestedReminder(for serviceEntry: ServiceEntry) -> ReminderItem? {
+        reminders.first { reminder in
+            reminder.vehicle?.id == serviceEntry.vehicle?.id &&
+            reminder.type == ReminderType(serviceType: serviceEntry.serviceType) &&
+            (
+                reminder.linkedServiceEntryID == serviceEntry.id ||
+                reminder.serviceEntry?.id == serviceEntry.id ||
+                reminder.title.trimmingCharacters(in: .whitespacesAndNewlines) == "\(serviceEntry.displayTitle) due"
+            )
+        }
     }
 }

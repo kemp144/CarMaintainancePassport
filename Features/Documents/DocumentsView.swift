@@ -76,44 +76,77 @@ struct DocumentsView: View {
         let pagesCount = documentItems.reduce(0) { $0 + $1.pageCount }
         let linkedCount = documentItems.filter { $0.serviceTitle != nil }.count
 
-        return SurfaceCard {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text("Digital glovebox")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(AppTheme.primaryText)
-                    Spacer()
-                    Text("\(documentsCount) saved")
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(AppTheme.secondaryText)
-                }
+        let typeLabel1 = filter == .all ? "Documents" : (filter == .images ? "Photo documents" : "PDF documents")
+        let typeLabel2 = filter == .all ? "Attachments" : (filter == .images ? "Photos" : "PDFs")
+        
+        let tabDescription: String
+        switch filter {
+        case .all: tabDescription = "Showing all documents"
+        case .images: tabDescription = "Showing photos only"
+        case .pdfs: tabDescription = "Showing PDFs only"
+        }
 
-                HStack(spacing: 12) {
-                    SummaryStatTile(title: "Documents", value: "\(documentsCount)", icon: "doc.fill")
-                    SummaryStatTile(title: "Files", value: "\(pagesCount)", icon: "square.stack.3d.up.fill")
-                    SummaryStatTile(title: "Linked", value: "\(linkedCount)", icon: "link")
-                }
+        return SurfaceCard(padding: 16) {
+            VStack(alignment: .leading, spacing: 14) {
+                // Tab-specific stats
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Digital glovebox")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(AppTheme.primaryText)
+                        Spacer()
+                        Text(tabDescription)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
 
-                if let savedDocumentLimit, !entitlementStore.canUseUnlimitedDocuments() {
-                    HStack(spacing: 8) {
-                        Text("\(savedDocumentCount) of \(savedDocumentLimit) saved items used")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(hasReachedFreeDocumentLimit ? AppTheme.accent : AppTheme.secondaryText)
-
-                        if hasReachedFreeDocumentLimit {
-                            Text("Pro")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(AppTheme.accent)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
-                        }
+                    HStack(spacing: 12) {
+                        SummaryStatTile(title: typeLabel1, value: "\(documentsCount)", icon: "doc.fill")
+                        SummaryStatTile(title: typeLabel2, value: "\(pagesCount)", icon: "paperclip")
+                        SummaryStatTile(title: "Linked", value: "\(linkedCount)", icon: "link")
                     }
                 }
 
-                Text("Store receipts, PDFs, and service paperwork with the right car.")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.tertiaryText)
+                // Global free plan info & Supporting copy
+                VStack(alignment: .leading, spacing: 6) {
+                    Divider().background(AppTheme.separator).padding(.vertical, 4)
+
+                    if entitlementStore.canUseUnlimitedDocuments() {
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.accent)
+                            Text("Pro active: Unlimited document storage")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(AppTheme.primaryText)
+                        }
+                    } else if let savedDocumentLimit = savedDocumentLimit {
+                        HStack(alignment: .center, spacing: 6) {
+                            Text("Free plan")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(AppTheme.primaryText)
+                            
+                            Text("•")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.tertiaryText)
+
+                            Text("\(savedDocumentCount)/\(savedDocumentLimit) document slots used")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(hasReachedFreeDocumentLimit ? AppTheme.accent : AppTheme.secondaryText)
+                            
+                            Spacer()
+                        }
+
+                        Text("Each saved document can include one or more photos or PDFs.")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.tertiaryText)
+                    }
+
+                    Text("Keep receipts, PDFs, and service paperwork organized with the right vehicle.")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.secondaryText)
+                        .padding(.top, 2)
+                }
             }
         }
     }
@@ -170,7 +203,7 @@ struct DocumentsView: View {
                             .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
                     }
 
-                    Text("Pro adds unlimited storage and OCR receipt capture.")
+                    Text("Explore Pro for unlimited storage and OCR receipt capture.")
                         .font(.caption)
                         .foregroundStyle(AppTheme.secondaryText)
                 }
@@ -184,6 +217,38 @@ struct DocumentsView: View {
                 .foregroundStyle(AppTheme.accent)
             }
         }
+    }
+
+    private var emptyStateCard: some View {
+        let title: String
+        let message: String
+        let actionTitle: String
+        
+        switch filter {
+        case .all:
+            title = "Keep paperwork together"
+            message = "Store receipts, service records, and vehicle documents in one place."
+            actionTitle = "Add Files"
+        case .images:
+            title = "No photo documents yet"
+            message = "Add photos of receipts, inspections, or service paperwork for this vehicle."
+            actionTitle = "Add Photos"
+        case .pdfs:
+            title = "No PDF documents yet"
+            message = "Import invoices, reports, and paperwork as PDFs for this vehicle."
+            actionTitle = "Add PDFs"
+        }
+
+        return EmptyStateCard(
+            icon: filter == .images ? "photo.on.rectangle.angled" : (filter == .pdfs ? "doc.richtext.fill" : "doc.on.doc.fill"),
+            title: title,
+            message: message,
+            actionTitle: actionTitle,
+            verticalPadding: 28
+        ) {
+            presentAddFiles()
+        }
+        .disabled(vehicles.isEmpty)
     }
 
     var body: some View {
@@ -206,22 +271,11 @@ struct DocumentsView: View {
                                     documentLimitCard
                                 }
 
-                                EmptyStateCard(
-                                    icon: "doc.on.doc.fill",
-                                    title: "Keep paperwork together",
-                                    message: entitlementStore.canUseDocumentOCR()
-                                        ? "Scan a receipt, or add photos and PDFs."
-                                        : "Add photos and PDFs to keep receipts and records together.",
-                                    actionTitle: "Add Files",
-                                    verticalPadding: 28
-                                ) {
-                                    presentAddFiles()
-                                }
-                                .disabled(vehicles.isEmpty)
+                                emptyStateCard
                             }
                             .padding(.horizontal, AppTheme.Spacing.pageEdge)
                             .padding(.top, 8)
-                            .padding(.bottom, 24)
+                            .padding(.bottom, 120) // Ensure spacing above search bar
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     } else {
@@ -241,7 +295,7 @@ struct DocumentsView: View {
                             }
                             .padding(.horizontal, AppTheme.Spacing.pageEdge)
                             .padding(.top, 8)
-                            .padding(.bottom, 24)
+                            .padding(.bottom, 120) // Ensure spacing above search bar
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     }
@@ -339,68 +393,71 @@ struct DocumentsView: View {
 
     private func documentRow(for item: DocumentListItem) -> some View {
         SurfaceCard(padding: 14) {
-            HStack(spacing: 14) {
+            HStack(alignment: .top, spacing: 14) {
                 DocumentThumbnailView(
                     previewReference: item.thumbnailReference ?? item.previewReference,
                     fallbackType: item.type,
                     pageCount: item.pageCount
                 )
+                .padding(.top, 2)
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(item.title)
-                        .font(.headline.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppTheme.primaryText)
                         .lineLimit(1)
+                        .truncationMode(.tail)
 
                     HStack(spacing: 6) {
-                        if let category = item.categoryTitle {
-                            Text(category)
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(AppTheme.accent)
-                            Text("•")
-                                .foregroundStyle(AppTheme.tertiaryText)
-                        }
-
+                        Text(item.type.title)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.primaryText)
+                        
+                        Text("•")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.tertiaryText)
+                            
                         Text(item.vehicleTitle)
-                            .font(.subheadline)
+                            .font(.caption)
                             .foregroundStyle(AppTheme.secondaryText)
                             .lineLimit(1)
+                            .truncationMode(.tail)
                     }
 
-                    Text("\(item.type.title) • \(AppFormatters.mediumDate.string(from: item.createdAt))")
-                        .font(.caption)
+                    Text(AppFormatters.mediumDate.string(from: item.createdAt))
+                        .font(.caption2)
                         .foregroundStyle(AppTheme.tertiaryText)
 
                     if let serviceTitle = item.serviceTitle {
-                        Label(serviceTitle, systemImage: "link")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(AppTheme.accentSecondary)
-                            .lineLimit(1)
+                        HStack(spacing: 4) {
+                            Image(systemName: "link")
+                                .font(.system(size: 9, weight: .bold))
+                            Text(serviceTitle)
+                                .font(.caption2.weight(.medium))
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(AppTheme.accent)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(AppTheme.accent.opacity(0.12)))
+                        .padding(.top, 2)
                     }
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 8) {
-                    Text("\(item.pageCount) \(item.pageCount == 1 ? "file" : "files")")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(AppTheme.primaryText)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Capsule().fill(AppTheme.surfaceSecondary))
-
-                    Menu {
-                        Button(role: .destructive) {
-                            deleteTarget = item.selection
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
+                Menu {
+                    Button(role: .destructive) {
+                        deleteTarget = item.selection
                     } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(AppTheme.secondaryText)
-                            .frame(width: 28, height: 28)
+                        Label("Delete", systemImage: "trash")
                     }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(AppTheme.tertiaryText)
+                        .frame(width: 32, height: 32, alignment: .topTrailing)
+                        .contentShape(Rectangle())
                 }
             }
         }

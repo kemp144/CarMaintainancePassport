@@ -6,6 +6,8 @@ struct CarServicePassportApp: App {
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("settings.autoBackup") private var autoBackupEnabled = false
     @AppStorage("dataRecovery.pendingNotice") private var pendingRecoveryNotice = ""
+    @AppStorage("reminder.linkedServiceRepair.v1") private var didRepairLinkedServiceReminders = false
+    @AppStorage("reminder.linkedServiceCleanup.v1") private var didCleanupLinkedServiceReminders = false
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var entitlementStore = EntitlementStore()
     @StateObject private var paywallCoordinator = PaywallCoordinator()
@@ -35,6 +37,8 @@ struct CarServicePassportApp: App {
             .modelContainer(modelContainer)
             .task {
                 await entitlementStore.prepare()
+                await repairLinkedServiceRemindersIfNeeded()
+                await cleanupDuplicateLinkedServiceRemindersIfNeeded()
             }
             .sheet(item: $paywallCoordinator.reason, onDismiss: {
                 paywallCoordinator.dismiss()
@@ -155,6 +159,80 @@ struct CarServicePassportApp: App {
             )
         } catch {
             // silent — auto backup failure should not interrupt the user
+        }
+    }
+
+    @MainActor
+    private func repairLinkedServiceRemindersIfNeeded() async {
+        guard !didRepairLinkedServiceReminders else { return }
+
+        do {
+            let context = modelContainer.mainContext
+            let services = try context.fetch(FetchDescriptor<ServiceEntry>())
+            let reminders = try context.fetch(FetchDescriptor<ReminderItem>())
+            let calendar = Calendar.current
+
+            for service in services {
+                let expectedTitle = "\(service.displayTitle) due"
+                let repairedDate = calendar.date(byAdding: .month, value: 12, to: service.date)
+
+                for reminder in reminders {
+                    let reminderTitle = reminder.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let titleMatches = reminderTitle == expectedTitle
+                    let serviceMatches = reminder.serviceEntry?.id == service.id || reminder.linkedServiceEntryID == service.id
+                    let vehicleMatches = reminder.vehicle?.id == service.vehicle?.id
+
+                    guard vehicleMatches, titleMatches || serviceMatches else { continue }
+
+                    reminder.linkedServiceEntryID = service.id
+                    reminder.linkedServiceDate = service.date
+                    reminder.linkedServiceMileage = service.mileage
+
+                    if let repairedDate {
+                        reminder.dateDue = repairedDate
+                    }
+
+                    reminder.updatedAt = .now
+
+                    if reminder.isEnabled, reminder.dateDue != nil, let vehicle = reminder.vehicle {
+                        NotificationService.shared.cancel(identifier: reminder.notificationIdentifier)
+                        reminder.notificationIdentifier = await NotificationService.shared.schedule(for: reminder, vehicleName: vehicle.title)
+                    }
+                }
+            }
+
+            try? context.save()
+            didRepairLinkedServiceReminders = true
+        } catch {
+            // If repair fails, we just try again on next launch.
+        }
+    }
+
+    @MainActor
+    private func cleanupDuplicateLinkedServiceRemindersIfNeeded() async {
+        guard !didCleanupLinkedServiceReminders else { return }
+
+        do {
+            let context = modelContainer.mainContext
+            let reminders = try context.fetch(FetchDescriptor<ReminderItem>())
+            let grouped = Dictionary(grouping: reminders) { $0.deduplicationKey }
+
+            for (_, items) in grouped where items.count > 1 {
+                let sorted = items.sorted {
+                    if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+                    if $0.createdAt != $1.createdAt { return $0.createdAt > $1.createdAt }
+                    return $0.id.uuidString < $1.id.uuidString
+                }
+
+                for duplicate in sorted.dropFirst() {
+                    context.delete(duplicate)
+                }
+            }
+
+            try? context.save()
+            didCleanupLinkedServiceReminders = true
+        } catch {
+            // If cleanup fails, we can try again on next launch.
         }
     }
 }

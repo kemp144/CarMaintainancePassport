@@ -178,6 +178,9 @@ struct BackupExportService {
                 id: br.id,
                 vehicle: vehicle,
                 serviceEntry: serviceEntry,
+                linkedServiceEntryID: br.linkedServiceEntryID ?? br.serviceEntryID,
+                linkedServiceDate: br.linkedServiceDate,
+                linkedServiceMileage: br.linkedServiceMileage,
                 type: ReminderType(rawValue: br.type) ?? .custom,
                 title: br.title,
                 notes: br.notes,
@@ -316,6 +319,9 @@ struct BackupReminder: Codable {
     let id: UUID
     let vehicleID: UUID?
     let serviceEntryID: UUID?
+    let linkedServiceEntryID: UUID?
+    let linkedServiceDate: Date?
+    let linkedServiceMileage: Int?
     let type: String
     let title: String
     let notes: String
@@ -330,6 +336,9 @@ struct BackupReminder: Codable {
         id = reminder.id
         vehicleID = reminder.vehicle?.id
         serviceEntryID = reminder.serviceEntry?.id
+        linkedServiceEntryID = reminder.linkedServiceEntryID
+        linkedServiceDate = reminder.linkedServiceDate
+        linkedServiceMileage = reminder.linkedServiceMileage
         type = reminder.typeRaw
         title = reminder.title
         notes = reminder.notes

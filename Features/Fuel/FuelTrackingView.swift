@@ -152,18 +152,45 @@ struct FuelTrackingView: View {
     }
 
     private var fuelProTeaser: some View {
-        LockedInsightCard(
-            title: "See your real fuel efficiency",
-            message: "Your history is already useful. Pro adds the long-term view that makes fuel costs easier to understand.",
-            highlights: [
-                "Long-term average consumption",
-                "Trend charts and period filters",
-                "Efficiency insights and OCR receipts"
-            ],
-            ctaTitle: "Unlock Pro",
-            previewText: fuelPreviewText
-        ) {
-            paywallCoordinator.present(.fuelTracking)
+        VStack(alignment: .leading, spacing: 12) {
+            if let consumption = analysis.insights.lastValidConsumption.value {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                    Text("Your recent average is \(AppFormatters.consumption(consumption))")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+                .padding(.horizontal, 4)
+            } else if analysis.insights.validCycleCount >= 3 {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                    Text("You already have \(analysis.insights.validCycleCount) valid fill-up cycles.")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+                .padding(.horizontal, 4)
+            }
+
+            RefinedLockedInsightCard(
+                title: "See your real fuel efficiency",
+                message: "Your history is already useful. Pro adds the long-term view that makes fuel costs easier to understand.",
+                highlights: [
+                    "Long-term average consumption",
+                    "Trend charts and period filters",
+                    "Efficiency insights and OCR receipts"
+                ],
+                ctaTitle: "Unlock Pro"
+            ) {
+                AnalyticsService.shared.track(event: .upgrade_from_fuel_trend, properties: [
+                    "cycle_count": analysis.insights.validCycleCount,
+                    "has_avg": analysis.insights.lastValidConsumption.value != nil
+                ])
+                paywallCoordinator.present(.fuelTracking)
+            }
         }
     }
 
@@ -253,7 +280,7 @@ struct FuelTrackingView: View {
             EmptyStateCard(
                 icon: "fuelpump.fill",
                 title: "Log your first fuel entry",
-                message: "Use an initial tank if you are starting with a full tank already, or add the next full fill-up as your starting point.",
+                message: "Use a full fill-up if you are starting with a full tank already, or add the next full fill-up to begin tracking.",
                 actionTitle: "Add Fuel"
             ) {
                 showingAddFuel = true
@@ -578,8 +605,10 @@ struct FuelTrackingView: View {
                                 value: insight?.pricePerLiter.map { UnitFormatter.costPerFuelUnitCurrency($0, currencyCode: entry.currencyCode) } ?? "—"
                             )
                             expandedMetric(
-                                title: "Since Prev",
-                                value: insight?.distanceSincePreviousEntryKm.map(AppFormatters.mileage) ?? "—"
+                                title: "Distance since previous fuel entry",
+                                value: insight?.distanceSincePreviousEntryKm.map(AppFormatters.mileage) ?? "—",
+                                detail: "Calculated from nearby fuel timeline entries.",
+                                isReadOnly: true
                             )
 
                             expandedMetric(
@@ -636,14 +665,35 @@ struct FuelTrackingView: View {
             )
     }
 
-    private func expandedMetric(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(.caption2)
-                .foregroundStyle(AppTheme.tertiaryText)
+    private func expandedMetric(title: String, value: String, detail: String? = nil, isReadOnly: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(title)
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.tertiaryText)
+
+                if isReadOnly {
+                    Text("Read-only")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(AppTheme.accent.opacity(0.12))
+                        )
+                }
+            }
+
             Text(value)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(AppTheme.primaryText)
+
+            if let detail {
+                Text(detail)
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.tertiaryText)
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)

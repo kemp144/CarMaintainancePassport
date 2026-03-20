@@ -22,6 +22,14 @@ struct GarageView: View {
     private var singleTrackedVehicle: Vehicle? {
         vehicles.count == 1 ? vehicles.first : nil
     }
+    
+    private var unlockedVehicle: Vehicle? {
+        if entitlementStore.hasProAccess { return nil } // Only relevant for free mode
+        if vehicles.isEmpty { return nil }
+        
+        // Find most recently updated (since we already query by updatedAt reverse)
+        return vehicles.first
+    }
 
     private var filteredVehicles: [Vehicle] {
         let searched = vehicles.filter { vehicle in
@@ -116,6 +124,7 @@ struct GarageView: View {
                                 addVehicleTapped()
                             }
                             .padding(AppTheme.Spacing.pageEdge)
+                            .padding(.top, 20)
                         } else {
                             ContentUnavailableView {
                                 Label("No vehicles found", systemImage: "magnifyingglass")
@@ -126,22 +135,49 @@ struct GarageView: View {
                         }
                     } else {
                         LazyVStack(spacing: 14) {
+                            if !entitlementStore.hasProAccess && vehicles.count > 1 {
+                                SurfaceCard(tier: .compact, padding: 12) {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "info.circle.fill")
+                                            .foregroundStyle(AppTheme.accentSecondary)
+                                        Text("Free includes 1 active vehicle. Your other vehicles are safely saved and can be unlocked again with Pro.")
+                                            .font(.caption.weight(.medium))
+                                            .foregroundStyle(AppTheme.secondaryText)
+                                            .lineLimit(2)
+                                    }
+                                }
+                            }
+
                             if let vehicle = singleTrackedVehicle, !entitlementStore.hasProAccess {
                                 singleVehicleGarageSnapshot(for: vehicle)
                                 singleVehicleComparisonTeaser
                             }
 
                             ForEach(filteredVehicles) { vehicle in
-                                NavigationLink {
-                                    VehicleDetailView(vehicle: vehicle)
-                                } label: {
-                                    VehicleRowCard(vehicle: vehicle)
+                                let isLocked = !entitlementStore.hasProAccess && vehicles.count > 1 && vehicle.id != unlockedVehicle?.id
+                                
+                                if isLocked {
+                                    Button {
+                                        ContextualPaywallTrigger.trackAndPresent(
+                                            reason: .lockedVehicle,
+                                            coordinator: paywallCoordinator
+                                        )
+                                    } label: {
+                                        VehicleRowCard(vehicle: vehicle, isLocked: true)
+                                    }
+                                    .buttonStyle(.plain)
+                                } else {
+                                    NavigationLink {
+                                        VehicleDetailView(vehicle: vehicle)
+                                    } label: {
+                                        VehicleRowCard(vehicle: vehicle, isLocked: false)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
                         .padding(.horizontal, AppTheme.Spacing.pageEdge)
-                        .padding(.top, 6)
+                        .padding(.top, 16)
                         .padding(.bottom, 120) // Space for FAB and TabBar
                     }
                 }
