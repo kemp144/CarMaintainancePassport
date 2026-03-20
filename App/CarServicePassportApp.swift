@@ -8,6 +8,7 @@ struct CarServicePassportApp: App {
     @AppStorage("dataRecovery.pendingNotice") private var pendingRecoveryNotice = ""
     @AppStorage("reminder.linkedServiceRepair.v1") private var didRepairLinkedServiceReminders = false
     @AppStorage("reminder.linkedServiceCleanup.v1") private var didCleanupLinkedServiceReminders = false
+    @AppStorage("vehicle.mileageTimelineRepair.v1") private var didRepairVehicleMileageTimeline = false
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var entitlementStore = EntitlementStore()
     @StateObject private var paywallCoordinator = PaywallCoordinator()
@@ -37,6 +38,7 @@ struct CarServicePassportApp: App {
             .modelContainer(modelContainer)
             .task {
                 await entitlementStore.prepare()
+                await repairVehicleMileageTimelineIfNeeded()
                 await repairLinkedServiceRemindersIfNeeded()
                 await cleanupDuplicateLinkedServiceRemindersIfNeeded()
             }
@@ -159,6 +161,25 @@ struct CarServicePassportApp: App {
             )
         } catch {
             // silent — auto backup failure should not interrupt the user
+        }
+    }
+
+    @MainActor
+    private func repairVehicleMileageTimelineIfNeeded() async {
+        guard !didRepairVehicleMileageTimeline else { return }
+
+        do {
+            let context = modelContainer.mainContext
+            let vehicles = try context.fetch(FetchDescriptor<Vehicle>())
+
+            for vehicle in vehicles {
+                VehicleMileageResolver.recalculateCurrentMileage(for: vehicle, updateTimestamp: nil)
+            }
+
+            try? context.save()
+            didRepairVehicleMileageTimeline = true
+        } catch {
+            // If repair fails, we try again on next launch.
         }
     }
 

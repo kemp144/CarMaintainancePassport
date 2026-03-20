@@ -143,9 +143,7 @@ extension Vehicle {
 
     /// The date of the entry that established the current mileage high-water mark.
     var latestMileageDate: Date? {
-        let fuelDates = fuelEntries.filter { $0.mileage == currentMileage }.map(\.date)
-        let serviceDates = serviceEntries.filter { $0.mileage == currentMileage }.map(\.date)
-        return (fuelDates + serviceDates).max()
+        VehicleMileageResolver.lastKnownMileageDate(for: self)
     }
 
     var sortedFuelEntries: [FuelEntry] {
@@ -158,5 +156,159 @@ extension Vehicle {
 
     var totalFuelLiters: Double {
         FuelAnalyticsService.summary(for: fuelEntries).totalLiters
+    }
+
+    var resolvedCurrentMileage: Int? {
+        VehicleMileageResolver.currentMileage(for: self)
+    }
+
+    var currentMileageDisplayString: String {
+        VehicleMileageResolver.displayCurrentMileage(for: self)
+    }
+}
+
+struct VehicleManualMileageSnapshot: Codable {
+    let mileage: Int
+    let updatedAt: Date
+}
+
+enum VehicleManualMileageStore {
+    private static let storageKey = "vehicle.manualMileageSnapshots.v1"
+
+    static func manualMileageSnapshot(for vehicle: Vehicle) -> VehicleManualMileageSnapshot? {
+        loadSnapshots()[vehicle.id.uuidString]
+    }
+
+    static func manualMileage(for vehicle: Vehicle) -> Int? {
+        manualMileageSnapshot(for: vehicle)?.mileage
+    }
+
+    static func setManualMileage(_ mileage: Int?, for vehicle: Vehicle, at updatedAt: Date = .now) {
+        var snapshots = loadSnapshots()
+        let key = vehicle.id.uuidString
+
+        if let mileage {
+            snapshots[key] = VehicleManualMileageSnapshot(mileage: mileage, updatedAt: updatedAt)
+        } else {
+            snapshots.removeValue(forKey: key)
+        }
+
+        saveSnapshots(snapshots)
+    }
+
+    static func seedLegacyManualMileageIfNeeded(for vehicle: Vehicle) {
+        guard manualMileageSnapshot(for: vehicle) == nil else { return }
+        guard vehicle.currentMileage > 0 else { return }
+
+        let hasTimelineEntries = vehicle.fuelEntries.contains(where: { $0.mileage > 0 })
+            || vehicle.serviceEntries.contains(where: { $0.mileage > 0 })
+        guard !hasTimelineEntries else { return }
+
+        setManualMileage(vehicle.currentMileage, for: vehicle, at: vehicle.updatedAt)
+    }
+
+    private static func loadSnapshots() -> [String: VehicleManualMileageSnapshot] {
+        guard
+            let data = UserDefaults.standard.data(forKey: storageKey),
+            let decoded = try? JSONDecoder().decode([String: VehicleManualMileageSnapshot].self, from: data)
+        else {
+            return [:]
+        }
+
+        return decoded
+    }
+
+    private static func saveSnapshots(_ snapshots: [String: VehicleManualMileageSnapshot]) {
+        guard let encoded = try? JSONEncoder().encode(snapshots) else { return }
+        UserDefaults.standard.set(encoded, forKey: storageKey)
+    }
+}
+
+enum VehicleMileageResolver {
+    struct MileageEvent {
+        let mileage: Int
+        let date: Date
+        let updatedAt: Date
+        let createdAt: Date
+        let sourcePriority: Int
+        let stableID: String
+    }
+
+    static func currentMileage(for vehicle: Vehicle) -> Int? {
+        latestMileageEvent(for: vehicle)?.mileage ?? VehicleManualMileageStore.manualMileage(for: vehicle)
+    }
+
+    static func displayCurrentMileage(for vehicle: Vehicle) -> String {
+        currentMileage(for: vehicle).map(AppFormatters.mileage) ?? "Mileage not set"
+    }
+
+    static func lastKnownMileageDate(for vehicle: Vehicle) -> Date? {
+        latestMileageEvent(for: vehicle)?.date
+    }
+
+    static func latestMileageEvent(for vehicle: Vehicle) -> MileageEvent? {
+        VehicleManualMileageStore.seedLegacyManualMileageIfNeeded(for: vehicle)
+        return mileageEvents(for: vehicle).max(by: isEarlier(_:than:))
+    }
+
+    static func recalculateCurrentMileage(for vehicle: Vehicle, updateTimestamp: Date? = .now) {
+        VehicleManualMileageStore.seedLegacyManualMileageIfNeeded(for: vehicle)
+
+        if let mileage = currentMileage(for: vehicle) {
+            vehicle.currentMileage = mileage
+        } else {
+            vehicle.currentMileage = 0
+        }
+
+        if let updateTimestamp {
+            vehicle.updatedAt = updateTimestamp
+        }
+    }
+
+    private static func mileageEvents(for vehicle: Vehicle) -> [MileageEvent] {
+        let fuelEvents = vehicle.fuelEntries.compactMap { entry -> MileageEvent? in
+            guard entry.mileage > 0 else { return nil }
+            return MileageEvent(
+                mileage: entry.mileage,
+                date: Calendar.current.startOfDay(for: entry.date),
+                updatedAt: entry.updatedAt,
+                createdAt: entry.createdAt,
+                sourcePriority: 0,
+                stableID: "fuel-\(entry.id.uuidString)"
+            )
+        }
+
+        let serviceEvents = vehicle.serviceEntries.compactMap { entry -> MileageEvent? in
+            guard entry.mileage > 0 else { return nil }
+            return MileageEvent(
+                mileage: entry.mileage,
+                date: Calendar.current.startOfDay(for: entry.date),
+                updatedAt: entry.updatedAt,
+                createdAt: entry.createdAt,
+                sourcePriority: 1,
+                stableID: "service-\(entry.id.uuidString)"
+            )
+        }
+
+        let manualEvent = VehicleManualMileageStore.manualMileageSnapshot(for: vehicle).map { snapshot in
+            MileageEvent(
+                mileage: snapshot.mileage,
+                date: Calendar.current.startOfDay(for: snapshot.updatedAt),
+                updatedAt: snapshot.updatedAt,
+                createdAt: snapshot.updatedAt,
+                sourcePriority: 2,
+                stableID: "manual-\(vehicle.id.uuidString)"
+            )
+        }
+
+        return fuelEvents + serviceEvents + (manualEvent.map { [$0] } ?? [])
+    }
+
+    private static func isEarlier(_ lhs: MileageEvent, than rhs: MileageEvent) -> Bool {
+        if lhs.date != rhs.date { return lhs.date < rhs.date }
+        if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt < rhs.updatedAt }
+        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        if lhs.sourcePriority != rhs.sourcePriority { return lhs.sourcePriority < rhs.sourcePriority }
+        return lhs.stableID < rhs.stableID
     }
 }

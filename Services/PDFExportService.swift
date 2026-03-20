@@ -257,23 +257,45 @@ struct PDFExportService {
     func exportCSV(for vehicle: Vehicle) throws -> URL {
         let filename = "\(vehicle.make)-\(vehicle.model)-history.csv".replacingOccurrences(of: " ", with: "-")
         let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-        
-        var csvString = "Date,Service Type,Mileage,Cost,Currency,Workshop,Notes\n"
-        
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        var csvString = [
+            "Date",
+            "Service Type",
+            "Mileage (km)",
+            "Cost",
+            "Currency",
+            "Workshop",
+            "Notes"
+        ]
+        .map(csvField)
+        .joined(separator: ",")
+        + "\n"
+
         for entry in vehicle.sortedServices {
-            let date = AppFormatters.mediumDate.string(from: entry.date)
-            let type = entry.displayTitle.replacingOccurrences(of: ",", with: " ")
-            let mileage = entry.mileage
-            let cost = entry.price
-            let currency = entry.currencyCode
-            let workshop = entry.workshopName.replacingOccurrences(of: ",", with: " ")
-            let notes = entry.notes.replacingOccurrences(of: ",", with: " ").replacingOccurrences(of: "\n", with: " ")
-            
-            csvString += "\(date),\(type),\(mileage),\(cost),\(currency),\(workshop),\(notes)\n"
+            let row = [
+                dateFormatter.string(from: entry.date),
+                entry.displayTitle,
+                String(entry.mileage),
+                String(format: "%.2f", entry.price),
+                entry.currencyCode,
+                entry.workshopName,
+                entry.notes.replacingOccurrences(of: "\n", with: " ")
+            ]
+
+            csvString += row.map(csvField).joined(separator: ",") + "\n"
         }
-        
+
         try csvString.write(to: outputURL, atomically: true, encoding: .utf8)
         return outputURL
+    }
+
+    private func csvField(_ value: String) -> String {
+        "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
     }
 
     private func renderCoverPage(in context: CGContext, bounds: CGRect, vehicle: Vehicle, reminders: [ReminderItem]) {
@@ -318,7 +340,7 @@ struct PDFExportService {
 
         // Vehicle Details
         let details = [
-            ("Current Mileage", AppFormatters.mileage(vehicle.currentMileage)),
+            ("Current Mileage", vehicle.currentMileageDisplayString),
             ("License Plate", vehicle.licensePlate.isEmpty ? "Not recorded" : vehicle.licensePlate),
             ("VIN", vehicle.vin.isEmpty ? "Not recorded" : vehicle.vin),
             ("Purchase Date", vehicle.purchaseDate.map(AppFormatters.mediumDate.string) ?? "Not recorded"),

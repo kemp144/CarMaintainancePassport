@@ -44,6 +44,8 @@ struct ServiceEntryFormView: View {
     @State private var currentReceiptDraft: ScannedReceiptDraft?
     @State private var pendingReceiptImageData: Data?
     @State private var pendingReceiptFilename: String?
+    @State private var validationMessage: String?
+    @State private var showingValidationAlert = false
 
     let autoStartOCR: Bool
     private let initialOCRDraft: ScannedReceiptDraft?
@@ -351,6 +353,11 @@ struct ServiceEntryFormView: View {
         } message: {
             Text("The receipt is still available. You can save it as a document or scan again.")
         }
+        .alert("Couldn’t save service entry", isPresented: $showingValidationAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(validationMessage ?? "Please review the entered values.")
+        }
         .confirmationDialog("Create the next reminder?", isPresented: $showingReminderSuggestion, titleVisibility: .visible) {
             Button("12 months") {
                 createSuggestedReminder(months: 12, kilometers: nil)
@@ -391,7 +398,7 @@ struct ServiceEntryFormView: View {
             self.date = date
         }
         if let mileage = result.mileage {
-            self.mileage = String(mileage)
+            self.mileage = UnitFormatter.distanceValue(Double(mileage))
         }
         if let price = result.price {
             self.price = String(format: "%.0f", price)
@@ -443,6 +450,13 @@ struct ServiceEntryFormView: View {
 
     private func saveEntry() async {
         guard let vehicle = selectedVehicle, let mileageValue = UnitFormatter.parseDistance(mileage) else { return }
+        let today = Calendar.current.startOfDay(for: .now)
+        if Calendar.current.startOfDay(for: date) > today {
+            validationMessage = "Service date cannot be in the future."
+            showingValidationAlert = true
+            return
+        }
+
         let originalEntryID = entry?.id
         let originalDate = entry?.date
         let originalMileage = entry?.mileage
@@ -492,13 +506,7 @@ struct ServiceEntryFormView: View {
                 targetEntry = newEntry
             }
 
-            let maxFuelMileage = vehicle.fuelEntries.map(\.mileage).max() ?? 0
-            let maxServiceMileage = vehicle.serviceEntries
-                .filter { $0.id != entry?.id }
-                .map(\.mileage)
-                .max() ?? 0
-            vehicle.currentMileage = max(max(maxFuelMileage, maxServiceMileage), mileageValue)
-            vehicle.updatedAt = .now
+            VehicleMileageResolver.recalculateCurrentMileage(for: vehicle)
 
             try await persistDraftAttachments(for: targetEntry, vehicle: vehicle)
             purgeRemovedAttachments(from: targetEntry)

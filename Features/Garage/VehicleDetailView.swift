@@ -80,6 +80,20 @@ struct VehicleDetailView: View {
                                     .padding(.bottom, 10)
 
                                 HStack(spacing: 8) {
+                                    Image(systemName: "speedometer")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(AppTheme.accent)
+                                    Text("Current mileage")
+                                        .font(.caption.weight(.medium))
+                                        .foregroundStyle(AppTheme.secondaryText)
+                                    Spacer()
+                                    Text(vehicle.currentMileageDisplayString)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.primaryText)
+                                }
+                                .padding(.bottom, 10)
+
+                                HStack(spacing: 8) {
                                     if !vehicle.licensePlate.isEmpty {
                                         Text(vehicle.licensePlate)
                                             .font(.system(size: 11, design: .monospaced))
@@ -379,11 +393,6 @@ struct VehicleDetailView: View {
         .sheet(isPresented: $showingFuelTracking) {
             NavigationStack {
                 FuelTrackingView(vehicle: vehicle)
-            }
-        }
-        .sheet(isPresented: $showingEdit) {
-            NavigationStack {
-                VehicleFormView(vehicle: vehicle)
             }
         }
         .sheet(item: Binding(get: {
@@ -868,8 +877,8 @@ struct VehicleDetailView: View {
 
     private var vehicleSubtitleLine: String {
         let year = vehicle.year > 0 ? String(vehicle.year) : "Unknown Year"
-        if vehicle.currentMileage > 0 {
-            return "\(year) · \(AppFormatters.mileage(vehicle.currentMileage))"
+        if let currentMileage = vehicle.resolvedCurrentMileage {
+            return "\(year) · \(AppFormatters.mileage(currentMileage))"
         }
         return year
     }
@@ -983,37 +992,32 @@ struct VehicleDetailView: View {
     }
 
     private func exportPDF() {
-        do {
-            exportURL = try PDFExportService.shared.exportPassport(for: vehicle)
-            Haptics.success()
-        } catch {
-            Haptics.error()
+        performExport(.servicePassportPDF) {
+            try PDFExportService.shared.exportPassport(for: vehicle)
         }
     }
 
     private func exportResaleReport() {
-        guard entitlementStore.canExportPDF() else {
-            AnalyticsService.shared.track(event: .upgrade_from_export, properties: ["type": "resale_report"])
-            paywallCoordinator.present(.exportPDF)
-            return
-        }
-        do {
-            exportURL = try PDFExportService.shared.exportResaleReport(for: vehicle)
-            Haptics.success()
-        } catch {
-            Haptics.error()
+        performExport(.resaleReport) {
+            try PDFExportService.shared.exportResaleReport(for: vehicle)
         }
     }
 
     private func exportCSV() {
-        guard entitlementStore.canExportPDF() else {
-            AnalyticsService.shared.track(event: .upgrade_from_export, properties: ["type": "csv"])
+        performExport(.csv) {
+            try PDFExportService.shared.exportCSV(for: vehicle)
+        }
+    }
+
+    private func performExport(_ feature: EntitlementStore.ExportFeature, action: () throws -> URL) {
+        guard entitlementStore.canExport(feature) else {
+            AnalyticsService.shared.track(event: .upgrade_from_export, properties: ["type": feature.rawValue])
             paywallCoordinator.present(.exportPDF)
             return
         }
 
         do {
-            exportURL = try PDFExportService.shared.exportCSV(for: vehicle)
+            exportURL = try action()
             Haptics.success()
         } catch {
             Haptics.error()

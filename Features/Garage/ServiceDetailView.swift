@@ -220,9 +220,7 @@ struct ServiceDetailView: View {
     }
 
     private func deleteEntry() {
-        if let vehicle = entry.vehicle {
-            vehicle.updatedAt = .now
-        }
+        let vehicle = entry.vehicle
         for attachment in entry.attachments {
             Task {
                 await AttachmentStorageService.shared.delete(reference: attachment.storageReference)
@@ -231,6 +229,10 @@ struct ServiceDetailView: View {
         }
         modelContext.delete(entry)
         try? modelContext.save()
+        if let vehicle {
+            VehicleMileageResolver.recalculateCurrentMileage(for: vehicle)
+            try? modelContext.save()
+        }
         dismiss()
     }
 }

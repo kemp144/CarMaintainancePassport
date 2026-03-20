@@ -708,8 +708,10 @@ struct FuelTrackingView: View {
     }
 
     private func deleteEntry(_ entry: FuelEntry) {
+        let vehicle = self.vehicle
         modelContext.delete(entry)
-        recalculateVehicleMileage()
+        try? modelContext.save()
+        VehicleMileageResolver.recalculateCurrentMileage(for: vehicle)
         try? modelContext.save()
         entryToDelete = nil
         showingDeleteConfirmation = false
@@ -721,12 +723,5 @@ struct FuelTrackingView: View {
         }
 
         return analysis.insights.lastValidConsumption.note
-    }
-
-    private func recalculateVehicleMileage() {
-        let fuelMileage = vehicle.fuelEntries.map(\.mileage).max() ?? 0
-        let serviceMileage = vehicle.serviceEntries.map(\.mileage).max() ?? 0
-        vehicle.currentMileage = max(fuelMileage, serviceMileage)
-        vehicle.updatedAt = .now
     }
 }

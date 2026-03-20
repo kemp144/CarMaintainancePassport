@@ -69,7 +69,7 @@ struct FuelEntryValidationResult {
 }
 
 enum FuelEntryValidator {
-    private static let suspiciousPricePerLiterRange = 0.4...4.5
+    private static let suspiciousPricePerLiterRange = 0.15...6.5
 
     static func validate(
         draft: FuelEntryDraft,
@@ -89,29 +89,38 @@ enum FuelEntryValidator {
             errors.append("Odometer cannot be negative.")
         }
 
-        // Warn if the odometer looks like a trip distance instead of an actual reading
-        let highestExisting = entries
-            .filter { $0.id != draft.id }
-            .map(\.mileage)
-            .max() ?? 0
-        if highestExisting > 0, odometer > 0, odometer < highestExisting / 2 {
-            warnings.append("This odometer value (\(UnitFormatter.distance(Double(odometer)))) is much lower than the last recorded reading (\(UnitFormatter.distance(Double(highestExisting)))). Make sure you're entering the full odometer, not a trip distance.")
+        let today = Calendar.current.startOfDay(for: .now)
+        if Calendar.current.startOfDay(for: draft.date) > today {
+            errors.append("Fuel stop date cannot be in the future.")
         }
 
+        // Warn if the odometer looks like a trip distance instead of an actual reading
+        let latestRecordedOdometer = FuelLogEngine.sort(
+            entries
+                .filter { $0.id != draft.id }
+                .map(\.fuelLogRecord)
+        )
+        .last?
+        .odometerKm ?? 0
+        if latestRecordedOdometer > 0, odometer > 0, odometer < latestRecordedOdometer / 2 {
+            warnings.append("This odometer value (\(UnitFormatter.distance(Double(odometer)))) is much lower than the last recorded reading (\(UnitFormatter.distance(Double(latestRecordedOdometer)))). Make sure you're entering the full odometer, not a trip distance.")
+        }
+
+        let displayedFuelUnit = UnitSettings.currentFuelVolumeUnit.title.lowercased()
         let requiresAmounts = draft.entryType.requiresFuelAmounts
         let hasLiters = (draft.liters ?? 0) > 0
         let hasTotalCost = (draft.totalCost ?? 0) > 0
 
         if requiresAmounts {
             if !hasLiters || !hasTotalCost {
-                errors.append("Liters and total price are both required for this fuel entry.")
+                errors.append("\(displayedFuelUnit.capitalized) and total price are both required for this fuel entry.")
             }
         } else if hasLiters != hasTotalCost {
-            errors.append("If you enter liters, please enter the total price too.")
+            errors.append("If you enter \(displayedFuelUnit), please enter the total price too.")
         }
 
         if let liters = draft.liters, liters < 0 {
-            errors.append("Liters cannot be negative.")
+            errors.append("\(displayedFuelUnit.capitalized) cannot be negative.")
         }
 
         if let totalCost = draft.totalCost, totalCost < 0 {
@@ -120,7 +129,7 @@ enum FuelEntryValidator {
 
         if let pricePerLiter = draft.derivedPricePerLiter,
            !suspiciousPricePerLiterRange.contains(pricePerLiter) {
-            warnings.append("This price looks unusually high for the entered liters. Please check the decimal value.")
+            warnings.append("This fuel price seems unusual for the entered volume. Please double-check the amount.")
         }
 
         if let draftRecord = draft.asRecord {

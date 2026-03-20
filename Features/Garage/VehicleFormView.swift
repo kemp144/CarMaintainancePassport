@@ -29,9 +29,13 @@ struct VehicleFormView: View {
     @State private var isLookingUpVIN = false
     @State private var vinLookupError: String?
     @State private var showingVINError = false
+    @State private var hasEditedMileage = false
+
+    private let initialManualMileage: Int?
 
     init(vehicle: Vehicle? = nil) {
         self.vehicle = vehicle
+        self.initialManualMileage = vehicle.flatMap { VehicleManualMileageStore.manualMileage(for: $0) }
         _make = State(initialValue: vehicle?.make ?? "")
         _model = State(initialValue: vehicle?.model ?? "")
         _year = State(initialValue: vehicle?.year ?? Calendar.current.component(.year, from: .now))
@@ -243,6 +247,9 @@ struct VehicleFormView: View {
                 }
             }
         }
+        .onChange(of: currentMileage) {
+            hasEditedMileage = true
+        }
     }
 
     private var hasCoverImage: Bool {
@@ -261,13 +268,15 @@ struct VehicleFormView: View {
 
         do {
             let imageReference = try await persistCoverIfNeeded()
+            let now = Date()
+            let trimmedMileage = currentMileage.trimmingCharacters(in: .whitespacesAndNewlines)
+            let parsedManualMileage = UnitFormatter.parseDistance(currentMileage)
 
             if let vehicle {
                 vehicle.make = make.trimmingCharacters(in: .whitespacesAndNewlines)
                 vehicle.model = model.trimmingCharacters(in: .whitespacesAndNewlines)
                 vehicle.year = year
                 vehicle.licensePlate = licensePlate.trimmingCharacters(in: .whitespacesAndNewlines)
-                vehicle.currentMileage = UnitFormatter.parseDistance(currentMileage) ?? 0
                 vehicle.purchaseDate = hasPurchaseDate ? purchaseDate : nil
                 vehicle.purchasePrice = Double(purchasePrice)
                 vehicle.currencyCode = currencyCode
@@ -278,14 +287,21 @@ struct VehicleFormView: View {
                 } else if coverReference == nil {
                     vehicle.coverImageReference = nil
                 }
-                vehicle.updatedAt = .now
+
+                if hasEditedMileage {
+                    VehicleManualMileageStore.setManualMileage(trimmedMileage.isEmpty ? nil : parsedManualMileage, for: vehicle, at: now)
+                } else if initialManualMileage != nil {
+                    VehicleManualMileageStore.seedLegacyManualMileageIfNeeded(for: vehicle)
+                }
+
+                VehicleMileageResolver.recalculateCurrentMileage(for: vehicle, updateTimestamp: now)
             } else {
                 let newVehicle = Vehicle(
                     make: make.trimmingCharacters(in: .whitespacesAndNewlines),
                     model: model.trimmingCharacters(in: .whitespacesAndNewlines),
                     year: year,
                     licensePlate: licensePlate.trimmingCharacters(in: .whitespacesAndNewlines),
-                    currentMileage: UnitFormatter.parseDistance(currentMileage) ?? 0,
+                    currentMileage: 0,
                     purchaseDate: hasPurchaseDate ? purchaseDate : nil,
                     purchasePrice: Double(purchasePrice),
                     currencyCode: currencyCode,
@@ -294,6 +310,8 @@ struct VehicleFormView: View {
                     coverImageReference: imageReference
                 )
                 modelContext.insert(newVehicle)
+                VehicleManualMileageStore.setManualMileage(trimmedMileage.isEmpty ? nil : parsedManualMileage, for: newVehicle, at: now)
+                VehicleMileageResolver.recalculateCurrentMileage(for: newVehicle, updateTimestamp: now)
             }
 
             try? modelContext.save()

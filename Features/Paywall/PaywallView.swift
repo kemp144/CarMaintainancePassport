@@ -333,7 +333,7 @@ struct PaywallView: View {
                 .disabled(entitlementStore.isBusy)
 
                 if selectedPlan == .yearly {
-                    Text("Save €11.89/year")
+                    Text(yearlySavingsText)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(AppTheme.accentSecondary)
                         .padding(.horizontal, 10)
@@ -387,7 +387,7 @@ struct PaywallView: View {
                             .minimumScaleFactor(0.85)
 
                         if isYearly {
-                            Text(plan.savingsText)
+                            Text(yearlySavingsText)
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(AppTheme.accentSecondary)
                         }
@@ -475,7 +475,7 @@ struct PaywallView: View {
     }
 
     private func planPriceText(for plan: EntitlementStore.ProPlan) -> String {
-        entitlementStore.product(for: plan)?.displayPrice ?? plan.fallbackPrice
+        entitlementStore.product(for: plan)?.displayPrice ?? plan.priceUnavailableText
     }
 
     private var showsStickyCTA: Bool {
@@ -495,9 +495,16 @@ struct PaywallView: View {
             ComparisonFeature(title: "OCR receipts", free: "Manual entry", pro: "Auto-filled", highlightPro: true),
             ComparisonFeature(title: "Documents", free: "Up to 10 saved", pro: "Unlimited", highlightPro: true),
             ComparisonFeature(title: "Backup & restore", free: "Included", pro: "Included", highlightPro: false),
-            ComparisonFeature(title: "Reports", free: "Basic history", pro: "PDF + CSV + resale", highlightPro: true),
+            ComparisonFeature(title: "Reports", free: "Not included", pro: "PDF + CSV + resale", highlightPro: true),
             ComparisonFeature(title: "Ownership insights", free: "Core summary", pro: "Deep breakdowns", highlightPro: true)
         ]
+    }
+
+    private var yearlySavingsText: String {
+        PaywallPriceFormatter.localizedSavingsText(
+            monthly: entitlementStore.product(for: .monthly),
+            yearly: entitlementStore.product(for: .yearly)
+        ) ?? "Save with yearly billing"
     }
 
     private var paywallBenefits: [PaywallBenefit] {
@@ -631,29 +638,38 @@ private extension EntitlementStore.ProPlan {
         }
     }
 
-    var savingsText: String {
-        "Save €11.89/year"
-    }
-
-    var fallbackPrice: String {
-        switch self {
-        case .monthly:
-            return "€1.99"
-        case .yearly:
-            return "€11.99"
-        case .lifetime:
-            return "€29.99"
-        }
+    var priceUnavailableText: String {
+        "App Store price"
     }
 
     func ctaTitle(priceText: String) -> String {
         switch self {
         case .monthly:
-            return "Start Pro for \(priceText)/month"
+            return priceText == priceUnavailableText ? "Continue with Monthly" : "Start Pro for \(priceText)/month"
         case .yearly:
-            return "Start Pro for \(priceText)/year"
+            return priceText == priceUnavailableText ? "Continue with Yearly" : "Start Pro for \(priceText)/year"
         case .lifetime:
-            return "Unlock Pro forever for \(priceText)"
+            return priceText == priceUnavailableText ? "Unlock Lifetime Pro" : "Unlock Pro forever for \(priceText)"
         }
+    }
+}
+
+private enum PaywallPriceFormatter {
+    static func localizedSavingsText(monthly: Product?, yearly: Product?) -> String? {
+        guard let monthly, let yearly else { return nil }
+
+        let annualMonthlyCost = NSDecimalNumber(decimal: monthly.price)
+            .multiplying(by: NSDecimalNumber(value: 12))
+            .decimalValue
+        let savings = NSDecimalNumber(decimal: annualMonthlyCost)
+            .subtracting(NSDecimalNumber(decimal: yearly.price))
+            .decimalValue
+
+        guard NSDecimalNumber(decimal: savings).compare(NSDecimalNumber.zero) == .orderedDescending else {
+            return nil
+        }
+
+        let formattedSavings = yearly.priceFormatStyle.format(savings)
+        return "Save \(formattedSavings)/year"
     }
 }

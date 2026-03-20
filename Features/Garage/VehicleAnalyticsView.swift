@@ -402,15 +402,17 @@ struct VehicleAnalyticsView: View {
                         InsightTile(title: "Highest Cost Category", state: viewModel.mostExpensiveMaintenanceCategory, icon: "exclamationmark.triangle.fill", compact: true)
                     }
 
-                    DataConfidenceFootnote(message: viewModel.maintenanceConfidenceText)
-
-                    Text(viewModel.maintenanceInsightText)
-                        .font(.caption2)
-                        .foregroundStyle(AppTheme.tertiaryText.opacity(0.7))
-                        .multilineTextAlignment(.leading)
-                        .lineSpacing(-1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 4)
+                    VStack(alignment: .leading, spacing: 2) {
+                        DataConfidenceFootnote(message: viewModel.maintenanceConfidenceText)
+                        
+                        Text(viewModel.maintenanceInsightText)
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.tertiaryText.opacity(0.7))
+                            .multilineTextAlignment(.leading)
+                            .lineSpacing(-1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 4)
                 }
             } else {
                 // 2. One elegant teaser preview
@@ -1257,8 +1259,8 @@ struct AnalyticsRow: View {
                         value.contains("Due soon") ? Color.orange :
                         AppTheme.secondaryText
                     )
-            case .notEnoughHistory:
-                Text("No data yet")
+            case .notEnoughHistory(let msg):
+                Text(msg)
                     .font(.caption)
                     .foregroundStyle(AppTheme.tertiaryText)
             case .neverRecorded:
@@ -1382,7 +1384,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     
     // Maintenance Intelligence
     @Published var mostExpensiveMaintenanceCategory: MetricState<String> = .neverRecorded
-    @Published var averageServiceIntervalDays: MetricState<String> = .notEnoughHistory("Need 2+ services")
+    @Published var averageServiceIntervalDays: MetricState<String> = .notEnoughHistory("More service history needed")
     @Published var daysSinceLastOilChange: MetricState<String> = .neverRecorded
     @Published var distanceSinceLastBrakes: MetricState<String> = .neverRecorded
     @Published var distanceSinceLastTires: MetricState<String> = .neverRecorded
@@ -1442,7 +1444,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         }
         
         if validItems.count == 1 {
-            return .notEnoughHistory("Tracking needs more history")
+            return .notEnoughHistory("More service history needed")
         }
         
         let sorted = validItems.sorted { byDistance ? $0.mileage < $1.mileage : $0.date < $1.date }
@@ -1800,7 +1802,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             
             if maintenanceServices.count < 3 {
                 res.maintenanceInsightText = "Log more services to improve alerts and predictions."
-                res.maintenanceConfidenceText = "Needs more history for reliable patterns."
+                res.maintenanceConfidenceText = "More service history is needed for reliable patterns."
             } else if maintenanceServices.count < 6 {
                 res.maintenanceInsightText = "Insights improve with more service history."
                 res.maintenanceConfidenceText = "Useful now, smarter with more history."

@@ -7,7 +7,7 @@ struct OnboardingView: View {
     private let items: [(title: String, message: String, icon: String)] = [
         ("Your car, one clean passport", "Keep service records, reminders, and ownership history in one calm place.", "car.rear.and.tire.marks"),
         ("Receipts and documents stay close", "Store photos, PDFs, and vehicle paperwork with the car they belong to.", "doc.on.doc.fill"),
-        ("See what matters next", "Add reminders, log service, and export a polished history when you need it.", "bell.badge.fill")
+        ("See what matters next", "Add reminders, log service, track fuel, and export a polished history when you need it.", "bell.badge.fill")
     ]
 
     var body: some View {

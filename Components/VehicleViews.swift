@@ -32,24 +32,19 @@ struct VehicleHeroCard: View {
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.secondaryText)
 
-                if vehicle.currentMileage > 0 {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Label(AppFormatters.mileage(vehicle.currentMileage), systemImage: "speedometer")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Color.white.opacity(0.88))
+                VStack(alignment: .leading, spacing: 2) {
+                    Label(vehicle.currentMileageDisplayString, systemImage: "speedometer")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.white.opacity(0.88))
 
-                        if let mileageDate = vehicle.latestMileageDate {
-                            Text("Updated \(AppFormatters.mediumDate.string(from: mileageDate))")
-                                .font(.caption2)
-                                .foregroundStyle(Color.white.opacity(0.5))
-                        }
+                    if let mileageDate = vehicle.latestMileageDate {
+                        Text("Updated \(AppFormatters.mediumDate.string(from: mileageDate))")
+                            .font(.caption2)
+                            .foregroundStyle(Color.white.opacity(0.5))
                     }
                 }
 
                 HStack(spacing: 10) {
-                    if vehicle.currentMileage == 0 {
-                        Label("No mileage recorded", systemImage: "speedometer")
-                    }
                     Label(AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode), systemImage: "eurosign.circle")
                 }
                 .font(.subheadline.weight(.medium))
@@ -109,13 +104,11 @@ struct VehicleRowCard: View {
                         .font(.system(size: 13.5))
                         .foregroundStyle(AppTheme.secondaryText)
 
-                        if vehicle.currentMileage > 0 {
-                            ownershipInfoRow(
-                                icon: "speedometer",
-                                title: "Current mileage",
-                                value: AppFormatters.mileage(vehicle.currentMileage)
-                            )
-                        }
+                        ownershipInfoRow(
+                            icon: "speedometer",
+                            title: "Current mileage",
+                            value: vehicle.currentMileageDisplayString
+                        )
 
                         if let lastServiceDate = vehicle.latestServiceDate {
                             ownershipInfoRow(

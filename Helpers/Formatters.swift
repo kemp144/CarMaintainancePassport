@@ -34,6 +34,11 @@ enum AppFormatters {
         UnitFormatter.distance(Double(value))
     }
 
+    static func optionalMileage(_ value: Int?) -> String {
+        guard let value else { return "Mileage not set" }
+        return mileage(value)
+    }
+
     static func fuelVolume(_ value: Double) -> String {
         UnitFormatter.fuelVolume(value)
     }

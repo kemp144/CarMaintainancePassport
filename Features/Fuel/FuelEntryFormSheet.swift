@@ -30,8 +30,7 @@ struct FuelEntryFormSheet: View {
         self.vehicle = vehicle
         self.entry = entry
         _date = State(initialValue: entry?.date ?? .now)
-        _mileage = State(initialValue: entry.map { UnitFormatter.distanceValue(Double($0.mileage)) }
-            ?? (vehicle.currentMileage > 0 ? UnitFormatter.distanceValue(Double(vehicle.currentMileage)) : ""))
+        _mileage = State(initialValue: entry.map { UnitFormatter.distanceValue(Double($0.mileage)) } ?? "")
         _entryType = State(initialValue: entry?.entryType ?? .fullFillUp)
         _liters = State(initialValue: entry.map { $0.liters > 0 ? UnitFormatter.fuelVolumeValue($0.liters) : "" } ?? "")
         _totalCost = State(initialValue: entry.map { $0.totalCost > 0 ? String(format: "%.2f", $0.totalCost) : "" } ?? "")
@@ -104,16 +103,24 @@ struct FuelEntryFormSheet: View {
                 Section {
                     DatePicker(entryType == .missedFillUp ? "Date of fuel stop" : "Date", selection: $date, displayedComponents: .date)
 
-                    HStack {
-                        Text(entryType == .missedFillUp ? "Odometer at stop" : "Odometer")
-                            .foregroundStyle(AppTheme.primaryText)
-                        Spacer()
-                        HStack(spacing: 4) {
-                            TextField("0", text: $mileage)
-                                .keyboardType(.numberPad)
-                                .multilineTextAlignment(.trailing)
-                                .frame(minWidth: 60)
-                            Text(UnitSettings.currentDistanceUnit.shortTitle)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text(entryType == .missedFillUp ? "Odometer at that stop" : "Current odometer")
+                                .foregroundStyle(AppTheme.primaryText)
+                            Spacer()
+                            HStack(spacing: 4) {
+                                TextField("0", text: $mileage)
+                                    .keyboardType(.numberPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(minWidth: 60)
+                                Text(UnitSettings.currentDistanceUnit.shortTitle)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                            }
+                        }
+
+                        if entry == nil, let lastKnownMileage = vehicle.resolvedCurrentMileage {
+                            Text("Last known mileage: \(AppFormatters.mileage(lastKnownMileage))")
+                                .font(.caption)
                                 .foregroundStyle(AppTheme.secondaryText)
                         }
                     }
@@ -122,7 +129,7 @@ struct FuelEntryFormSheet: View {
                 } footer: {
                     Text(entryType == .missedFillUp
                          ? "Enter the date and odometer reading from that earlier fuel stop."
-                         : "Enter the odometer shown on the dashboard. We use it to validate the fuel timeline and calculate consumption.")
+                         : "Enter the odometer shown at the pump. The previous reading is shown only as reference, so duplicate mileage is less likely.")
                         .foregroundStyle(AppTheme.tertiaryText)
                 }
                 .listRowBackground(AppTheme.surface)
@@ -145,7 +152,7 @@ struct FuelEntryFormSheet: View {
                 } header: {
                     Text("Fuel").foregroundStyle(AppTheme.secondaryText)
                 } footer: {
-                    Text(entryType == .missedFillUp ? "Add any details you remember. Fuel volume and price are optional for missed fuel stops." : "Full and Partial entries need both fuel volume and total price.")
+                    Text(entryType == .missedFillUp ? "Add any details you remember. Fuel volume and total price are optional for missed fuel stops." : "Full and Partial entries need both fuel volume and total price.")
                         .foregroundStyle(AppTheme.tertiaryText)
                 }
                 .listRowBackground(AppTheme.surface)
@@ -373,19 +380,9 @@ struct FuelEntryFormSheet: View {
         lastStation = draft.station
         lastCurrencyCode = draft.currencyCode
 
-        recalculateVehicleMileage(afterSavingMileage: mileageValue)
+        VehicleMileageResolver.recalculateCurrentMileage(for: vehicle)
         try? modelContext.save()
         Haptics.success()
         dismiss()
-    }
-
-    private func recalculateVehicleMileage(afterSavingMileage mileage: Int) {
-        let existingFuelMileage = vehicle.fuelEntries
-            .filter { $0.id != entry?.id }
-            .map(\.mileage)
-            .max() ?? 0
-        let serviceMileage = vehicle.serviceEntries.map(\.mileage).max() ?? 0
-        vehicle.currentMileage = max(max(existingFuelMileage, serviceMileage), mileage)
-        vehicle.updatedAt = .now
     }
 }

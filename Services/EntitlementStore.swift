@@ -50,18 +50,26 @@ final class EntitlementStore: ObservableObject {
     #endif
 
     private var updatesTask: Task<Void, Never>?
-    private let cachedProAccess: Bool
+
+    enum ExportFeature: String {
+        case servicePassportPDF
+        case csv
+        case resaleReport
+    }
+
+    private enum Cache {
+        static let proAccessGracePeriod: TimeInterval = 60 * 60 * 24 * 3
+    }
 
     private enum Keys {
         static let cachedProUnlocked = "entitlement.cachedProUnlocked"
+        static let cachedProUnlockedAt = "entitlement.cachedProUnlockedAt"
         static let debugProOverride = "entitlement.debugProOverride"
         static let premiumPreviewStates = "entitlement.premiumPreviewStates"
     }
 
     init() {
-        let cached = UserDefaults.standard.bool(forKey: Keys.cachedProUnlocked)
-        cachedProAccess = cached
-        isProUnlocked = cached
+        isProUnlocked = Self.cachedProAccessIsFresh()
         premiumPreviewStates = Self.loadPremiumPreviewStates()
     }
 
@@ -71,9 +79,9 @@ final class EntitlementStore: ObservableObject {
 
     var hasProAccess: Bool {
         #if DEBUG
-        return cachedProAccess || isProUnlocked || debugProOverride
+        return isProUnlocked || debugProOverride
         #else
-        return cachedProAccess || isProUnlocked
+        return isProUnlocked
         #endif
     }
 
@@ -104,10 +112,14 @@ final class EntitlementStore: ObservableObject {
     }
 
     func canExportPDF() -> Bool {
-        hasProAccess
+        canExport(.servicePassportPDF)
     }
 
     func canExportAdvancedReports() -> Bool {
+        canExport(.resaleReport)
+    }
+
+    func canExport(_ feature: ExportFeature) -> Bool {
         hasProAccess
     }
     
@@ -308,9 +320,7 @@ final class EntitlementStore: ObservableObject {
         }
 
         isProUnlocked = unlocked
-        if unlocked {
-            UserDefaults.standard.set(true, forKey: Keys.cachedProUnlocked)
-        }
+        persistCachedProAccess(unlocked)
     }
 
     private func verify<T>(_ result: VerificationResult<T>) throws -> T {
@@ -355,6 +365,23 @@ final class EntitlementStore: ObservableObject {
             unlockedByMilestone: false,
             lastMilestoneValueShown: nil
         )
+    }
+
+    private func persistCachedProAccess(_ unlocked: Bool) {
+        let defaults = UserDefaults.standard
+        defaults.set(unlocked, forKey: Keys.cachedProUnlocked)
+
+        if unlocked {
+            defaults.set(Date(), forKey: Keys.cachedProUnlockedAt)
+        } else {
+            defaults.removeObject(forKey: Keys.cachedProUnlockedAt)
+        }
+    }
+
+    private static func cachedProAccessIsFresh(now: Date = .now, defaults: UserDefaults = .standard) -> Bool {
+        guard defaults.bool(forKey: Keys.cachedProUnlocked) else { return false }
+        guard let cachedAt = defaults.object(forKey: Keys.cachedProUnlockedAt) as? Date else { return false }
+        return now.timeIntervalSince(cachedAt) <= Cache.proAccessGracePeriod
     }
 }
 
