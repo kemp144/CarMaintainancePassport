@@ -36,40 +36,25 @@ struct ServiceEntryFormView: View {
     @State private var savedEntryForReminder: ServiceEntry?
     @State private var showingReminderSuggestion = false
     @State private var showingCustomReminder = false
-    @State private var showingOCRScanner = false
-    @State private var showingOCRFailureDialog = false
-    @State private var showingOCRCancelDialog = false
-    @State private var ocrResult: OCRService.OCRResult?
-    @State private var isProcessingOCR = false
-    @State private var currentReceiptDraft: ScannedReceiptDraft?
-    @State private var pendingReceiptImageData: Data?
-    @State private var pendingReceiptFilename: String?
     @State private var validationMessage: String?
     @State private var showingValidationAlert = false
+    @State private var notificationInfoMessage: String?
 
-    let autoStartOCR: Bool
-    private let initialOCRDraft: ScannedReceiptDraft?
-
-    init(vehicle: Vehicle? = nil, entry: ServiceEntry? = nil, autoStartOCR: Bool = false, ocrDraft: ScannedReceiptDraft? = nil) {
+    init(vehicle: Vehicle? = nil, entry: ServiceEntry? = nil) {
         self.entry = entry
-        self.autoStartOCR = autoStartOCR
-        self.initialOCRDraft = ocrDraft
         self.initialVehicle = vehicle ?? entry?.vehicle
         _selectedVehicleID = State(initialValue: (vehicle ?? entry?.vehicle)?.id)
-        _date = State(initialValue: ocrDraft?.result.date ?? entry?.date ?? .now)
-        _mileage = State(initialValue: ocrDraft?.result.mileage.map { UnitFormatter.distanceValue(Double($0)) } ?? entry.map { UnitFormatter.distanceValue(Double($0.mileage)) } ?? vehicle.map { UnitFormatter.distanceValue(Double($0.currentMileage)) } ?? "")
-        _serviceType = State(initialValue: ocrDraft?.suggestedServiceType ?? entry?.serviceType ?? .oilChange)
+        _date = State(initialValue: entry?.date ?? .now)
+        _mileage = State(initialValue: entry.map { UnitFormatter.distanceValue(Double($0.mileage)) } ?? vehicle.map { UnitFormatter.distanceValue(Double($0.currentMileage)) } ?? "")
+        _serviceType = State(initialValue: entry?.serviceType ?? .oilChange)
         _customServiceTypeName = State(initialValue: entry?.customServiceTypeName ?? "")
-        _category = State(initialValue: ocrDraft?.suggestedCategory ?? entry?.category ?? (entry?.serviceType.defaultCategory ?? (ocrDraft?.suggestedServiceType?.defaultCategory ?? .maintenance)))
-        _price = State(initialValue: ocrDraft?.result.price.map { String(format: "%.0f", $0) } ?? (entry?.price == 0 ? "" : String(format: "%.0f", entry?.price ?? 0)))
-        _currencyCode = State(initialValue: entry?.currencyCode ?? vehicle?.currencyCode ?? CurrencyPreset.eur.rawValue)
-        _workshopName = State(initialValue: ocrDraft?.result.workshopName ?? ocrDraft?.result.vendorName ?? entry?.workshopName ?? "")
+        _category = State(initialValue: entry?.category ?? (entry?.serviceType.defaultCategory ?? .maintenance))
+        _price = State(initialValue: entry?.price == 0 ? "" : String(format: "%.0f", entry?.price ?? 0))
+        _currencyCode = State(initialValue: entry?.currencyCode ?? vehicle?.currencyCode ?? CurrencyPreset.suggested().rawValue)
+        _workshopName = State(initialValue: entry?.workshopName ?? "")
         _notes = State(initialValue: entry?.notes ?? "")
         _isImportant = State(initialValue: entry?.isImportant ?? false)
-        _currentReceiptDraft = State(initialValue: ocrDraft)
-        _pendingReceiptImageData = State(initialValue: ocrDraft?.imageData)
-        _pendingReceiptFilename = State(initialValue: ocrDraft?.filename)
-        _draftAttachments = State(initialValue: ocrDraft.map { [DraftAttachment(type: .image, filename: $0.filename, imageData: $0.imageData, sourceURL: nil, isReceipt: true)] } ?? [])
+        _draftAttachments = State(initialValue: [])
     }
 
     var body: some View {
@@ -77,32 +62,6 @@ struct ServiceEntryFormView: View {
             AppTheme.background.ignoresSafeArea()
 
             Form {
-                if let currentReceiptDraft {
-                    Section {
-                        HStack(spacing: 12) {
-                            Image(systemName: "doc.text.viewfinder")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(AppTheme.accent)
-                                .frame(width: 28)
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Receipt scanned")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(AppTheme.primaryText)
-
-                                Text(currentReceiptDraft.hasUsefulData ? "Review the scanned details before saving." : "The receipt is attached. Complete the fields below manually if needed.")
-                                    .font(.footnote)
-                                    .foregroundStyle(AppTheme.secondaryText)
-                            }
-
-                            Spacer()
-                        }
-                    } header: {
-                        Text("Draft Review").foregroundStyle(AppTheme.secondaryText)
-                    }
-                    .listRowBackground(AppTheme.surface)
-                }
-
                 Section {
                     Picker("Vehicle", selection: $selectedVehicleID) {
                         ForEach(vehicles) { vehicle in
@@ -112,28 +71,6 @@ struct ServiceEntryFormView: View {
                     .disabled(initialVehicle != nil)
                 } header: {
                     Text("Vehicle").foregroundStyle(AppTheme.secondaryText)
-                }
-                .listRowBackground(AppTheme.surface)
-
-                Section {
-                    if isProcessingOCR {
-                        HStack(spacing: 10) {
-                            ProgressView()
-                            Text("Scanning receipt…")
-                                .foregroundStyle(AppTheme.secondaryText)
-                        }
-                    } else {
-                        Button {
-                            if entitlementStore.canUseOCR() {
-                                showingOCRScanner = true
-                            } else {
-                                paywallCoordinator.present(.ocrScan)
-                            }
-                        } label: {
-                            Label("Scan receipt to prefill", systemImage: "doc.viewfinder")
-                                .foregroundStyle(AppTheme.accent)
-                        }
-                    }
                 }
                 .listRowBackground(AppTheme.surface)
 
@@ -261,26 +198,11 @@ struct ServiceEntryFormView: View {
             .scrollContentBackground(.hidden)
             .foregroundStyle(AppTheme.primaryText)
         }
-        .task {
-            if autoStartOCR && entry == nil {
-                if entitlementStore.canUseOCR() {
-                    showingOCRScanner = true
-                } else {
-                    paywallCoordinator.present(.ocrScan)
-                }
-            }
-        }
         .navigationTitle(entry == nil ? "Add Service" : "Edit Service")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    if currentReceiptDraft != nil {
-                        showingOCRCancelDialog = true
-                    } else {
-                        dismiss()
-                    }
-                }
+                Button("Cancel") { dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(isSaving ? "Saving..." : "Save") {
@@ -312,47 +234,6 @@ struct ServiceEntryFormView: View {
                 selectedPhotoItems = []
             }
         }
-        .sheet(isPresented: $showingOCRScanner) {
-            OCRImagePickerSheet { image in
-                guard let image else { return }
-                let imageData = image.jpegData(compressionQuality: 0.86)
-                pendingReceiptImageData = imageData
-                pendingReceiptFilename = "Receipt \(AppFormatters.receiptFilename.string(from: .now))"
-                isProcessingOCR = true
-                Task {
-                    defer { isProcessingOCR = false }
-                    do {
-                        let result = try await OCRService.shared.scan(image: image)
-                        ocrResult = result
-                        applyScannedReceipt(result: result)
-                    } catch {
-                        showingOCRFailureDialog = true
-                    }
-                }
-            }
-        }
-        .confirmationDialog("Receipt scanned", isPresented: $showingOCRCancelDialog, titleVisibility: .visible) {
-            Button("Save Receipt Only") {
-                Task { await saveReceiptOnly() }
-            }
-            Button("Discard Draft", role: .destructive) {
-                dismiss()
-            }
-            Button("Keep Editing", role: .cancel) {}
-        } message: {
-            Text("You can save the receipt to Documents, discard the draft, or keep editing the service entry.")
-        }
-        .alert("Could not read the receipt", isPresented: $showingOCRFailureDialog) {
-            Button("Save as Document") {
-                Task { await saveReceiptOnly() }
-            }
-            Button("Try Again") {
-                showingOCRScanner = true
-            }
-            Button("Continue Manually", role: .cancel) {}
-        } message: {
-            Text("The receipt is still available. You can save it as a document or scan again.")
-        }
         .alert("Couldn’t save service entry", isPresented: $showingValidationAlert) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -374,6 +255,22 @@ struct ServiceEntryFormView: View {
         } message: {
             Text("Keep the next \(serviceType.title.lowercased()) visible before it slips.")
         }
+        .alert(
+            "Notifications Off",
+            isPresented: Binding(
+                get: { notificationInfoMessage != nil },
+                set: { newValue in
+                    if !newValue { notificationInfoMessage = nil }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                notificationInfoMessage = nil
+                dismiss()
+            }
+        } message: {
+            Text(notificationInfoMessage ?? "")
+        }
         .sheet(isPresented: $showingCustomReminder, onDismiss: {
             dismiss()
         }) {
@@ -393,66 +290,24 @@ struct ServiceEntryFormView: View {
         attachments.count + documents.count
     }
 
-    private func applyScannedReceipt(result: OCRService.OCRResult) {
-        if let date = result.date {
-            self.date = date
-        }
-        if let mileage = result.mileage {
-            self.mileage = UnitFormatter.distanceValue(Double(mileage))
-        }
-        if let price = result.price {
-            self.price = String(format: "%.0f", price)
-        }
-        if let workshopName = result.workshopName ?? result.vendorName, !workshopName.isEmpty {
-            self.workshopName = workshopName
-        }
-        if let serviceType = result.suggestedServiceType {
-            self.serviceType = serviceType
-            self.category = result.suggestedCategory ?? serviceType.defaultCategory
-        }
-
-        if let imageData = pendingReceiptImageData, let filename = pendingReceiptFilename {
-            draftAttachments.removeAll { $0.isReceipt }
-            draftAttachments.insert(
-                DraftAttachment(type: .image, filename: filename, imageData: imageData, sourceURL: nil, isReceipt: true),
-                at: 0
-            )
-            currentReceiptDraft = ScannedReceiptDraft(
-                imageData: imageData,
-                filename: filename,
-                result: result
-            )
-        }
-    }
-
-    private func saveReceiptOnly() async {
-        guard let vehicle = selectedVehicle, let imageData = pendingReceiptImageData ?? currentReceiptDraft?.imageData else { return }
-        let filename = pendingReceiptFilename ?? currentReceiptDraft?.filename ?? "Receipt"
-
-        guard entitlementStore.canAddSavedDocuments(existingCount: savedDocumentCount) else {
-            paywallCoordinator.present(.documentVault)
-            return
-        }
-
-        do {
-            try await ScannedReceiptStorageService.shared.saveReceipt(
-                imageData: imageData,
-                filename: filename,
-                vehicle: vehicle,
-                in: modelContext
-            )
-            Haptics.success()
-            dismiss()
-        } catch {
-            Haptics.error()
-        }
-    }
-
     private func saveEntry() async {
         guard let vehicle = selectedVehicle, let mileageValue = UnitFormatter.parseDistance(mileage) else { return }
         let today = Calendar.current.startOfDay(for: .now)
         if Calendar.current.startOfDay(for: date) > today {
             validationMessage = "Service date cannot be in the future."
+            showingValidationAlert = true
+            return
+        }
+
+        let timelineErrors = VehicleOdometerTimelineValidator.validateServiceEntry(
+            vehicle: vehicle,
+            serviceID: entry?.id,
+            date: date,
+            mileage: mileageValue,
+            createdAt: entry?.createdAt ?? .now
+        )
+        if let firstTimelineError = timelineErrors.first {
+            validationMessage = firstTimelineError
             showingValidationAlert = true
             return
         }
@@ -594,7 +449,7 @@ struct ServiceEntryFormView: View {
 
             if reminder.isEnabled, reminder.dateDue != nil {
                 NotificationService.shared.cancel(identifier: reminder.notificationIdentifier)
-                reminder.notificationIdentifier = await NotificationService.shared.schedule(for: reminder, vehicleName: vehicleName)
+                reminder.notificationIdentifier = (await NotificationService.shared.schedule(for: reminder, vehicleName: vehicleName)).identifier
             } else {
                 NotificationService.shared.cancel(identifier: reminder.notificationIdentifier)
                 reminder.notificationIdentifier = nil
@@ -703,10 +558,17 @@ struct ServiceEntryFormView: View {
 
         Task {
             NotificationService.shared.cancel(identifier: reminder.notificationIdentifier)
-            reminder.notificationIdentifier = await NotificationService.shared.schedule(for: reminder, vehicleName: vehicle.title)
+            let outcome = await NotificationService.shared.schedule(for: reminder, vehicleName: vehicle.title)
+            reminder.notificationIdentifier = outcome.identifier
             try? modelContext.save()
+
+            if case .permissionDenied = outcome {
+                notificationInfoMessage = "Reminder saved, but notifications are currently disabled for Car Service Passport. You can enable them in Settings anytime."
+                return
+            }
+
+            dismiss()
         }
-        dismiss()
     }
 
     private func existingSuggestedReminder(for serviceEntry: ServiceEntry) -> ReminderItem? {

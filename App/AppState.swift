@@ -19,7 +19,6 @@ enum PaywallReason: String, Identifiable {
     case documentVault
     case analytics
     case fuelTracking
-    case ocrScan
     case vinLookup
     case importData
     case settings
@@ -67,7 +66,7 @@ enum PaywallCopyBuilder {
         case .fuelTrend:
             return PaywallCopy(
                 title: "See your real fuel efficiency",
-                message: "Unlock long-term averages, trend charts, period filters, and OCR receipt tools."
+                message: "Unlock long-term averages, trend charts, and period filters."
             )
         case .resaleReport:
             return PaywallCopy(
@@ -87,7 +86,7 @@ enum PaywallCopyBuilder {
         case .documentVault:
             return PaywallCopy(
                 title: "Keep your paperwork organized",
-                message: "Keep more documents in one place, capture receipts faster with OCR, and build a cleaner ownership record."
+                message: "Keep more documents in one place and build a cleaner ownership record."
             )
         case .analytics:
             return PaywallCopy(
@@ -97,12 +96,7 @@ enum PaywallCopyBuilder {
         case .fuelTracking:
             return PaywallCopy(
                 title: "See your real fuel efficiency",
-                message: "Unlock long-term averages, trend charts, period filters, and OCR receipt tools."
-            )
-        case .ocrScan:
-            return PaywallCopy(
-                title: "Turn receipts into records instantly",
-                message: "Pro extracts the date, amount, mileage, vendor, and notes from a receipt photo and turns it into a structured service record — no manual entry needed."
+                message: "Unlock long-term averages, trend charts, and period filters."
             )
         case .vinLookup:
             return PaywallCopy(

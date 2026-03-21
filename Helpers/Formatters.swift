@@ -55,6 +55,21 @@ enum AppFormatters {
         return formatter.string(from: NSNumber(value: amount)) ?? "\(amount) \(code)"
     }
 
+    static func currencyIcon(for code: String, filled: Bool = true) -> String {
+        let suffix = filled ? ".circle.fill" : ".circle"
+        switch code.uppercased() {
+        case "USD", "CAD", "AUD", "NZD", "SGD", "HKD", "MXN": return "dollarsign\(suffix)"
+        case "GBP": return "sterlingsign\(suffix)"
+        case "JPY", "CNY": return "yensign\(suffix)"
+        case "KRW": return "wonsign\(suffix)"
+        case "INR": return "indianrupeesign\(suffix)"
+        case "RUB": return "rublesign\(suffix)"
+        case "TRY": return "turkishlirasign\(suffix)"
+        case "BTC": return "bitcoinsign\(suffix)"
+        default: return "eurosign\(suffix)"
+        }
+    }
+
     static let receiptFilename: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd-HHmmss"

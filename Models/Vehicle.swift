@@ -248,7 +248,7 @@ enum VehicleMileageResolver {
 
     static func latestMileageEvent(for vehicle: Vehicle) -> MileageEvent? {
         VehicleManualMileageStore.seedLegacyManualMileageIfNeeded(for: vehicle)
-        return mileageEvents(for: vehicle).max(by: isEarlier(_:than:))
+        return timelineEvents(for: vehicle).max(by: isEarlier(_:than:))
     }
 
     static func recalculateCurrentMileage(for vehicle: Vehicle, updateTimestamp: Date? = .now) {
@@ -265,8 +265,14 @@ enum VehicleMileageResolver {
         }
     }
 
-    private static func mileageEvents(for vehicle: Vehicle) -> [MileageEvent] {
+    static func timelineEvents(
+        for vehicle: Vehicle,
+        excludingFuelID: UUID? = nil,
+        excludingServiceID: UUID? = nil,
+        includeManual: Bool = true
+    ) -> [MileageEvent] {
         let fuelEvents = vehicle.fuelEntries.compactMap { entry -> MileageEvent? in
+            guard entry.id != excludingFuelID else { return nil }
             guard entry.mileage > 0 else { return nil }
             return MileageEvent(
                 mileage: entry.mileage,
@@ -279,6 +285,7 @@ enum VehicleMileageResolver {
         }
 
         let serviceEvents = vehicle.serviceEntries.compactMap { entry -> MileageEvent? in
+            guard entry.id != excludingServiceID else { return nil }
             guard entry.mileage > 0 else { return nil }
             return MileageEvent(
                 mileage: entry.mileage,
@@ -290,7 +297,7 @@ enum VehicleMileageResolver {
             )
         }
 
-        let manualEvent = VehicleManualMileageStore.manualMileageSnapshot(for: vehicle).map { snapshot in
+        let manualEvent = includeManual ? VehicleManualMileageStore.manualMileageSnapshot(for: vehicle).map { snapshot in
             MileageEvent(
                 mileage: snapshot.mileage,
                 date: Calendar.current.startOfDay(for: snapshot.updatedAt),
@@ -299,16 +306,102 @@ enum VehicleMileageResolver {
                 sourcePriority: 2,
                 stableID: "manual-\(vehicle.id.uuidString)"
             )
-        }
+        } : nil
 
         return fuelEvents + serviceEvents + (manualEvent.map { [$0] } ?? [])
     }
 
-    private static func isEarlier(_ lhs: MileageEvent, than rhs: MileageEvent) -> Bool {
+    fileprivate static func isEarlier(_ lhs: MileageEvent, than rhs: MileageEvent) -> Bool {
         if lhs.date != rhs.date { return lhs.date < rhs.date }
         if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt < rhs.updatedAt }
         if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
         if lhs.sourcePriority != rhs.sourcePriority { return lhs.sourcePriority < rhs.sourcePriority }
         return lhs.stableID < rhs.stableID
+    }
+}
+
+enum VehicleOdometerTimelineValidator {
+    static func validateServiceEntry(
+        vehicle: Vehicle,
+        serviceID: UUID?,
+        date: Date,
+        mileage: Int,
+        createdAt: Date
+    ) -> [String] {
+        validate(
+            vehicle: vehicle,
+            candidate: VehicleMileageResolver.MileageEvent(
+                mileage: mileage,
+                date: Calendar.current.startOfDay(for: date),
+                updatedAt: .now,
+                createdAt: createdAt,
+                sourcePriority: 1,
+                stableID: "service-candidate-\(serviceID?.uuidString ?? UUID().uuidString)"
+            ),
+            excludingFuelID: nil,
+            excludingServiceID: serviceID
+        )
+    }
+
+    static func validateFuelEntry(
+        vehicle: Vehicle,
+        fuelID: UUID?,
+        date: Date,
+        mileage: Int,
+        createdAt: Date
+    ) -> [String] {
+        validate(
+            vehicle: vehicle,
+            candidate: VehicleMileageResolver.MileageEvent(
+                mileage: mileage,
+                date: Calendar.current.startOfDay(for: date),
+                updatedAt: .now,
+                createdAt: createdAt,
+                sourcePriority: 0,
+                stableID: "fuel-candidate-\(fuelID?.uuidString ?? UUID().uuidString)"
+            ),
+            excludingFuelID: fuelID,
+            excludingServiceID: nil
+        )
+    }
+
+    private static func validate(
+        vehicle: Vehicle,
+        candidate: VehicleMileageResolver.MileageEvent,
+        excludingFuelID: UUID?,
+        excludingServiceID: UUID?
+    ) -> [String] {
+        // Validate against the full dated odometer timeline so one module cannot
+        // silently create an impossible "current mileage" state for the vehicle.
+        let ordered = (
+            VehicleMileageResolver.timelineEvents(
+                for: vehicle,
+                excludingFuelID: excludingFuelID,
+                excludingServiceID: excludingServiceID
+            ) + [candidate]
+        )
+        .sorted(by: VehicleMileageResolver.isEarlier(_:than:))
+
+        guard let candidateIndex = ordered.firstIndex(where: { $0.stableID == candidate.stableID }) else {
+            return []
+        }
+
+        var errors: [String] = []
+
+        if candidateIndex > 0 {
+            let previous = ordered[candidateIndex - 1]
+            if candidate.mileage < previous.mileage {
+                errors.append("Odometer cannot be lower than the previous recorded reading (\(AppFormatters.mileage(previous.mileage))).")
+            }
+        }
+
+        if candidateIndex < ordered.count - 1 {
+            let next = ordered[candidateIndex + 1]
+            if candidate.mileage > next.mileage {
+                errors.append("Odometer cannot be higher than the next recorded reading (\(AppFormatters.mileage(next.mileage))).")
+            }
+        }
+
+        return errors
     }
 }

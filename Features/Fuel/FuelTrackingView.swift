@@ -15,6 +15,7 @@ struct FuelTrackingView: View {
     @State private var showingDeleteConfirmation = false
     @State private var selectedPeriod: FuelLogPeriod = .allTime
     @State private var selectedChartMetric: FuelChartMetric = .spend
+    @State private var selectedChartDate: Date?
     @State private var expandedEntryIDs: Set<UUID> = []
 
     private var hasDetailedFuelAccess: Bool {
@@ -38,6 +39,22 @@ struct FuelTrackingView: View {
 
     private var chartPoints: [FuelTrendPoint] {
         analysis.chartPoints(for: selectedChartMetric)
+    }
+    
+    private var selectedChartPoint: FuelTrendPoint? {
+        guard let date = selectedChartDate else { return nil }
+        return chartPoints.min(by: { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) })
+    }
+    
+    private func formattedChartValue(for value: Double) -> String {
+        switch selectedChartMetric {
+        case .spend:
+            return AppFormatters.currency(value, code: vehicle.currencyCode)
+        case .consumption:
+            return AppFormatters.consumption(value)
+        case .price:
+            return UnitFormatter.costPerFuelUnitCurrency(value, currencyCode: vehicle.currencyCode)
+        }
     }
 
     var body: some View {
@@ -181,7 +198,7 @@ struct FuelTrackingView: View {
                 highlights: [
                     "Long-term average consumption",
                     "Trend charts and period filters",
-                    "Efficiency insights and OCR receipts"
+                    "Efficiency insights and trend analysis"
                 ],
                 ctaTitle: "Unlock Pro"
             ) {
@@ -203,7 +220,7 @@ struct FuelTrackingView: View {
 
             HStack(spacing: 12) {
                 fuelStatCard(
-                    title: "Recent Avg (Valid fill-ups)",
+                    title: "Recent Avg",
                     value: analysis.insights.lastValidConsumption.value.map { AppFormatters.consumption($0) } ?? "—",
                     note: analysis.insights.lastValidConsumption.note,
                     icon: "gauge.medium",
@@ -213,7 +230,7 @@ struct FuelTrackingView: View {
                     title: "Avg Price / \(UnitSettings.currentFuelVolumeUnit.shortTitle)",
                     value: analysis.insights.averagePricePerLiter.map { UnitFormatter.costPerFuelUnitCurrency($0, currencyCode: vehicle.currencyCode) } ?? "—",
                     note: analysis.insights.averagePricePerLiter == nil ? "Add more fill-ups to refine this." : nil,
-                    icon: "eurosign.circle.fill",
+                    icon: AppFormatters.currencyIcon(for: vehicle.currencyCode),
                     emphasis: .primary
                 )
             }
@@ -339,7 +356,7 @@ struct FuelTrackingView: View {
                     title: "Avg Price / \(UnitSettings.currentFuelVolumeUnit.shortTitle)",
                     value: analysis.insights.averagePricePerLiter.map { UnitFormatter.costPerFuelUnitCurrency($0, currencyCode: vehicle.currencyCode) } ?? "—",
                     note: nil,
-                    icon: "eurosign.circle.fill",
+                    icon: AppFormatters.currencyIcon(for: vehicle.currencyCode),
                     emphasis: .secondary
                 )
                 fuelStatCard(
@@ -436,40 +453,8 @@ struct FuelTrackingView: View {
                         .foregroundStyle(AppTheme.secondaryText)
                         .frame(maxWidth: .infinity, minHeight: 180)
                 } else {
-                    Chart {
-                        switch selectedChartMetric {
-                        case .spend:
-                            ForEach(chartPoints) { point in
-                                BarMark(
-                                    x: .value("Date", point.date),
-                                    y: .value("Value", point.value)
-                                )
-                                .foregroundStyle(AppTheme.accent.gradient)
-                                .cornerRadius(6)
-                            }
-                        case .consumption, .price:
-                            ForEach(chartPoints) { point in
-                                AreaMark(
-                                    x: .value("Date", point.date),
-                                    y: .value("Value", point.value)
-                                )
-                                .foregroundStyle(AppTheme.accent.opacity(0.14))
-
-                                LineMark(
-                                    x: .value("Date", point.date),
-                                    y: .value("Value", point.value)
-                                )
-                                .foregroundStyle(AppTheme.accent)
-                                .lineStyle(.init(lineWidth: 2.5, lineCap: .round))
-
-                                PointMark(
-                                    x: .value("Date", point.date),
-                                    y: .value("Value", point.value)
-                                )
-                                .foregroundStyle(AppTheme.accent)
-                            }
-                        }
-                    }
+                    chartContent
+                    .chartXSelection(value: $selectedChartDate)
                     .frame(height: 180)
                     .chartXAxis {
                         AxisMarks(values: .automatic(desiredCount: min(chartPoints.count, 4))) {
@@ -491,6 +476,83 @@ struct FuelTrackingView: View {
                 }
             }
         }
+    }
+
+
+    @ViewBuilder
+    private var chartContent: some View {
+        Chart {
+            chartMarks
+            chartOverlay
+        }
+    }
+
+    @ChartContentBuilder
+    private var chartMarks: some ChartContent {
+        if selectedChartMetric == .spend {
+            ForEach(chartPoints) { point in
+                BarMark(
+                    x: .value("Date", point.date),
+                    y: .value("Value", point.value)
+                )
+                .foregroundStyle((selectedChartPoint?.id == point.id) ? AppTheme.accent.gradient : AppTheme.accent.opacity(0.3).gradient)
+                .cornerRadius(6)
+            }
+        } else {
+            ForEach(chartPoints) { point in
+                AreaMark(
+                    x: .value("Date", point.date),
+                    y: .value("Value", point.value)
+                )
+                .foregroundStyle(AppTheme.accent.opacity(0.14))
+
+                LineMark(
+                    x: .value("Date", point.date),
+                    y: .value("Value", point.value)
+                )
+                .foregroundStyle(AppTheme.accent)
+                .lineStyle(.init(lineWidth: 2.5, lineCap: .round))
+
+                PointMark(
+                    x: .value("Date", point.date),
+                    y: .value("Value", point.value)
+                )
+                .foregroundStyle(AppTheme.accent)
+                .symbolSize((selectedChartPoint?.id == point.id) ? 100 : 40)
+            }
+        }
+    }
+
+    @ChartContentBuilder
+    private var chartOverlay: some ChartContent {
+        if let point = selectedChartPoint {
+            RuleMark(x: .value("Date", point.date))
+                .foregroundStyle(AppTheme.separator)
+                .lineStyle(.init(lineWidth: 1, dash: [5]))
+                .annotation(position: .top, alignment: .center, spacing: 0) {
+                    chartTooltip(for: point)
+                }
+        }
+    }
+
+    private func chartTooltip(for point: FuelTrendPoint) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(AppFormatters.mediumDate.string(from: point.date))
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(AppTheme.secondaryText)
+            Text(formattedChartValue(for: point.value))
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(AppTheme.primaryText)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(AppTheme.elevatedBackground)
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(AppTheme.separator, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.2), radius: 6, y: 3)
     }
 
     private var entriesSection: some View {
@@ -544,16 +606,18 @@ struct FuelTrackingView: View {
                             }
 
                             HStack(spacing: 10) {
-                                HStack(spacing: 5) {
-                                    Text("Liters")
+                                HStack(spacing: 4) {
+                                    Image(systemName: "fuelpump")
+                                        .font(.system(size: 10, weight: .medium))
                                     Text(litersText)
                                 }
 
                                 Text("•")
                                     .foregroundStyle(AppTheme.tertiaryText)
 
-                                HStack(spacing: 5) {
-                                    Text("Odometer")
+                                HStack(spacing: 4) {
+                                    Image(systemName: "speedometer")
+                                        .font(.system(size: 10, weight: .medium))
                                     Text(odometerText)
                                 }
                             }
@@ -565,14 +629,14 @@ struct FuelTrackingView: View {
 
                         Spacer(minLength: 12)
 
-                        VStack(alignment: .trailing, spacing: 4) {
+                        VStack(alignment: .trailing, spacing: 2) {
                             Text(priceText)
                                 .font(.system(size: 16, weight: .bold))
                                 .foregroundStyle(AppTheme.primaryText)
 
                             Text("Total")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.secondaryText)
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.tertiaryText)
                         }
 
                         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
@@ -593,24 +657,11 @@ struct FuelTrackingView: View {
                         Divider()
                             .overlay(AppTheme.separator)
 
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.flexible(), spacing: 12),
-                                GridItem(.flexible(), spacing: 12)
-                            ],
-                            spacing: 12
-                        ) {
+                        HStack(spacing: 6) {
                             expandedMetric(
                                 title: "Price / \(UnitSettings.currentFuelVolumeUnit.shortTitle)",
                                 value: insight?.pricePerLiter.map { UnitFormatter.costPerFuelUnitCurrency($0, currencyCode: entry.currencyCode) } ?? "—"
                             )
-                            expandedMetric(
-                                title: "Distance since previous fuel entry",
-                                value: insight?.distanceSincePreviousEntryKm.map(AppFormatters.mileage) ?? "—",
-                                detail: "Calculated from nearby fuel timeline entries.",
-                                isReadOnly: true
-                            )
-
                             expandedMetric(
                                 title: "Consumption",
                                 value: insight?.cycleConsumption.map(AppFormatters.consumption) ?? "—"
@@ -665,38 +716,29 @@ struct FuelTrackingView: View {
             )
     }
 
-    private func expandedMetric(title: String, value: String, detail: String? = nil, isReadOnly: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(title)
-                    .font(.caption2)
-                    .foregroundStyle(AppTheme.tertiaryText)
-
-                if isReadOnly {
-                    Text("Read-only")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(AppTheme.accent)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule()
-                                .fill(AppTheme.accent.opacity(0.12))
-                        )
-                }
-            }
+    private func expandedMetric(title: String, value: String, detail: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.tertiaryText)
+                .lineLimit(1)
 
             Text(value)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(AppTheme.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
 
             if let detail {
                 Text(detail)
                     .font(.caption2)
                     .foregroundStyle(AppTheme.tertiaryText)
+                    .lineLimit(2)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.vertical, 9)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Color(hex: "020617"))

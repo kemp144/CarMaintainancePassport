@@ -21,6 +21,8 @@ targets:
       - Models
       - Services
       - Theme
+    resources:
+      - Assets.xcassets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.robertengel.CarServicePassport

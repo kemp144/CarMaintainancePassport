@@ -80,12 +80,9 @@ struct CreateDocumentView: View {
             selectedServiceID = nil
         }
         .sheet(isPresented: $showingAddFilesSheet) {
-            DocumentAddFilesSheet(
-                allowReceiptScan: false,
-                onDocumentSeed: { seed in
-                    appendDraftSeed(seed)
-                }
-            )
+            DocumentAddFilesSheet(onDocumentSeed: { seed in
+                appendDraftSeed(seed)
+            })
         }
         .sheet(item: $previewPage) { page in
             DraftPagePreviewSheet(page: page)
@@ -159,7 +156,7 @@ struct CreateDocumentView: View {
                     .foregroundStyle(AppTheme.tertiaryText)
 
                 if let maxSavedDocuments = entitlementStore.maxSavedDocuments, !entitlementStore.canUseUnlimitedDocuments() {
-                    Text("Free includes up to \(maxSavedDocuments) saved documents. Upgrade to keep adding more and unlock OCR workflows.")
+                    Text("Free includes up to \(maxSavedDocuments) saved documents. Upgrade to keep adding more and unlock the full document vault.")
                         .font(.caption)
                         .foregroundStyle(hasReachedFreeDocumentLimit ? AppTheme.accent : AppTheme.secondaryText)
                 }

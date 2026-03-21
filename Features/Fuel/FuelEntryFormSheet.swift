@@ -105,7 +105,7 @@ struct FuelEntryFormSheet: View {
 
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text(entryType == .missedFillUp ? "Odometer at that stop" : "Current odometer")
+                            Text(entryType == .missedFillUp ? "Odometer at stop" : "Current odometer")
                                 .foregroundStyle(AppTheme.primaryText)
                             Spacer()
                             HStack(spacing: 4) {
@@ -135,7 +135,7 @@ struct FuelEntryFormSheet: View {
                 .listRowBackground(AppTheme.surface)
 
                 Section {
-                    TextField(entryType == .missedFillUp ? "Fuel volume (optional)" : UnitSettings.currentFuelVolumeUnit.title, text: $liters)
+                    TextField(entryType == .missedFillUp ? "\(UnitSettings.currentFuelVolumeUnit.title) (optional)" : UnitSettings.currentFuelVolumeUnit.title, text: $liters)
                         .keyboardType(.decimalPad)
 
                     TextField(entryType == .missedFillUp ? "Total price (optional)" : "Total price", text: $totalCost)
@@ -152,7 +152,7 @@ struct FuelEntryFormSheet: View {
                 } header: {
                     Text("Fuel").foregroundStyle(AppTheme.secondaryText)
                 } footer: {
-                    Text(entryType == .missedFillUp ? "Add any details you remember. Fuel volume and total price are optional for missed fuel stops." : "Full and Partial entries need both fuel volume and total price.")
+                    Text(entryType == .missedFillUp ? "Add any details you remember. Liters and total price are optional for missed fuel stops." : "Full and Partial entries need both fuel volume and total price.")
                         .foregroundStyle(AppTheme.tertiaryText)
                 }
                 .listRowBackground(AppTheme.surface)
@@ -169,7 +169,7 @@ struct FuelEntryFormSheet: View {
                 } header: {
                     Text("Additional").foregroundStyle(AppTheme.secondaryText)
                 } footer: {
-                    Text("Fuel type, station, and currency are remembered for faster future entries.")
+                    Text("Fuel type and station are remembered for faster future entries.")
                         .foregroundStyle(AppTheme.tertiaryText)
                 }
                 .listRowBackground(AppTheme.surface)
@@ -318,7 +318,7 @@ struct FuelEntryFormSheet: View {
     }
 
     private func save() {
-        let validation = FuelEntryValidator.validate(draft: draft, against: vehicle.fuelEntries)
+        let validation = FuelEntryValidator.validate(draft: draft, against: vehicle.fuelEntries, for: vehicle)
 
         guard validation.isValid else {
             validationMessage = validation.errors.first

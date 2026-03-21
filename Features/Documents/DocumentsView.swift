@@ -23,11 +23,8 @@ struct DocumentsView: View {
     @State private var searchText = ""
     @State private var showingAddFilesSheet = false
     @State private var pendingDraftSeed: DocumentDraftSeed?
-    @State private var pendingReceiptDraft: ScannedReceiptDraft?
     @State private var selectedDocument: DocumentSelection?
     @State private var deleteTarget: DocumentSelection?
-    @State private var pendingServiceDraft: ScannedReceiptDraft?
-    @State private var pendingServiceVehicle: Vehicle?
     @State private var deleteErrorMessage: String?
     @State private var isDeletingDocument = false
 
@@ -76,7 +73,7 @@ struct DocumentsView: View {
         let pagesCount = documentItems.reduce(0) { $0 + $1.pageCount }
         let linkedCount = documentItems.filter { $0.serviceTitle != nil }.count
 
-        let typeLabel1 = filter == .all ? "Documents" : (filter == .images ? "Photo documents" : "PDF documents")
+        let typeLabel1 = filter == .all ? "Documents" : (filter == .images ? "Photo docs" : "PDF docs")
         let typeLabel2 = filter == .all ? "Attachments" : (filter == .images ? "Photos" : "PDFs")
         
         let tabDescription: String
@@ -86,21 +83,21 @@ struct DocumentsView: View {
         case .pdfs: tabDescription = "Showing PDFs only"
         }
 
-        return SurfaceCard(padding: 16) {
-            VStack(alignment: .leading, spacing: 14) {
+        return SurfaceCard(padding: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 // Tab-specific stats
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text("Digital glovebox")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(AppTheme.primaryText)
                         Spacer()
                         Text(tabDescription)
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(AppTheme.secondaryText)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(AppTheme.tertiaryText)
                     }
 
-                    HStack(spacing: 12) {
+                    HStack(spacing: 8) {
                         SummaryStatTile(title: typeLabel1, value: "\(documentsCount)", icon: "doc.fill")
                         SummaryStatTile(title: typeLabel2, value: "\(pagesCount)", icon: "paperclip")
                         SummaryStatTile(title: "Linked", value: "\(linkedCount)", icon: "link")
@@ -108,44 +105,39 @@ struct DocumentsView: View {
                 }
 
                 // Global free plan info & Supporting copy
-                VStack(alignment: .leading, spacing: 6) {
-                    Divider().background(AppTheme.separator).padding(.vertical, 4)
+                VStack(alignment: .leading, spacing: 4) {
+                    Divider().background(AppTheme.separator).padding(.vertical, 2)
 
                     if entitlementStore.canUseUnlimitedDocuments() {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 5) {
                             Image(systemName: "checkmark.circle.fill")
-                                .font(.caption)
+                                .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(AppTheme.accent)
-                            Text("Pro active: Unlimited document storage")
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(AppTheme.primaryText)
+                            Text("Unlimited document storage active")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(AppTheme.secondaryText)
                         }
                     } else if let savedDocumentLimit = savedDocumentLimit {
                         HStack(alignment: .center, spacing: 6) {
                             Text("Free plan")
-                                .font(.caption.weight(.bold))
+                                .font(.caption2.weight(.bold))
                                 .foregroundStyle(AppTheme.primaryText)
                             
                             Text("•")
-                                .font(.caption)
+                                .font(.system(size: 10))
                                 .foregroundStyle(AppTheme.tertiaryText)
 
-                            Text("\(savedDocumentCount)/\(savedDocumentLimit) document slots used")
-                                .font(.caption.weight(.medium))
+                            Text("\(savedDocumentCount)/\(savedDocumentLimit) slots used")
+                                .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(hasReachedFreeDocumentLimit ? AppTheme.accent : AppTheme.secondaryText)
                             
                             Spacer()
                         }
-
-                        Text("Each saved document can include one or more photos or PDFs.")
-                            .font(.caption2)
-                            .foregroundStyle(AppTheme.tertiaryText)
                     }
 
-                    Text("Keep receipts, PDFs, and service paperwork organized with the right vehicle.")
-                        .font(.caption2)
-                        .foregroundStyle(AppTheme.secondaryText)
-                        .padding(.top, 2)
+                    Text("Organize receipts and PDFs by vehicle.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(AppTheme.tertiaryText)
                 }
             }
         }
@@ -169,13 +161,13 @@ struct DocumentsView: View {
             } label: {
                 HStack(spacing: 5) {
                     Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                     Text("Add")
-                        .font(.caption.weight(.semibold))
+                        .font(.system(size: 12, weight: .semibold))
                 }
                 .foregroundStyle(vehicles.isEmpty || hasReachedFreeDocumentLimit ? AppTheme.tertiaryText : AppTheme.accent)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 7)
+                .padding(.vertical, 6)
                 .background(
                     Capsule(style: .continuous)
                         .fill(AppTheme.accent.opacity(vehicles.isEmpty || hasReachedFreeDocumentLimit ? 0.05 : 0.12))
@@ -187,24 +179,24 @@ struct DocumentsView: View {
     }
 
     private var documentLimitCard: some View {
-        SurfaceCard(padding: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Text("Need more document space?")
-                            .font(.subheadline.weight(.semibold))
+        SurfaceCard(padding: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text("Need more space?")
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(AppTheme.primaryText)
 
                         Text("Pro")
-                            .font(.caption2.weight(.semibold))
+                            .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(AppTheme.accent)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
                             .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
                     }
 
-                    Text("Explore Pro for unlimited storage and OCR receipt capture.")
-                        .font(.caption)
+                    Text("Unlock unlimited document storage.")
+                        .font(.system(size: 11))
                         .foregroundStyle(AppTheme.secondaryText)
                 }
 
@@ -213,7 +205,7 @@ struct DocumentsView: View {
                 Button("Upgrade") {
                     paywallCoordinator.present(.documentVault)
                 }
-                .font(.caption.weight(.semibold))
+                .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(AppTheme.accent)
             }
         }
@@ -227,15 +219,15 @@ struct DocumentsView: View {
         switch filter {
         case .all:
             title = "Keep paperwork together"
-            message = "Store receipts, service records, and vehicle documents in one place."
+            message = "Store receipts and service records in one place."
             actionTitle = "Add Files"
         case .images:
-            title = "No photo documents yet"
-            message = "Add photos of receipts, inspections, or service paperwork for this vehicle."
+            title = "No photo documents"
+            message = "Add photos of receipts or inspections."
             actionTitle = "Add Photos"
         case .pdfs:
-            title = "No PDF documents yet"
-            message = "Import invoices, reports, and paperwork as PDFs for this vehicle."
+            title = "No PDF documents"
+            message = "Import invoices and reports as PDFs."
             actionTitle = "Add PDFs"
         }
 
@@ -244,7 +236,7 @@ struct DocumentsView: View {
             title: title,
             message: message,
             actionTitle: actionTitle,
-            verticalPadding: 28
+            verticalPadding: 24
         ) {
             presentAddFiles()
         }
@@ -256,7 +248,9 @@ struct DocumentsView: View {
             AppTheme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                VehicleFilterScrollView(vehicles: vehicles)
+                if vehicles.count > 1 {
+                    VehicleFilterScrollView(vehicles: vehicles)
+                }
 
                 VStack(spacing: 12) {
                     documentTopControls
@@ -275,9 +269,11 @@ struct DocumentsView: View {
                             }
                             .padding(.horizontal, AppTheme.Spacing.pageEdge)
                             .padding(.top, 8)
-                            .padding(.bottom, 120) // Ensure spacing above search bar
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .safeAreaInset(edge: .bottom) {
+                            Color.clear.frame(height: 40)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .top)
                     } else {
                         ScrollView(showsIndicators: false) {
                             VStack(spacing: 12) {
@@ -287,7 +283,7 @@ struct DocumentsView: View {
                                     documentLimitCard
                                 }
 
-                                LazyVStack(spacing: 12) {
+                                LazyVStack(spacing: 10) {
                                     ForEach(documentItems) { item in
                                         documentRow(for: item)
                                     }
@@ -297,7 +293,7 @@ struct DocumentsView: View {
                             .padding(.top, 8)
                             .padding(.bottom, 120) // Ensure spacing above search bar
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .frame(maxWidth: .infinity, alignment: .top)
                     }
                 }
                 .padding(.top, 8)
@@ -305,17 +301,15 @@ struct DocumentsView: View {
         }
         .navigationTitle("Documents")
         .navigationBarTitleDisplayMode(.large)
-        .searchable(text: $searchText, prompt: "File, title or vehicle")
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "File, title or vehicle"
+        )
         .sheet(isPresented: $showingAddFilesSheet) {
-            DocumentAddFilesSheet(
-                allowReceiptScan: entitlementStore.canUseDocumentOCR(),
-                onDocumentSeed: { seed in
-                    pendingDraftSeed = seed
-                },
-                onReceiptScanned: { draft in
-                    pendingReceiptDraft = draft
-                }
-            )
+            DocumentAddFilesSheet(onDocumentSeed: { seed in
+                pendingDraftSeed = seed
+            })
         }
         .sheet(item: $pendingDraftSeed, onDismiss: {
             pendingDraftSeed = nil
@@ -327,34 +321,8 @@ struct DocumentsView: View {
                 )
             }
         }
-        .sheet(item: $pendingReceiptDraft, onDismiss: {
-            pendingReceiptDraft = nil
-        }) { draft in
-            NavigationStack {
-                ReceiptReviewView(
-                    vehicle: currentVehicle,
-                    draft: draft
-                ) { updatedDraft in
-                    if let vehicle = currentVehicle {
-                        pendingServiceVehicle = vehicle
-                        pendingServiceDraft = updatedDraft
-                    }
-                }
-            }
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
         .sheet(item: $selectedDocument) { selection in
             DocumentDetailView(selection: selection)
-        }
-        .sheet(item: $pendingServiceDraft, onDismiss: {
-            pendingServiceVehicle = nil
-        }) { draft in
-            if let vehicle = pendingServiceVehicle {
-                NavigationStack {
-                    ServiceEntryFormView(vehicle: vehicle, autoStartOCR: false, ocrDraft: draft)
-                }
-            }
         }
         .confirmationDialog("Delete this document?", isPresented: Binding(get: {
             deleteTarget != nil
@@ -392,54 +360,54 @@ struct DocumentsView: View {
     }
 
     private func documentRow(for item: DocumentListItem) -> some View {
-        SurfaceCard(padding: 14) {
-            HStack(alignment: .top, spacing: 14) {
+        SurfaceCard(padding: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 DocumentThumbnailView(
                     previewReference: item.thumbnailReference ?? item.previewReference,
                     fallbackType: item.type,
                     pageCount: item.pageCount
                 )
-                .padding(.top, 2)
+                .padding(.top, 1)
 
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(item.title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(AppTheme.primaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
 
-                    HStack(spacing: 6) {
+                    HStack(spacing: 5) {
                         Text(item.type.title)
-                            .font(.caption)
+                            .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(AppTheme.primaryText)
                         
                         Text("•")
-                            .font(.caption)
+                            .font(.system(size: 10))
                             .foregroundStyle(AppTheme.tertiaryText)
                             
                         Text(item.vehicleTitle)
-                            .font(.caption)
+                            .font(.system(size: 11))
                             .foregroundStyle(AppTheme.secondaryText)
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
 
                     Text(AppFormatters.mediumDate.string(from: item.createdAt))
-                        .font(.caption2)
+                        .font(.system(size: 10))
                         .foregroundStyle(AppTheme.tertiaryText)
 
                     if let serviceTitle = item.serviceTitle {
                         HStack(spacing: 4) {
                             Image(systemName: "link")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(.system(size: 8, weight: .bold))
                             Text(serviceTitle)
-                                .font(.caption2.weight(.medium))
+                                .font(.system(size: 10, weight: .medium))
                                 .lineLimit(1)
                         }
                         .foregroundStyle(AppTheme.accent)
                         .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(AppTheme.accent.opacity(0.12)))
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(AppTheme.accent.opacity(0.1)))
                         .padding(.top, 2)
                     }
                 }
@@ -454,9 +422,9 @@ struct DocumentsView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(AppTheme.tertiaryText)
-                        .frame(width: 32, height: 32, alignment: .topTrailing)
+                        .frame(width: 28, height: 28, alignment: .topTrailing)
                         .contentShape(Rectangle())
                 }
             }

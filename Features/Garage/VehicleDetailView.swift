@@ -11,13 +11,10 @@ struct VehicleDetailView: View {
 
     @State private var showingEdit = false
     @State private var showingServiceForm = false
-    @State private var showingOCRServiceForm = false
     @State private var showingReminderForm = false
-    @State private var showingDocumentComposer = false
     @State private var showingDocuments = false
     @State private var selectedReminder: ReminderItem?
     @State private var selectedServiceEntry: ServiceEntry?
-    @State private var pendingServiceDraft: ScannedReceiptDraft?
     @State private var showingAnalytics = false
     @State private var showingFuelTracking = false
     @State private var showingDeleteConfirmation = false
@@ -64,51 +61,40 @@ struct VehicleDetailView: View {
                                     .font(.system(size: 22, weight: .bold))
                                     .foregroundStyle(AppTheme.primaryText)
                                     .lineLimit(2)
-                                    .minimumScaleFactor(0.86)
-                                    .padding(.bottom, 4)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.bottom, 5)
 
                                 Text(vehicleSubtitleLine)
                                     .font(.system(size: 14))
                                     .foregroundStyle(AppTheme.secondaryText)
-                                    .padding(.bottom, 6)
+                                    .padding(.bottom, 7)
 
-                                Text(ownershipSnapshotText)
+                                Text(spendAndServicesLine)
                                     .font(.footnote.weight(.medium))
                                     .foregroundStyle(AppTheme.secondaryText)
-                                    .lineLimit(2)
-                                    .minimumScaleFactor(0.82)
+                                    .padding(.bottom, 2)
+
+                                Text(lastServiceLine)
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.tertiaryText)
                                     .padding(.bottom, 10)
 
-                                HStack(spacing: 8) {
-                                    Image(systemName: "speedometer")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(AppTheme.accent)
-                                    Text("Current mileage")
-                                        .font(.caption.weight(.medium))
-                                        .foregroundStyle(AppTheme.secondaryText)
-                                    Spacer()
-                                    Text(vehicle.currentMileageDisplayString)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(AppTheme.primaryText)
-                                }
-                                .padding(.bottom, 10)
-
-                                HStack(spacing: 8) {
+                                HStack(spacing: 6) {
                                     if !vehicle.licensePlate.isEmpty {
                                         Text(vehicle.licensePlate)
-                                            .font(.system(size: 11, design: .monospaced))
-                                            .foregroundStyle(AppTheme.secondaryText)
-                                            .padding(.horizontal, 9)
+                                            .font(.system(size: 10.5, design: .monospaced))
+                                            .foregroundStyle(AppTheme.tertiaryText)
+                                            .padding(.horizontal, 8)
                                             .padding(.vertical, 3)
-                                            .background(RoundedRectangle(cornerRadius: 6).fill(AppTheme.surfaceSecondary.opacity(0.75)))
+                                            .background(RoundedRectangle(cornerRadius: 5).fill(AppTheme.surfaceSecondary.opacity(0.5)))
                                     }
                                     if !vehicle.vin.isEmpty {
                                         Text("VIN: \(vehicle.vin)")
-                                            .font(.system(size: 10.5, design: .monospaced))
-                                            .foregroundStyle(AppTheme.tertiaryText)
-                                            .padding(.horizontal, 9)
+                                            .font(.system(size: 9.5, design: .monospaced))
+                                            .foregroundStyle(AppTheme.tertiaryText.opacity(0.7))
+                                            .padding(.horizontal, 8)
                                             .padding(.vertical, 3)
-                                            .background(RoundedRectangle(cornerRadius: 6).fill(AppTheme.surfaceSecondary.opacity(0.75)))
+                                            .background(RoundedRectangle(cornerRadius: 5).fill(AppTheme.surfaceSecondary.opacity(0.4)))
                                             .lineLimit(1)
                                     }
                                 }
@@ -360,11 +346,6 @@ struct VehicleDetailView: View {
                 ServiceDetailView(entry: entry)
             }
         }
-        .sheet(isPresented: $showingOCRServiceForm) {
-            NavigationStack {
-                ServiceEntryFormView(vehicle: vehicle, autoStartOCR: true)
-            }
-        }
         .sheet(isPresented: $showingReminderForm) {
             NavigationStack {
                 ReminderFormView(vehicle: vehicle)
@@ -378,11 +359,6 @@ struct VehicleDetailView: View {
         .sheet(item: $selectedReminder) { reminder in
             NavigationStack {
                 ReminderFormView(vehicle: vehicle, reminder: reminder)
-            }
-        }
-        .sheet(item: $pendingServiceDraft) { draft in
-            NavigationStack {
-                ServiceEntryFormView(vehicle: vehicle, ocrDraft: draft)
             }
         }
         .sheet(isPresented: $showingAnalytics) {
@@ -426,24 +402,33 @@ struct VehicleDetailView: View {
                     showingReminderForm = true
                 }
 
-                Menu {
-                    Button {
-                        exportPDF()
+                if entitlementStore.hasProAccess {
+                    Menu {
+                        Button {
+                            exportPDF()
+                        } label: {
+                            Label("Service Passport (PDF)", systemImage: "doc.richtext.fill")
+                        }
+                        Button {
+                            exportResaleReport()
+                        } label: {
+                            Label("Resale Report (PDF)", systemImage: "tag.fill")
+                        }
+                        Button {
+                            exportCSV()
+                        } label: {
+                            Label("Export CSV Data", systemImage: "tablecells.fill")
+                        }
                     } label: {
-                        Label("Service Passport (PDF)", systemImage: "doc.richtext.fill")
+                        quickActionLabel(title: "Export", icon: "square.and.arrow.up", priority: .tertiary)
                     }
+                } else {
                     Button {
-                        exportResaleReport()
+                        paywallCoordinator.present(.exportPDF)
                     } label: {
-                        Label("Resale Report (PDF)", systemImage: "tag.fill")
+                        quickActionLabel(title: "Export", icon: "square.and.arrow.up", priority: .tertiary, isLocked: true)
                     }
-                    Button {
-                        exportCSV()
-                    } label: {
-                        Label("Export CSV Data", systemImage: "tablecells.fill")
-                    }
-                } label: {
-                    quickActionLabel(title: "Export", icon: "square.and.arrow.up", priority: .tertiary)
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -583,7 +568,7 @@ struct VehicleDetailView: View {
                                                 .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
                                         }
 
-                                        Text("Consumption, charts, filters, OCR receipts, export, and advanced analytics.")
+                                        Text("Consumption, charts, filters, export, and advanced analytics.")
                                             .font(.caption)
                                             .foregroundStyle(AppTheme.secondaryText)
                                     }
@@ -883,16 +868,18 @@ struct VehicleDetailView: View {
         return year
     }
 
-    private var ownershipSnapshotText: String {
+    private var spendAndServicesLine: String {
         let total = AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode)
         let serviceCount = vehicle.serviceEntries.count
         let serviceText = serviceCount == 1 ? "1 service" : "\(serviceCount) services"
+        return "\(total) total · \(serviceText)"
+    }
 
+    private var lastServiceLine: String {
         if let lastDate = vehicle.latestServiceDate {
-            return "\(total) total · \(serviceText) · Last service \(AppFormatters.monthYear.string(from: lastDate))"
+            return "Last service · \(AppFormatters.monthYear.string(from: lastDate))"
         }
-
-        return "\(total) total · \(serviceText) · No service history yet"
+        return "No service history yet"
     }
 
     private func reminderRowTitle(for reminder: ReminderItem) -> String {

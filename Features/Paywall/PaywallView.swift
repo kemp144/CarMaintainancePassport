@@ -11,6 +11,7 @@ struct PaywallView: View {
 
     @State private var selectedPlan: EntitlementStore.ProPlan = .yearly
     @State private var scrollOffset: CGFloat = 0
+    @State private var showingPrivacySheet = false
 
     private var paywallCopy: PaywallCopy {
         PaywallCopyBuilder.build(for: reason, context: paywallCoordinator.context)
@@ -51,6 +52,9 @@ struct PaywallView: View {
                         stickyCTA
                     }
                 }
+            }
+            .sheet(isPresented: $showingPrivacySheet) {
+                privacySheet
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -296,11 +300,9 @@ struct PaywallView: View {
                 }
 
                 Button {
-                    if let url = URL(string: "https://www.apple.com/legal/privacy/") {
-                        openURL(url)
-                    }
+                    showingPrivacySheet = true
                 } label: {
-                    Text("Privacy Policy")
+                    Text("Privacy")
                 }
             }
             .font(.footnote)
@@ -492,9 +494,8 @@ struct PaywallView: View {
             ComparisonFeature(title: "Reminders", free: "By date", pro: "Date + mileage", highlightPro: true),
             ComparisonFeature(title: "Fuel history", free: "Logs + totals", pro: "Logs + totals", highlightPro: false),
             ComparisonFeature(title: "Fuel insights", free: "Basic averages", pro: "Long-term trends", highlightPro: true),
-            ComparisonFeature(title: "OCR receipts", free: "Manual entry", pro: "Auto-filled", highlightPro: true),
             ComparisonFeature(title: "Documents", free: "Up to 10 saved", pro: "Unlimited", highlightPro: true),
-            ComparisonFeature(title: "Backup & restore", free: "Included", pro: "Included", highlightPro: false),
+            ComparisonFeature(title: "Automatic backup", free: "Included", pro: "Included", highlightPro: false),
             ComparisonFeature(title: "Reports", free: "Not included", pro: "PDF + CSV + resale", highlightPro: true),
             ComparisonFeature(title: "Ownership insights", free: "Core summary", pro: "Deep breakdowns", highlightPro: true)
         ]
@@ -528,7 +529,7 @@ struct PaywallView: View {
                 PaywallBenefit(icon: "gauge.with.dots.needle.33percent", title: "Long-term averages", message: "See how your car performs beyond the latest fill-up."),
                 PaywallBenefit(icon: "chart.xyaxis.line", title: "Trend charts", message: "Track fuel history visually without guesswork."),
                 PaywallBenefit(icon: "line.3.horizontal.decrease.circle.fill", title: "Flexible filtering", message: "Focus on the periods that matter most."),
-                PaywallBenefit(icon: "doc.text.viewfinder", title: "Receipt OCR", message: "Capture fill-ups faster with less manual entry.")
+                PaywallBenefit(icon: "fuelpump.fill", title: "Deeper fuel insights", message: "Spot patterns in spend, price, and consumption over time.")
             ]
         case .resaleReport:
             return [
@@ -549,7 +550,7 @@ struct PaywallView: View {
                 PaywallBenefit(icon: "gauge.with.dots.needle.33percent", title: "Real fuel efficiency", message: "Track the averages that matter over time."),
                 PaywallBenefit(icon: "chart.xyaxis.line", title: "Trend charts", message: "See spend, prices, and consumption visually."),
                 PaywallBenefit(icon: "line.3.horizontal.decrease.circle.fill", title: "Flexible filtering", message: "Focus on recent periods or your full history."),
-                PaywallBenefit(icon: "doc.text.viewfinder", title: "Receipt OCR", message: "Capture fill-ups faster with less manual entry.")
+                PaywallBenefit(icon: "fuelpump.fill", title: "Deeper fuel insights", message: "Spot patterns in spend, price, and consumption over time.")
             ]
         case .secondVehicle:
             return [
@@ -565,6 +566,53 @@ struct PaywallView: View {
                 PaywallBenefit(icon: "fuelpump.fill", title: "Fuel efficiency insights", message: "Unlock consumption, charts, filters, and deeper fuel trends."),
                 PaywallBenefit(icon: "doc.richtext.fill", title: "Reports and resale tools", message: "Keep receipts organized and export buyer-ready history.")
             ]
+        }
+    }
+
+    private var privacySheet: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.background.ignoresSafeArea()
+
+                ScrollView(showsIndicators: false) {
+                    SurfaceCard {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Privacy")
+                                .font(.title2.weight(.bold))
+                                .foregroundStyle(AppTheme.primaryText)
+
+                            privacyRow(title: "Account", message: "You can use the app without creating an account.")
+                            privacyRow(title: "Storage", message: BackupExportService.shared.isUsingICloud ? "Your records stay on this device, with backups saved to iCloud Drive when available." : "Your records stay on this device. Local backups are removed if the app is deleted.")
+                            privacyRow(title: "Purchases", message: "Subscriptions and purchases are handled by the App Store.")
+                            privacyRow(title: "Ads", message: "The app does not show ads or use ad tracking.")
+                        }
+                    }
+                    .padding(20)
+                }
+            }
+            .navigationTitle("Privacy")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") {
+                        showingPrivacySheet = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private func privacyRow(title: String, message: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.primaryText)
+
+            Text(message)
+                .font(.footnote)
+                .foregroundStyle(AppTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

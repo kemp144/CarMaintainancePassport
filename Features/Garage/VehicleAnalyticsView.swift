@@ -54,6 +54,7 @@ struct VehicleAnalyticsView: View {
     @State private var showingServicePreview = false
     @State private var showingFuelPreview = false
     @State private var showingResalePreview = false
+    @State private var showingForecastDetail = false
     
     enum AnalyticsTab: String, CaseIterable, Identifiable {
         case financials = "Finance"
@@ -160,8 +161,24 @@ struct VehicleAnalyticsView: View {
             await viewModel.calculateIntelligence(allVehicles: allVehicles)
             syncPreviewMilestones()
         }
+        .sheet(isPresented: $showingForecastDetail) {
+            ForecastDetailSheet(items: viewModel.forecastItems, vehicle: vehicle)
+        }
     }
     
+    // MARK: - Forecast Helpers
+
+    private func forecastContextNote(_ text: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: "info.circle")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.tertiaryText)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(AppTheme.tertiaryText)
+        }
+    }
+
     // MARK: - Financials Tab
     private var financialsTab: some View {
         VStack(spacing: 18) {
@@ -187,45 +204,73 @@ struct VehicleAnalyticsView: View {
 
                 SurfaceCard(tier: .primary, padding: 16) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Ownership Forecast")
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(AppTheme.primaryText)
-                            
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Ownership Forecast")
+                                    .font(.headline.weight(.semibold))
+                                    .foregroundStyle(AppTheme.primaryText)
+                                Text("Cumulative · based on upcoming reminders")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.tertiaryText)
+                            }
+                            Spacer()
+                            if !viewModel.forecastItems.isEmpty {
+                                Button {
+                                    showingForecastDetail = true
+                                } label: {
+                                    Image(systemName: "list.bullet.circle")
+                                        .font(.body)
+                                        .foregroundStyle(AppTheme.accent)
+                                }
+                            }
+                        }
+
                         if viewModel.upcomingPlannedCost == 0 {
-                            Text("No planned costs detected")
+                            Text("No upcoming scheduled costs")
                                 .font(.subheadline)
                                 .foregroundStyle(AppTheme.secondaryText)
                         } else {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text("Next 3 Mo")
+                            HStack(alignment: .top) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("3 Months")
                                         .font(.caption)
                                         .foregroundStyle(AppTheme.secondaryText)
                                     Text(AppFormatters.currency(viewModel.upcomingPlannedCost3Months, code: vehicle.currencyCode))
                                         .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(viewModel.upcomingPlannedCost3Months == 0 ? AppTheme.tertiaryText : AppTheme.primaryText)
                                 }
                                 Spacer()
-                                VStack(alignment: .leading) {
-                                    Text("Next 6 Mo")
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("6 Months")
                                         .font(.caption)
                                         .foregroundStyle(AppTheme.secondaryText)
                                     Text(AppFormatters.currency(viewModel.upcomingPlannedCost6Months, code: vehicle.currencyCode))
                                         .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(viewModel.upcomingPlannedCost6Months == 0 ? AppTheme.tertiaryText : AppTheme.primaryText)
                                 }
                                 Spacer()
-                                VStack(alignment: .trailing) {
-                                    Text("Next 12 Mo")
+                                VStack(alignment: .trailing, spacing: 4) {
+                                    Text("12 Months")
                                         .font(.caption)
                                         .foregroundStyle(AppTheme.secondaryText)
                                     Text(AppFormatters.currency(viewModel.upcomingPlannedCost, code: vehicle.currencyCode))
                                         .font(.subheadline.weight(.semibold))
                                 }
                             }
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                if viewModel.upcomingPlannedCost3Months == 0 {
+                                    forecastContextNote("Nothing due in the next 3 months.")
+                                }
+                                if viewModel.upcomingPlannedCost6Months > 0,
+                                   viewModel.upcomingPlannedCost6Months == viewModel.upcomingPlannedCost {
+                                    forecastContextNote("No additional costs found after 6 months.")
+                                }
+                            }
                         }
 
                         if let forecastConfidenceText = viewModel.forecastConfidenceText {
                             DataConfidenceFootnote(message: forecastConfidenceText)
-                                .padding(.top, 0)
                         }
                     }
                 }
@@ -1353,7 +1398,8 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     @Published var upcomingPlannedCost: Double = 0
     @Published var upcomingPlannedCost3Months: Double = 0
     @Published var upcomingPlannedCost6Months: Double = 0
-    
+    @Published fileprivate var forecastItems: [ForecastItem] = []
+
     // Compare Metrics
     @Published var last90DaysSpend: Double = 0
     @Published var previous90DaysSpend: Double = 0
@@ -1598,13 +1644,22 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 if let due = reminder.dateDue {
                     if due >= now && due <= oneYearFromNow {
                         let relatedServices = sortedServices.filter { $0.serviceType.rawValue == reminder.typeRaw }
+                        let isEstimate = relatedServices.isEmpty
                         let avg: Double
-                        if relatedServices.isEmpty {
+                        if isEstimate {
                             avg = 100.0
                             forecastFallbackCount += 1
                         } else {
                             avg = relatedServices.reduce(0) { $0 + $1.price } / Double(relatedServices.count)
                         }
+                        let itemTitle = ServiceType(rawValue: reminder.typeRaw)?.title ?? reminder.title
+                        res.forecastItems.append(ForecastItem(
+                            title: itemTitle,
+                            dueDate: due,
+                            dueMileage: nil,
+                            estimatedCost: avg,
+                            isEstimate: isEstimate
+                        ))
                         forecastItemCount += 1
                         res.upcomingPlannedCost += avg
                         if due <= sixMonthsFromNow {
@@ -1634,16 +1689,25 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                         }
                     } else if milDue - vehicleMileage <= 5000 {
                         let relatedServices = sortedServices.filter { $0.serviceType.rawValue == reminder.typeRaw }
+                        let isEstimate = relatedServices.isEmpty
                         let avg: Double
-                        if relatedServices.isEmpty {
+                        if isEstimate {
                             avg = 100.0
                             forecastFallbackCount += 1
                         } else {
                             avg = relatedServices.reduce(0) { $0 + $1.price } / Double(relatedServices.count)
                         }
+                        let itemTitle = ServiceType(rawValue: reminder.typeRaw)?.title ?? reminder.title
+                        res.forecastItems.append(ForecastItem(
+                            title: itemTitle,
+                            dueDate: nil,
+                            dueMileage: milDue,
+                            estimatedCost: avg,
+                            isEstimate: isEstimate
+                        ))
                         forecastItemCount += 1
                         res.upcomingPlannedCost += avg
-                        
+
                         if milDue - vehicleMileage <= 2500 {
                             res.upcomingPlannedCost6Months += avg
                             if isMaintenanceReminder {
@@ -1692,6 +1756,15 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 res.policyReminderSummaryText = "\(first) reminders stay separate from maintenance health."
             } else {
                 res.policyReminderSummaryText = "Insurance and registration reminders stay separate from maintenance health."
+            }
+
+            res.forecastItems.sort {
+                switch ($0.dueDate, $1.dueDate) {
+                case let (a?, b?): return a < b
+                case (nil, _?): return false
+                case (_?, nil): return true
+                case (nil, nil): return ($0.dueMileage ?? 0) < ($1.dueMileage ?? 0)
+                }
             }
 
             if res.upcomingPlannedCost == 0 {
@@ -1822,9 +1895,9 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 }
                 
                 let ascendingMaint = maintenanceServices.sorted { $0.date < $1.date }
-                if ascendingMaint.count >= 2 {
-                    let first = ascendingMaint.first!.date
-                    let last = ascendingMaint.last!.date
+                if ascendingMaint.count >= 2,
+                   let first = ascendingMaint.first?.date,
+                   let last = ascendingMaint.last?.date {
                     let days = calendar.dateComponents([.day], from: first, to: last).day ?? 0
                     let interval = max(0, days / (ascendingMaint.count - 1))
                     res.averageServiceIntervalDays = .ready("\(interval) days")
@@ -2003,7 +2076,8 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         self.upcomingPlannedCost = result.upcomingPlannedCost
         self.upcomingPlannedCost3Months = result.upcomingPlannedCost3Months
         self.upcomingPlannedCost6Months = result.upcomingPlannedCost6Months
-        
+        self.forecastItems = result.forecastItems
+
         self.lastValidTank = result.lastValidTank
         self.recentAverageConsumption = result.recentAverageConsumption
         self.allTimeAverageConsumption = result.allTimeAverageConsumption
@@ -2062,6 +2136,24 @@ final class VehicleIntelligenceViewModel: ObservableObject {
     }
 }
 
+fileprivate struct ForecastItem: Identifiable {
+    let id = UUID()
+    let title: String
+    let dueDate: Date?
+    let dueMileage: Int?
+    let estimatedCost: Double
+    let isEstimate: Bool
+
+    var dueDateDescription: String {
+        if let date = dueDate {
+            return AppFormatters.mediumDate.string(from: date)
+        } else if let miles = dueMileage {
+            return "At \(UnitFormatter.distance(Double(miles)))"
+        }
+        return "Upcoming"
+    }
+}
+
 private struct IntelligenceResult {
     var totalLifetimeSpend: Double = 0
     var thisYearSpend: Double = 0
@@ -2080,7 +2172,8 @@ private struct IntelligenceResult {
     var upcomingPlannedCost: Double = 0
     var upcomingPlannedCost3Months: Double = 0
     var upcomingPlannedCost6Months: Double = 0
-    
+    var forecastItems: [ForecastItem] = []
+
     var lastValidTank: FuelEntry? = nil
     var recentAverageConsumption: MetricState<String> = .notEnoughHistory("Need valid full fill-ups")
     var allTimeAverageConsumption: MetricState<String> = .notEnoughHistory("Long-term average needs more history")
@@ -2172,6 +2265,69 @@ private extension DocumentVaultCategory {
             return true
         case .receipts:
             return false
+        }
+    }
+}
+
+// MARK: - Forecast Detail Sheet
+
+private struct ForecastDetailSheet: View {
+    let items: [ForecastItem]
+    let vehicle: Vehicle
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.background.ignoresSafeArea()
+
+                List {
+                    Section {
+                        ForEach(items) { item in
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(item.title)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(AppTheme.primaryText)
+                                    Text(item.dueDateDescription)
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.secondaryText)
+                                }
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 3) {
+                                    Text(AppFormatters.currency(item.estimatedCost, code: vehicle.currencyCode))
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.primaryText)
+                                    if item.isEstimate {
+                                        Text("estimated")
+                                            .font(.caption2)
+                                            .foregroundStyle(AppTheme.tertiaryText)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .listRowBackground(Color.clear)
+                        }
+                    } header: {
+                        Text("Scheduled costs · next 12 months")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .textCase(nil)
+                    } footer: {
+                        Text("Amounts are based on your service history. Items marked \"estimated\" use a placeholder until more history is logged.")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.tertiaryText)
+                    }
+                }
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("Forecast Breakdown")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
     }
 }

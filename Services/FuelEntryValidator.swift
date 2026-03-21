@@ -70,10 +70,13 @@ struct FuelEntryValidationResult {
 
 enum FuelEntryValidator {
     private static let suspiciousPricePerLiterRange = 0.15...6.5
+    // Max plausible fill-up in liters (~400L covers the largest truck tanks)
+    private static let maxReasonableLiters: Double = 400
 
     static func validate(
         draft: FuelEntryDraft,
-        against entries: [FuelEntry]
+        against entries: [FuelEntry],
+        for vehicle: Vehicle
     ) -> FuelEntryValidationResult {
         var errors: [String] = []
         var warnings: [String] = []
@@ -119,8 +122,12 @@ enum FuelEntryValidator {
             errors.append("If you enter \(displayedFuelUnit), please enter the total price too.")
         }
 
-        if let liters = draft.liters, liters < 0 {
-            errors.append("\(displayedFuelUnit.capitalized) cannot be negative.")
+        if let liters = draft.liters {
+            if liters < 0 {
+                errors.append("\(displayedFuelUnit.capitalized) cannot be negative.")
+            } else if liters > maxReasonableLiters {
+                warnings.append("That's an unusually large volume (\(UnitFormatter.fuelVolume(liters))). Please double-check the amount.")
+            }
         }
 
         if let totalCost = draft.totalCost, totalCost < 0 {
@@ -131,6 +138,15 @@ enum FuelEntryValidator {
            !suspiciousPricePerLiterRange.contains(pricePerLiter) {
             warnings.append("This fuel price seems unusual for the entered volume. Please double-check the amount.")
         }
+
+        let timelineErrors = VehicleOdometerTimelineValidator.validateFuelEntry(
+            vehicle: vehicle,
+            fuelID: draft.id,
+            date: draft.date,
+            mileage: odometer,
+            createdAt: draft.createdAt
+        )
+        errors.append(contentsOf: timelineErrors)
 
         if let draftRecord = draft.asRecord {
             let otherRecords = entries

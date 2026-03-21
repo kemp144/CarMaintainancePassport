@@ -7,7 +7,7 @@ struct VehicleFormView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var entitlementStore: EntitlementStore
     @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
-    @AppStorage("settings.defaultCurrency") private var defaultCurrency = CurrencyPreset.eur.rawValue
+    @AppStorage("settings.defaultCurrency") private var defaultCurrency = CurrencyPreset.suggested().rawValue
 
     private let vehicle: Vehicle?
 
@@ -44,7 +44,7 @@ struct VehicleFormView: View {
         _purchaseDate = State(initialValue: vehicle?.purchaseDate ?? .now)
         _hasPurchaseDate = State(initialValue: vehicle?.purchaseDate != nil)
         _purchasePrice = State(initialValue: vehicle?.purchasePrice.map { String(Int($0)) } ?? "")
-        _currencyCode = State(initialValue: vehicle?.currencyCode ?? CurrencyPreset.eur.rawValue)
+        _currencyCode = State(initialValue: vehicle?.currencyCode ?? CurrencyPreset.suggested().rawValue)
         _vin = State(initialValue: vehicle?.vin ?? "")
         _notes = State(initialValue: vehicle?.notes ?? "")
         _coverReference = State(initialValue: vehicle?.coverImageReference)

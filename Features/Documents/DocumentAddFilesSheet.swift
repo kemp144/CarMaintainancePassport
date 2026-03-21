@@ -7,26 +7,14 @@ struct DocumentAddFilesSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
 
-    let allowReceiptScan: Bool
     let onDocumentSeed: (DocumentDraftSeed) -> Void
-    let onReceiptScanned: ((ScannedReceiptDraft) -> Void)?
 
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var showingCamera = false
-    @State private var showingReceiptScanner = false
     @State private var showingPDFImporter = false
-    @State private var isScanningReceipt = false
-    @State private var showingReceiptScanError = false
-    @State private var receiptScanTask: Task<Void, Never>?
 
-    init(
-        allowReceiptScan: Bool = true,
-        onDocumentSeed: @escaping (DocumentDraftSeed) -> Void,
-        onReceiptScanned: ((ScannedReceiptDraft) -> Void)? = nil
-    ) {
-        self.allowReceiptScan = allowReceiptScan
+    init(onDocumentSeed: @escaping (DocumentDraftSeed) -> Void) {
         self.onDocumentSeed = onDocumentSeed
-        self.onReceiptScanned = onReceiptScanned
     }
 
     var body: some View {
@@ -43,12 +31,6 @@ struct DocumentAddFilesSheet: View {
                     .padding(.top, 12)
                     .padding(.bottom, 28)
                 }
-
-                if isScanningReceipt {
-                    ReceiptScanLoadingOverlay()
-                        .transition(.opacity)
-                        .zIndex(1)
-                }
             }
             .navigationTitle("Add Files")
             .navigationBarTitleDisplayMode(.inline)
@@ -60,16 +42,6 @@ struct DocumentAddFilesSheet: View {
         }
         .presentationDetents([.medium, .height(500)])
         .presentationDragIndicator(.visible)
-        .onDisappear {
-            receiptScanTask?.cancel()
-        }
-        .sheet(isPresented: $showingReceiptScanner) {
-            OCRImagePickerSheet { image in
-                guard let image else { return }
-                startReceiptScan(with: image)
-            }
-            .ignoresSafeArea()
-        }
         .sheet(isPresented: $showingCamera) {
             CameraCaptureView { image in
                 handleImageSelection(
@@ -124,14 +96,6 @@ struct DocumentAddFilesSheet: View {
                 )
             }
         }
-        .alert("Could not scan the receipt", isPresented: $showingReceiptScanError) {
-            Button("Try Again") {
-                showingReceiptScanner = true
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("The receipt image is still available. You can try the scan again or add files manually.")
-        }
     }
 
     @ViewBuilder
@@ -153,17 +117,13 @@ struct DocumentAddFilesSheet: View {
                         Text("Add files")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundStyle(AppTheme.primaryText)
-                        Text("Add photos, PDFs, or a receipt scan for this vehicle.")
+                        Text("Save photos, PDFs, and paperwork for this vehicle.")
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.secondaryText)
                     }
 
                     Spacer()
                 }
-
-                Text("Save files manually, or scan receipts automatically with Pro.")
-                    .font(.footnote)
-                    .foregroundStyle(AppTheme.tertiaryText)
             }
         }
     }
@@ -205,68 +165,9 @@ struct DocumentAddFilesSheet: View {
                         )
                     }
                     .buttonStyle(.plain)
-
-                    Divider()
-                        .background(AppTheme.separator)
-                        .padding(.vertical, 2)
-
-                    Button {
-                        if allowReceiptScan {
-                            showingReceiptScanner = true
-                        } else {
-                            paywallCoordinator.present(.ocrScan)
-                        }
-                    } label: {
-                        ocrScanRow()
-                    }
-                    .buttonStyle(.plain)
                 }
             }
         }
-    }
-
-    private func ocrScanRow() -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(allowReceiptScan ? AppTheme.surfaceSecondary : AppTheme.accent.opacity(0.1))
-                    .frame(width: 42, height: 42)
-
-                Image(systemName: "doc.viewfinder")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(allowReceiptScan ? AppTheme.accentSecondary : AppTheme.accent)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text("Scan Receipt")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(AppTheme.primaryText)
-
-                    if !allowReceiptScan {
-                        Text("Pro")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(AppTheme.accent)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Capsule(style: .continuous).fill(AppTheme.accent.opacity(0.14)))
-                    }
-                }
-
-                Text("Extract amount, date, mileage, and notes automatically.")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.secondaryText)
-                    .lineLimit(2)
-            }
-
-            Spacer()
-
-            Image(systemName: allowReceiptScan ? "chevron.right" : "lock.fill")
-                .font(.system(size: allowReceiptScan ? 12 : 10, weight: .semibold))
-                .foregroundStyle(allowReceiptScan ? AppTheme.tertiaryText : AppTheme.accent.opacity(0.6))
-        }
-        .padding(.vertical, 2)
-        .contentShape(Rectangle())
     }
 
     private func sectionLabel(_ text: String) -> some View {
@@ -315,12 +216,6 @@ struct DocumentAddFilesSheet: View {
     }
 
     @MainActor
-    private func completeReceipt(_ draft: ScannedReceiptDraft) {
-        dismiss()
-        onReceiptScanned?(draft)
-    }
-
-    @MainActor
     private func handleImageSelection(
         _ image: UIImage,
         filenamePrefix: String,
@@ -346,38 +241,6 @@ struct DocumentAddFilesSheet: View {
     }
 
     @MainActor
-    private func startReceiptScan(with image: UIImage) {
-        guard allowReceiptScan else { return }
-        guard !isScanningReceipt else { return }
-        guard let imageData = image.jpegData(compressionQuality: 0.86) else { return }
-
-        isScanningReceipt = true
-        showingReceiptScanError = false
-        receiptScanTask?.cancel()
-
-        receiptScanTask = Task { @MainActor in
-            defer {
-                isScanningReceipt = false
-                receiptScanTask = nil
-            }
-
-            do {
-                let result = try await OCRService.shared.scan(image: image)
-                guard !Task.isCancelled else { return }
-                let draft = ScannedReceiptDraft(
-                    imageData: imageData,
-                    filename: "Receipt \(AppFormatters.receiptFilename.string(from: .now))",
-                    result: result
-                )
-                completeReceipt(draft)
-            } catch {
-                guard !Task.isCancelled else { return }
-                showingReceiptScanError = true
-            }
-        }
-    }
-
-    @MainActor
     private func loadSelectedPhotos(_ items: [PhotosPickerItem], prefix: String) async -> [DocumentDraftPage] {
         var pages: [DocumentDraftPage] = []
 
@@ -392,33 +255,3 @@ struct DocumentAddFilesSheet: View {
     }
 }
 
-private struct ReceiptScanLoadingOverlay: View {
-    var body: some View {
-        VStack {
-            Spacer()
-
-            SurfaceCard {
-                VStack(spacing: 14) {
-                    ProgressView()
-                        .tint(AppTheme.accent)
-                        .scaleEffect(1.1)
-
-                    Text("Scanning receipt...")
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(AppTheme.primaryText)
-
-                    Text("Finding the date, amount, workshop, and other details.")
-                        .font(.footnote)
-                        .foregroundStyle(AppTheme.secondaryText)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-            }
-
-            Spacer()
-        }
-        .padding(.horizontal, 28)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(AppTheme.background.opacity(0.92).ignoresSafeArea())
-    }
-}

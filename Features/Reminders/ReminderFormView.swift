@@ -25,6 +25,7 @@ struct ReminderFormView: View {
     @State private var linkedServiceEntryID: UUID?
     @State private var linkedServiceDate: Date?
     @State private var linkedServiceMileage: Int?
+    @State private var notificationInfoMessage: String?
 
     init(vehicle: Vehicle? = nil, linkedService: ServiceEntry? = nil, reminder: ReminderItem? = nil) {
         self.reminder = reminder
@@ -87,15 +88,19 @@ struct ReminderFormView: View {
                         }
                     }
 
-                    HStack {
-                        Toggle("Set mileage (Pro)", isOn: $includesMileage)
-                            .onChange(of: includesMileage) { _, newValue in
+                    Toggle(
+                        entitlementStore.canUseMileageReminders() ? "Set mileage" : "Set mileage (Pro)",
+                        isOn: Binding(
+                            get: { includesMileage },
+                            set: { newValue in
                                 if newValue && !entitlementStore.canUseMileageReminders() {
-                                    includesMileage = false
                                     paywallCoordinator.present(.advancedReminders)
+                                } else {
+                                    includesMileage = newValue
                                 }
                             }
-                    }
+                        )
+                    )
                     
                     if includesMileage {
                         HStack {
@@ -124,6 +129,22 @@ struct ReminderFormView: View {
         }
         .navigationTitle(reminder == nil ? "Add Reminder" : "Edit Reminder")
         .navigationBarTitleDisplayMode(.inline)
+        .alert(
+            "Notifications Off",
+            isPresented: Binding(
+                get: { notificationInfoMessage != nil },
+                set: { newValue in
+                    if !newValue { notificationInfoMessage = nil }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                notificationInfoMessage = nil
+                dismiss()
+            }
+        } message: {
+            Text(notificationInfoMessage ?? "")
+        }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") { dismiss() }
@@ -186,12 +207,20 @@ struct ReminderFormView: View {
             NotificationService.shared.cancel(identifier: activeReminder.notificationIdentifier)
             activeReminder.notificationIdentifier = nil
         } else {
-            activeReminder.notificationIdentifier = await NotificationService.shared.schedule(for: activeReminder, vehicleName: vehicle.title)
+            let outcome = await NotificationService.shared.schedule(for: activeReminder, vehicleName: vehicle.title)
+            activeReminder.notificationIdentifier = outcome.identifier
+
+            if case .permissionDenied = outcome {
+                notificationInfoMessage = "Reminder saved, but notifications are currently disabled for Car Service Passport. You can enable them in Settings anytime."
+            }
         }
 
         vehicle.updatedAt = .now
         try? modelContext.save()
         Haptics.success()
-        dismiss()
+
+        if notificationInfoMessage == nil {
+            dismiss()
+        }
     }
 }

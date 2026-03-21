@@ -54,7 +54,6 @@ struct TimelineView: View {
     @State private var previewURL: URL?
 
     @State private var showingServiceForm = false
-    @State private var pendingServiceDraft: ScannedReceiptDraft?
 
     private var currentCategory: CategoryFilter {
         CategoryFilter(rawValue: appState.timelineCategory) ?? .all
@@ -324,7 +323,7 @@ struct TimelineView: View {
             let vehicle = appState.selectedVehicleID.flatMap { id in vehicles.first(where: { $0.id == id }) } ?? vehicles.first
             if let vehicle {
                 NavigationStack {
-                    ServiceEntryFormView(vehicle: vehicle, ocrDraft: pendingServiceDraft)
+                    ServiceEntryFormView(vehicle: vehicle)
                 }
             }
         }

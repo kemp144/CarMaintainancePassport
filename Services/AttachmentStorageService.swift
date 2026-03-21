@@ -26,6 +26,20 @@ actor AttachmentStorageService {
         return folder.appendingPathComponent(reference)
     }
 
+    static func data(for reference: String?) -> Data? {
+        guard let reference else { return nil }
+        return try? Data(contentsOf: fileURL(for: reference))
+    }
+
+    static func restoreFileData(_ data: Data, reference: String) throws {
+        let url = fileURL(for: reference)
+        let folder = url.deletingLastPathComponent()
+        if !FileManager.default.fileExists(atPath: folder.path) {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        }
+        try data.write(to: url, options: .atomic)
+    }
+
     func saveImageData(_ data: Data, filename: String) throws -> (storageReference: String, thumbnailReference: String?) {
         guard let image = UIImage(data: data) else {
             throw CocoaError(.fileReadCorruptFile)

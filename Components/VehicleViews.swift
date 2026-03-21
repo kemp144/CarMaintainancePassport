@@ -45,7 +45,7 @@ struct VehicleHeroCard: View {
                 }
 
                 HStack(spacing: 10) {
-                    Label(AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode), systemImage: "eurosign.circle")
+                    Label(AppFormatters.currency(vehicle.totalSpent, code: vehicle.currencyCode), systemImage: AppFormatters.currencyIcon(for: vehicle.currencyCode, filled: false))
                 }
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Color.white.opacity(0.88))

@@ -6,6 +6,20 @@ struct NotificationService {
 
     private let center = UNUserNotificationCenter.current()
 
+    enum ScheduleOutcome {
+        case scheduled(String)
+        case disabled
+        case triggerDatePassed
+        case permissionDenied
+
+        var identifier: String? {
+            if case .scheduled(let identifier) = self {
+                return identifier
+            }
+            return nil
+        }
+    }
+
     func requestPermissionIfNeeded() async -> Bool {
         let settings = await center.notificationSettings()
         switch settings.authorizationStatus {
@@ -20,14 +34,14 @@ struct NotificationService {
         }
     }
 
-    func schedule(for reminder: ReminderItem, vehicleName: String) async -> String? {
-        guard reminder.isEnabled, let dateDue = reminder.dateDue else { return nil }
+    func schedule(for reminder: ReminderItem, vehicleName: String) async -> ScheduleOutcome {
+        guard reminder.isEnabled, let dateDue = reminder.dateDue else { return .disabled }
 
         let triggerDate = Calendar.current.date(byAdding: .day, value: -reminder.notificationTiming.dayOffset, to: dateDue) ?? dateDue
-        guard triggerDate > .now else { return nil }
+        guard triggerDate > .now else { return .triggerDatePassed }
 
         let granted = await requestPermissionIfNeeded()
-        guard granted else { return nil }
+        guard granted else { return .permissionDenied }
 
         let identifier = reminder.notificationIdentifier ?? UUID().uuidString
         let content = UNMutableNotificationContent()
@@ -40,7 +54,7 @@ struct NotificationService {
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
 
         try? await center.add(request)
-        return identifier
+        return .scheduled(identifier)
     }
 
     func cancel(identifier: String?) {

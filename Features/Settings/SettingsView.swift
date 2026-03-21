@@ -13,7 +13,7 @@ struct SettingsView: View {
     @EnvironmentObject private var paywallCoordinator: PaywallCoordinator
     @EnvironmentObject private var appState: AppState
 
-    @AppStorage("settings.defaultCurrency") private var defaultCurrency = CurrencyPreset.eur.rawValue
+    @AppStorage("settings.defaultCurrency") private var defaultCurrency = CurrencyPreset.suggested().rawValue
     @AppStorage(UnitSettings.useSystemDefaultKey) private var useSystemDefaultUnits = true
     @AppStorage(UnitSettings.distanceUnitKey) private var distanceUnitRaw = UnitSettings.suggestedProfile().distanceUnit.rawValue
     @AppStorage(UnitSettings.fuelVolumeUnitKey) private var fuelVolumeUnitRaw = UnitSettings.suggestedProfile().fuelVolumeUnit.rawValue
@@ -25,14 +25,8 @@ struct SettingsView: View {
     @Query private var attachments: [AttachmentRecord]
     @Query private var documents: [DocumentRecord]
 
-    @AppStorage("settings.autoBackup") private var autoBackupEnabled = false
+    @AppStorage("settings.autoBackup") private var autoBackupEnabled = true
 
-    @State private var backupURL: URL?
-    @State private var showingImportPicker = false
-    @State private var importResult: BackupExportService.ImportResult?
-    @State private var importError: String?
-    @State private var showingImportResult = false
-    @State private var isImporting = false
     @State private var showingResetConfirmation = false
     @State private var showingResetFinalConfirmation = false
 
@@ -49,7 +43,6 @@ struct SettingsView: View {
                         unitsSection
                         proSection
                         backupSection
-                        importSection
                         notificationsSection
                         privacySection
                         dangerZoneSection
@@ -72,37 +65,6 @@ struct SettingsView: View {
             Color.clear.frame(height: 104)
         }
         .navigationBarHidden(true)
-        .sheet(item: Binding(get: {
-            backupURL.map(PreviewURL.init(url:))
-        }, set: { value in
-            backupURL = value?.url
-        })) { item in
-            ActivityView(activityItems: [item.url])
-        }
-        .fileImporter(
-            isPresented: $showingImportPicker,
-            allowedContentTypes: [.json],
-            allowsMultipleSelection: false
-        ) { result in
-            if case .success(let urls) = result, let url = urls.first {
-                importBackup(from: url)
-            }
-        }
-        .alert(
-            importError != nil ? "Import Failed" : "Import Complete",
-            isPresented: $showingImportResult
-        ) {
-            Button("OK", role: .cancel) {
-                importError = nil
-                importResult = nil
-            }
-        } message: {
-            if let err = importError {
-                Text(err)
-            } else if let r = importResult {
-                Text("Imported \(r.vehiclesImported) vehicle(s), \(r.servicesImported) service(s), \(r.remindersImported) reminder(s), and \(r.documentsImported) document(s).")
-            }
-        }
         .confirmationDialog("Reset all data?", isPresented: $showingResetConfirmation, titleVisibility: .visible) {
             Button("Continue", role: .destructive) {
                 showingResetFinalConfirmation = true
@@ -158,13 +120,15 @@ struct SettingsView: View {
                     }
                 }
 
-                settingsDivider()
+                if vehicles.count > 1 {
+                    settingsDivider()
 
-                settingsToggleRow(
-                    title: "Current vehicle only",
-                    subtitle: "Hides other vehicles in shared views.",
-                    isOn: $appState.showOnlyCurrentVehicle
-                )
+                    settingsToggleRow(
+                        title: "Show current vehicle only",
+                        subtitle: "Filters shared views to the selected vehicle.",
+                        isOn: $appState.showOnlyCurrentVehicle
+                    )
+                }
             }
         }
     }
@@ -274,7 +238,7 @@ struct SettingsView: View {
                             }
                         }
 
-                        Text(entitlementStore.hasProAccess ? "All premium features are active on this device." : "Unlock unlimited vehicles, fuel insights, OCR, premium exports, and smarter reminders.")
+                        Text(entitlementStore.hasProAccess ? "All premium features are active on this device." : "Unlock unlimited vehicles, fuel insights, premium exports, and smarter reminders.")
                             .font(.footnote)
                             .foregroundStyle(AppTheme.secondaryText)
                     }
@@ -310,53 +274,35 @@ struct SettingsView: View {
     }
 
     private var backupSection: some View {
-        settingsGroupCard(title: "Backup", subtitle: "Keep a local copy of your data") {
+        settingsGroupCard(title: "Backup", subtitle: backupSectionSubtitle) {
             VStack(spacing: 0) {
-                settingsActionRow(
-                    title: "Export JSON backup",
-                    subtitle: "Create a portable backup file.",
-                    icon: "square.and.arrow.up"
-                ) {
-                    exportBackup()
-                }
-
-                settingsDivider()
-
-                settingsActionRow(
-                    title: "Save backup to Files",
-                    subtitle: "Store a copy in the Files app.",
-                    icon: "folder.badge.plus"
-                ) {
-                    saveBackupToDocuments()
-                }
-
-                settingsDivider()
-
                 settingsToggleRow(
-                    title: "Auto backup on background",
-                    subtitle: "Saves your library when the app moves to the background.",
+                    title: "Back up automatically",
+                    subtitle: "Creates a backup each time the app moves to the background.",
                     isOn: $autoBackupEnabled
+                )
+
+                if let lastDate = BackupExportService.shared.lastBackupDate() {
+                    settingsDivider()
+                    settingsInfoRow(
+                        title: "Last backup",
+                        value: AppFormatters.mediumDate.string(from: lastDate)
+                    )
+                }
+
+                settingsDivider()
+                settingsInfoRow(
+                    title: "Storage",
+                    value: BackupExportService.shared.isUsingICloud ? "iCloud" : "On device"
                 )
             }
         }
     }
 
-    private var importSection: some View {
-        settingsGroupCard(title: "Import", subtitle: "Restore from a previous local backup") {
-            VStack(spacing: 0) {
-                if isImporting {
-                    settingsProgressRow(title: "Importing backup", subtitle: "Please wait while data is restored.")
-                } else {
-                    settingsActionRow(
-                        title: "Import from JSON backup",
-                        subtitle: "Existing records with matching IDs are skipped.",
-                        icon: "square.and.arrow.down"
-                    ) {
-                        showingImportPicker = true
-                    }
-                }
-            }
-        }
+    private var backupSectionSubtitle: String {
+        BackupExportService.shared.isUsingICloud
+            ? "Backups are saved to iCloud Drive when it is available on this device."
+            : "Backups are stored locally on this device and are removed if the app is deleted."
     }
 
     private var notificationsSection: some View {
@@ -380,7 +326,10 @@ struct SettingsView: View {
             VStack(spacing: 0) {
                 settingsInfoRow(title: "Account", value: "Not required")
                 settingsDivider()
-                settingsInfoRow(title: "Storage", value: "On device")
+                settingsInfoRow(
+                    title: "Storage",
+                    value: BackupExportService.shared.isUsingICloud ? "On device + iCloud backup" : "On device"
+                )
                 settingsDivider()
                 settingsInfoRow(title: "Ads", value: "None")
             }
@@ -390,7 +339,7 @@ struct SettingsView: View {
     private var supportSection: some View {
         settingsGroupCard(title: "Support", subtitle: "Help and feedback") {
             VStack(spacing: 0) {
-                settingsInfoRow(title: "Status", value: "Coming soon")
+                settingsInfoRow(title: "Help", value: "Use the App Store support link for contact details.")
             }
         }
     }
@@ -777,40 +726,4 @@ struct SettingsView: View {
         return "\(version) (\(build))"
     }
 
-    private func exportBackup() {
-        do {
-            backupURL = try BackupExportService.shared.exportJSON(vehicles: vehicles, services: services, reminders: reminders, attachments: attachments, documents: documents)
-            Haptics.success()
-        } catch {
-            Haptics.error()
-        }
-    }
-
-    private func saveBackupToDocuments() {
-        do {
-            try BackupExportService.shared.saveToDocuments(vehicles: vehicles, services: services, reminders: reminders, attachments: attachments, documents: documents)
-            Haptics.success()
-        } catch {
-            Haptics.error()
-        }
-    }
-
-    private func importBackup(from url: URL) {
-        isImporting = true
-        Task {
-            do {
-                let result = try await MainActor.run {
-                    try BackupExportService.shared.importJSON(from: url, into: modelContext)
-                }
-                importResult = result
-                importError = nil
-                Haptics.success()
-            } catch {
-                importError = error.localizedDescription
-                Haptics.error()
-            }
-            isImporting = false
-            showingImportResult = true
-        }
-    }
 }

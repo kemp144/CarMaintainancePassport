@@ -389,7 +389,34 @@ enum CurrencyPreset: String, CaseIterable, Identifiable {
     case eur = "EUR"
     case usd = "USD"
     case gbp = "GBP"
+    case aud = "AUD"
+    case nzd = "NZD"
     case chf = "CHF"
 
     var id: String { rawValue }
+
+    static func suggested(for locale: Locale = .autoupdatingCurrent) -> CurrencyPreset {
+        switch locale.region?.identifier.uppercased() {
+        case "AU":
+            return .aud
+        case "NZ":
+            return .nzd
+        case "IE":
+            return .eur
+        case "US":
+            return .usd
+        case "GB":
+            return .gbp
+        case "CH":
+            return .chf
+        default:
+            return .eur
+        }
+    }
+
+    static func registerDefaultValue(for locale: Locale = .autoupdatingCurrent) {
+        UserDefaults.standard.register(defaults: [
+            "settings.defaultCurrency": suggested(for: locale).rawValue
+        ])
+    }
 }

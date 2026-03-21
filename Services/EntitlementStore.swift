@@ -143,10 +143,6 @@ final class EntitlementStore: ObservableObject {
         hasProAccess
     }
 
-    func canUseDocumentOCR() -> Bool {
-        hasProAccess
-    }
-    
     func canSeeAnalytics() -> Bool {
         true
     }
@@ -164,10 +160,6 @@ final class EntitlementStore: ObservableObject {
     }
 
     func canUseFuelAnalytics() -> Bool {
-        hasProAccess
-    }
-
-    func canUseOCR() -> Bool {
         hasProAccess
     }
 

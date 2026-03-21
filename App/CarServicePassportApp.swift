@@ -4,8 +4,10 @@ import SwiftUI
 @main
 struct CarServicePassportApp: App {
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
-    @AppStorage("settings.autoBackup") private var autoBackupEnabled = false
+    @AppStorage("settings.autoBackup") private var autoBackupEnabled = true
     @AppStorage("dataRecovery.pendingNotice") private var pendingRecoveryNotice = ""
+    @AppStorage("backup.hasOfferedRestore") private var hasOfferedRestore = false
+    @State private var pendingRestoreURL: URL?
     @AppStorage("reminder.linkedServiceRepair.v1") private var didRepairLinkedServiceReminders = false
     @AppStorage("reminder.linkedServiceCleanup.v1") private var didCleanupLinkedServiceReminders = false
     @AppStorage("vehicle.mileageTimelineRepair.v1") private var didRepairVehicleMileageTimeline = false
@@ -18,6 +20,7 @@ struct CarServicePassportApp: App {
 
     init() {
         UnitSettings.registerDefaultValues()
+        CurrencyPreset.registerDefaultValue()
     }
 
     var body: some Scene {
@@ -41,6 +44,7 @@ struct CarServicePassportApp: App {
                 await repairVehicleMileageTimelineIfNeeded()
                 await repairLinkedServiceRemindersIfNeeded()
                 await cleanupDuplicateLinkedServiceRemindersIfNeeded()
+                await checkForBackupRestoreIfNeeded()
             }
             .sheet(item: $paywallCoordinator.reason, onDismiss: {
                 paywallCoordinator.dismiss()
@@ -65,6 +69,23 @@ struct CarServicePassportApp: App {
                 }
             } message: {
                 Text(pendingRecoveryNotice)
+            }
+            .alert("Restore Your Data?", isPresented: Binding(
+                get: { pendingRestoreURL != nil },
+                set: { if !$0 { pendingRestoreURL = nil } }
+            )) {
+                Button("Restore") { performRestore() }
+                Button("Skip", role: .cancel) {
+                    hasOfferedRestore = true
+                    pendingRestoreURL = nil
+                }
+            } message: {
+                if let url = pendingRestoreURL,
+                   let date = try? url.resourceValues(forKeys: [.creationDateKey]).creationDate {
+                    Text("A backup from \(AppFormatters.mediumDate.string(from: date)) was found. Restore your vehicles, services, fuel history, reminders, and documents now?")
+                } else {
+                    Text("A previous backup was found. Restore your vehicles, services, fuel history, reminders, and documents now?")
+                }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .background, autoBackupEnabled {
@@ -146,21 +167,43 @@ struct CarServicePassportApp: App {
 
     private func performAutoBackup() {
         do {
-            let context = modelContainer.mainContext
-            let vehicles = try context.fetch(FetchDescriptor<Vehicle>())
-            let services = try context.fetch(FetchDescriptor<ServiceEntry>())
-            let reminders = try context.fetch(FetchDescriptor<ReminderItem>())
-            let attachments = try context.fetch(FetchDescriptor<AttachmentRecord>())
-            let documents = try context.fetch(FetchDescriptor<DocumentRecord>())
-            try BackupExportService.shared.saveToDocuments(
-                vehicles: vehicles,
-                services: services,
-                reminders: reminders,
-                attachments: attachments,
-                documents: documents
+            let ctx = modelContainer.mainContext
+            try BackupExportService.shared.saveBackup(
+                vehicles:    try ctx.fetch(FetchDescriptor<Vehicle>()),
+                services:    try ctx.fetch(FetchDescriptor<ServiceEntry>()),
+                reminders:   try ctx.fetch(FetchDescriptor<ReminderItem>()),
+                attachments: try ctx.fetch(FetchDescriptor<AttachmentRecord>()),
+                documents:   try ctx.fetch(FetchDescriptor<DocumentRecord>()),
+                fuelEntries: try ctx.fetch(FetchDescriptor<FuelEntry>())
             )
         } catch {
-            // silent — auto backup failure should not interrupt the user
+            // Silent — backup failure must never interrupt the user experience.
+        }
+    }
+
+    @MainActor
+    private func checkForBackupRestoreIfNeeded() async {
+        guard !hasOfferedRestore else { return }
+        guard let backupURL = BackupExportService.shared.findLatestBackup() else { return }
+        let vehicles = (try? modelContainer.mainContext.fetch(FetchDescriptor<Vehicle>())) ?? []
+        guard vehicles.isEmpty else {
+            // Data already exists — no restore needed.
+            hasOfferedRestore = true
+            return
+        }
+        pendingRestoreURL = backupURL
+    }
+
+    @MainActor
+    private func performRestore() {
+        guard let url = pendingRestoreURL else { return }
+        hasOfferedRestore = true
+        pendingRestoreURL = nil
+        do {
+            _ = try BackupExportService.shared.importJSON(from: url, into: modelContainer.mainContext)
+            Haptics.success()
+        } catch {
+            Haptics.error()
         }
     }
 
@@ -217,7 +260,7 @@ struct CarServicePassportApp: App {
 
                     if reminder.isEnabled, reminder.dateDue != nil, let vehicle = reminder.vehicle {
                         NotificationService.shared.cancel(identifier: reminder.notificationIdentifier)
-                        reminder.notificationIdentifier = await NotificationService.shared.schedule(for: reminder, vehicleName: vehicle.title)
+                        reminder.notificationIdentifier = (await NotificationService.shared.schedule(for: reminder, vehicleName: vehicle.title)).identifier
                     }
                 }
             }

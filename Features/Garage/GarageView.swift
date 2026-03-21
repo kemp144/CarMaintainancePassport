@@ -26,9 +26,10 @@ struct GarageView: View {
     private var unlockedVehicle: Vehicle? {
         if entitlementStore.hasProAccess { return nil } // Only relevant for free mode
         if vehicles.isEmpty { return nil }
-        
-        // Find most recently updated (since we already query by updatedAt reverse)
-        return vehicles.first
+
+        // Pin the free slot to the oldest vehicle (first ever added), so editing a
+        // locked vehicle cannot silently transfer the unlock to it.
+        return vehicles.min(by: { $0.createdAt < $1.createdAt })
     }
 
     private var filteredVehicles: [Vehicle] {
@@ -148,11 +149,6 @@ struct GarageView: View {
                                 }
                             }
 
-                            if let vehicle = singleTrackedVehicle, !entitlementStore.hasProAccess {
-                                singleVehicleGarageSnapshot(for: vehicle)
-                                singleVehicleComparisonTeaser
-                            }
-
                             ForEach(filteredVehicles) { vehicle in
                                 let isLocked = !entitlementStore.hasProAccess && vehicles.count > 1 && vehicle.id != unlockedVehicle?.id
                                 
@@ -174,6 +170,9 @@ struct GarageView: View {
                                     }
                                     .buttonStyle(.plain)
                                 }
+                            }
+                            if singleTrackedVehicle != nil, !entitlementStore.hasProAccess {
+                                singleVehicleComparisonTeaser
                             }
                         }
                         .padding(.horizontal, AppTheme.Spacing.pageEdge)

@@ -502,6 +502,8 @@ struct SummaryStatTile: View {
                 Text(title)
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(AppTheme.secondaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
             }
 
             Text(value)
