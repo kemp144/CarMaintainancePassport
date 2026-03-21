@@ -60,3 +60,13 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Derived data
+.deriveddata/
+DerivedData/
+
+# macOS
+.DS_Store
+
+# Leftover scripts
+generate_icons.sh
