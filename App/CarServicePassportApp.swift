@@ -123,7 +123,8 @@ struct CarServicePassportApp: App {
     }
 
     private static func defaultStoreURL() -> URL {
-        let applicationSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let applicationSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
         if !FileManager.default.fileExists(atPath: applicationSupportURL.path) {
             try? FileManager.default.createDirectory(at: applicationSupportURL, withIntermediateDirectories: true)
         }

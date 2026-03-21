@@ -415,8 +415,15 @@ enum CurrencyPreset: String, CaseIterable, Identifiable {
     }
 
     static func registerDefaultValue(for locale: Locale = .autoupdatingCurrent) {
-        UserDefaults.standard.register(defaults: [
-            "settings.defaultCurrency": suggested(for: locale).rawValue
-        ])
+        let defaults = UserDefaults.standard
+        let key = "settings.defaultCurrency"
+
+        if let stored = defaults.string(forKey: key), CurrencyPreset(rawValue: stored) != nil {
+            return
+        }
+
+        // Seed the resolved regional default once so first launch and restored installs
+        // both begin with the correct currency without overwriting a valid user choice.
+        defaults.set(suggested(for: locale).rawValue, forKey: key)
     }
 }

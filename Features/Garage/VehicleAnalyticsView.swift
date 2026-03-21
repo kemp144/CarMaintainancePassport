@@ -1494,8 +1494,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
         }
         
         let sorted = validItems.sorted { byDistance ? $0.mileage < $1.mileage : $0.date < $1.date }
-        let first = sorted.first!
-        let last = sorted.last!
+        guard let first = sorted.first, let last = sorted.last else { return .incompleteRecord }
         
         if byDistance {
             let totalDist = last.mileage - first.mileage

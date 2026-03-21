@@ -42,7 +42,7 @@ final class Vehicle {
         currentMileage: Int = 0,
         purchaseDate: Date? = nil,
         purchasePrice: Double? = nil,
-        currencyCode: String = "EUR",
+        currencyCode: String = CurrencyPreset.suggested().rawValue,
         vin: String = "",
         notes: String = "",
         coverImageReference: String? = nil,

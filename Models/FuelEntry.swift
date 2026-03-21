@@ -29,7 +29,7 @@ final class FuelEntry {
         liters: Double,
         pricePerLiter: Double = 0,
         totalCost: Double,
-        currencyCode: String = "EUR",
+        currencyCode: String = CurrencyPreset.suggested().rawValue,
         entryType: FuelEntryType = .fullFillUp,
         fuelTypeName: String = "",
         station: String = "",

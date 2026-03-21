@@ -7,7 +7,7 @@ struct FuelEntryFormSheet: View {
 
     @AppStorage("fuel.lastFuelTypeName") private var lastFuelTypeName = ""
     @AppStorage("fuel.lastStation") private var lastStation = ""
-    @AppStorage("fuel.lastCurrencyCode") private var lastCurrencyCode = "EUR"
+    @AppStorage("fuel.lastCurrencyCode") private var lastCurrencyCode = CurrencyPreset.suggested().rawValue
 
     let vehicle: Vehicle
     private let entry: FuelEntry?

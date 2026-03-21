@@ -486,7 +486,7 @@ struct TimelineView: View {
             case .document(let attachment):
                 return attachment.vehicle?.currencyCode
             }
-        } ?? CurrencyPreset.eur.rawValue
+        } ?? CurrencyPreset.suggested().rawValue
     }
 
     private var scopeSummaryText: String {

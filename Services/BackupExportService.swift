@@ -21,7 +21,8 @@ struct BackupExportService {
 
     /// On-device Documents folder — accessible via Files app, but deleted with the app.
     var localBackupFolder: URL {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Documents")
         let folder = docs.appendingPathComponent("CarServicePassport/Backups", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder

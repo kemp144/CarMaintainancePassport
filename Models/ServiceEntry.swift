@@ -38,7 +38,7 @@ final class ServiceEntry {
         customServiceTypeName: String? = nil,
         category: EntryCategory? = nil,
         price: Double = 0,
-        currencyCode: String = "EUR",
+        currencyCode: String = CurrencyPreset.suggested().rawValue,
         workshopName: String = "",
         notes: String = "",
         isImportant: Bool = false,
