@@ -54,7 +54,13 @@ struct PaywallView: View {
                 }
             }
             .sheet(isPresented: $showingPrivacySheet) {
-                privacySheet
+                PrivacyPolicyView()
+            }
+            .task {
+                selectFirstAvailablePlanIfNeeded()
+            }
+            .onChange(of: entitlementStore.products.count) { _, _ in
+                selectFirstAvailablePlanIfNeeded()
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -144,8 +150,9 @@ struct PaywallView: View {
                     } else if let message = entitlementStore.productLoadErrorMessage {
                         pricingStatusRow(
                             icon: "exclamationmark.triangle.fill",
-                            title: "Pricing unavailable right now",
-                            message: message
+                            title: message == "Some plans are temporarily unavailable." ? "Some plans unavailable" : "Pricing unavailable right now",
+                            message: message,
+                            actionTitle: "Try Again"
                         ) {
                             Task { await entitlementStore.loadProducts() }
                         }
@@ -181,6 +188,11 @@ struct PaywallView: View {
                         .font(.footnote)
                         .foregroundStyle(AppTheme.warning)
                 }
+
+                Text(subscriptionDisclosureText)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.tertiaryText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -308,17 +320,21 @@ struct PaywallView: View {
 
             HStack(spacing: 16) {
                 Button {
-                    if let url = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/") {
-                        openURL(url)
-                    }
+                    openURL(AppLegalLinks.termsOfUse)
                 } label: {
-                    Text("Terms")
+                    Text("Terms of Use")
                 }
 
                 Button {
                     showingPrivacySheet = true
                 } label: {
-                    Text("Privacy")
+                    Text("Privacy Policy")
+                }
+
+                Button {
+                    openURL(AppLegalLinks.support)
+                } label: {
+                    Text("Support")
                 }
             }
             .font(.footnote)
@@ -329,38 +345,46 @@ struct PaywallView: View {
 
     private var stickyCTA: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                Button {
-                    Task {
-                        await entitlementStore.purchase(plan: selectedPlan)
-                        if entitlementStore.hasProAccess {
-                            dismiss()
+            VStack(spacing: 8) {
+                HStack(spacing: 10) {
+                    Button {
+                        Task {
+                            await entitlementStore.purchase(plan: selectedPlan)
+                            if entitlementStore.hasProAccess {
+                                dismiss()
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            if entitlementStore.isBusy {
+                                ProgressView()
+                                    .tint(.white)
+                            }
+
+                            Text(selectedPlan.ctaTitle(priceText: planPriceText(for: selectedPlan)))
                         }
                     }
-                } label: {
-                    HStack(spacing: 10) {
-                        if entitlementStore.isBusy {
-                            ProgressView()
-                                .tint(.white)
-                        }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(entitlementStore.isBusy || entitlementStore.product(for: selectedPlan) == nil || entitlementStore.isLoadingProducts)
 
-                        Text(selectedPlan.ctaTitle(priceText: planPriceText(for: selectedPlan)))
+                    if selectedPlan == .yearly {
+                        Text(yearlySavingsText)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(AppTheme.accentSecondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(AppTheme.accent.opacity(0.12))
+                            )
                     }
                 }
-                .buttonStyle(PrimaryButtonStyle())
-                .disabled(entitlementStore.isBusy || entitlementStore.product(for: selectedPlan) == nil || entitlementStore.isLoadingProducts)
 
-                if selectedPlan == .yearly {
-                    Text(yearlySavingsText)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(AppTheme.accentSecondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(AppTheme.accent.opacity(0.12))
-                        )
-                }
+                Text(subscriptionDisclosureText)
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.tertiaryText)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 20)
             .padding(.top, 14)
@@ -524,6 +548,10 @@ struct PaywallView: View {
         ) ?? "Save with yearly billing"
     }
 
+    private var subscriptionDisclosureText: String {
+        "Monthly and Yearly renew automatically unless canceled at least 24 hours before the end of the current period. Manage or cancel in App Store account settings. Lifetime is a one-time purchase."
+    }
+
     @ViewBuilder
     private func pricingStatusRow(
         icon: String,
@@ -636,52 +664,10 @@ struct PaywallView: View {
         }
     }
 
-    private var privacySheet: some View {
-        NavigationStack {
-            ZStack {
-                AppTheme.background.ignoresSafeArea()
-
-                ScrollView(showsIndicators: false) {
-                    SurfaceCard {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Privacy")
-                                .font(.title2.weight(.bold))
-                                .foregroundStyle(AppTheme.primaryText)
-
-                            privacyRow(title: "Account", message: "You can use the app without creating an account.")
-                            privacyRow(title: "Storage", message: "Your records stay on this device. Local backup is always available, and Pro can add iCloud backup copies.")
-                            privacyRow(title: "VIN Lookup", message: "Only when you tap Autofill, the entered VIN is sent to the NHTSA VIN decoder service to fetch vehicle details.")
-                            privacyRow(title: "Purchases", message: "Subscriptions and purchases are handled by the App Store.")
-                            privacyRow(title: "Ads", message: "The app does not show ads or use ad tracking.")
-                        }
-                    }
-                    .padding(20)
-                }
-            }
-            .navigationTitle("Privacy")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
-                        showingPrivacySheet = false
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-
-    private func privacyRow(title: String, message: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppTheme.primaryText)
-
-            Text(message)
-                .font(.footnote)
-                .foregroundStyle(AppTheme.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-        }
+    private func selectFirstAvailablePlanIfNeeded() {
+        guard entitlementStore.product(for: selectedPlan) == nil else { return }
+        guard let availablePlan = EntitlementStore.ProPlan.allCases.first(where: { entitlementStore.product(for: $0) != nil }) else { return }
+        selectedPlan = availablePlan
     }
 }
 

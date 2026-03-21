@@ -18,7 +18,7 @@ struct VINLookupService {
             switch self {
             case .invalidLength: return "VIN must be 17 characters"
             case .networkError: return "Network request failed"
-            case .noData: return "No vehicle data found for this VIN"
+            case .noData: return "Autofill is unavailable for this VIN. Please enter vehicle details manually."
             }
         }
     }

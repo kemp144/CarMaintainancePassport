@@ -184,24 +184,33 @@ struct VehicleFormView: View {
                 .listRowBackground(AppTheme.surface)
 
                 Section {
-                    HStack {
-                        TextField("VIN (17 characters)", text: $vin)
-                            .textInputAutocapitalization(.characters)
-                            .autocorrectionDisabled()
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            TextField("VIN (17 characters)", text: $vin)
+                                .textInputAutocapitalization(.characters)
+                                .autocorrectionDisabled()
 
-                        if isLookingUpVIN {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else if vin.count == 17 {
-                            Button("Autofill") {
-                                if entitlementStore.canUseVINLookup() {
-                                    Task { await lookupVIN() }
-                                } else {
-                                    paywallCoordinator.present(.vinLookup)
+                            if isLookingUpVIN {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else if canUseVINAutofill {
+                                Button("Autofill") {
+                                    if entitlementStore.canUseVINLookup() {
+                                        Task { await lookupVIN() }
+                                    } else {
+                                        paywallCoordinator.present(.vinLookup)
+                                    }
                                 }
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(AppTheme.accent)
                             }
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(AppTheme.accent)
+                        }
+
+                        if let vinHelperText {
+                            Text(vinHelperText)
+                                .font(.caption)
+                                .foregroundStyle(canUseVINAutofill ? AppTheme.tertiaryText : AppTheme.warning)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     TextField("Notes", text: $notes, axis: .vertical)
@@ -263,6 +272,18 @@ struct VehicleFormView: View {
         coverPreview != nil
     }
 
+    private var normalizedVIN: String {
+        VINValidator.normalized(vin)
+    }
+
+    private var canUseVINAutofill: Bool {
+        VINValidator.isValid(vin)
+    }
+
+    private var vinHelperText: String? {
+        VINValidator.helperText(for: vin)
+    }
+
     private func removeCover() {
         coverPreview = nil
         selectedPhotoItem = nil
@@ -270,6 +291,12 @@ struct VehicleFormView: View {
     }
 
     private func saveVehicle() async {
+        if let vinError = VINValidator.validationError(for: vin) {
+            validationMessage = vinError
+            showingValidationAlert = true
+            return
+        }
+
         let trimmedPurchasePrice = purchasePrice.trimmingCharacters(in: .whitespacesAndNewlines)
         let parsedPurchasePrice = trimmedPurchasePrice.isEmpty ? nil : UnitFormatter.parseDecimal(trimmedPurchasePrice)
         if !trimmedPurchasePrice.isEmpty && parsedPurchasePrice == nil {
@@ -296,7 +323,7 @@ struct VehicleFormView: View {
                 vehicle.purchaseDate = hasPurchaseDate ? purchaseDate : nil
                 vehicle.purchasePrice = parsedPurchasePrice
                 vehicle.currencyCode = currencyCode
-                vehicle.vin = vin.trimmingCharacters(in: .whitespacesAndNewlines)
+                vehicle.vin = normalizedVIN
                 vehicle.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
                 if let imageReference {
                     vehicle.coverImageReference = imageReference
@@ -321,7 +348,7 @@ struct VehicleFormView: View {
                     purchaseDate: hasPurchaseDate ? purchaseDate : nil,
                     purchasePrice: parsedPurchasePrice,
                     currencyCode: currencyCode,
-                    vin: vin.trimmingCharacters(in: .whitespacesAndNewlines),
+                    vin: normalizedVIN,
                     notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
                     coverImageReference: imageReference
                 )
@@ -355,11 +382,18 @@ struct VehicleFormView: View {
     }
 
     private func lookupVIN() async {
+        guard canUseVINAutofill else {
+            vinLookupError = VINValidator.validationError(for: vin) ?? "Enter a valid 17-character VIN to use Autofill."
+            showingVINError = true
+            Haptics.error()
+            return
+        }
+
         isLookingUpVIN = true
         defer { isLookingUpVIN = false }
 
         do {
-            let result = try await VINLookupService.shared.lookup(vin: vin)
+            let result = try await VINLookupService.shared.lookup(vin: normalizedVIN)
             if !result.make.isEmpty { make = result.make.capitalized }
             if !result.model.isEmpty { model = result.model.capitalized }
             if let y = result.year { year = y }

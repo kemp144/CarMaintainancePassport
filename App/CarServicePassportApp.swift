@@ -121,7 +121,7 @@ struct CarServicePassportApp: App {
             do {
                 return try ModelContainer(for: schema, configurations: configuration)
             } catch {
-                fatalError("Failed to create model container after recovery attempt: \(error)")
+                return makeEmergencyModelContainer(schema: schema, storeURL: storeURL, recoveryError: error)
             }
         }
     }
@@ -168,6 +168,41 @@ struct CarServicePassportApp: App {
         #if DEBUG
         print("[SwiftDataRecovery] Recovered incompatible store at \(storeURL.path): \(error)")
         #endif
+    }
+
+    private static func makeEmergencyModelContainer(schema: Schema, storeURL: URL, recoveryError: Error) -> ModelContainer {
+        let directoryURL = storeURL.deletingLastPathComponent()
+        let fallbackStoreURL = directoryURL.appendingPathComponent("emergency-\(UUID().uuidString).store")
+        let fallbackConfiguration = ModelConfiguration(schema: schema, url: fallbackStoreURL, cloudKitDatabase: .none)
+
+        if let fallbackContainer = try? ModelContainer(for: schema, configurations: fallbackConfiguration) {
+            UserDefaults.standard.set(
+                "The main local database could not be reopened, so the app started with a fresh emergency local store. Your previous local files remain in Recovered Stores. If you have a backup, restore it from Settings.",
+                forKey: "dataRecovery.pendingNotice"
+            )
+
+            #if DEBUG
+            print("[SwiftDataRecovery] Started emergency on-disk store after recovery failure: \(recoveryError)")
+            #endif
+
+            return fallbackContainer
+        }
+
+        let inMemoryConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        if let inMemoryContainer = try? ModelContainer(for: schema, configurations: inMemoryConfiguration) {
+            UserDefaults.standard.set(
+                "The local database could not be reopened, so the app started in temporary recovery mode. Changes made in this session may not persist until local storage works again. Restore from a backup when possible.",
+                forKey: "dataRecovery.pendingNotice"
+            )
+
+            #if DEBUG
+            print("[SwiftDataRecovery] Started temporary in-memory store after emergency store failure: \(recoveryError)")
+            #endif
+
+            return inMemoryContainer
+        }
+
+        fatalError("Failed to create model container in all recovery modes: \(recoveryError)")
     }
 
     private func performAutoBackup() {

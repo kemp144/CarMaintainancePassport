@@ -12,8 +12,11 @@
 		04212E4B5AA017EFBF52CF3A /* VehicleFilterScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0182F0033B65D506F687CBD9 /* VehicleFilterScrollView.swift */; };
 		04AEFFA9D0556461A744A730 /* DocumentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E433D15018A914E8DA43340 /* DocumentDetailView.swift */; };
 		07A0B1C2D3E4F50617283940 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 07A0B1C2D3E4F50617283941 /* Assets.xcassets */; };
-		09A7DCB961DE77EFC4BB37FB /* EntitlementStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEFEB61C93BB7961B8758CF /* EntitlementStore.swift */; };
-		17E26DB739CCCC8A1A93293E /* FuelEntryFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C9089A55064256021265852 /* FuelEntryFormSheet.swift */; };
+			09A7DCB961DE77EFC4BB37FB /* EntitlementStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEFEB61C93BB7961B8758CF /* EntitlementStore.swift */; };
+			11A111111111111111111111 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A111111111111111111112 /* PrivacyPolicyView.swift */; };
+			11A111111111111111111113 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 11A111111111111111111114 /* PrivacyInfo.xcprivacy */; };
+			11A111111111111111111115 /* VINValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A111111111111111111116 /* VINValidator.swift */; };
+			17E26DB739CCCC8A1A93293E /* FuelEntryFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C9089A55064256021265852 /* FuelEntryFormSheet.swift */; };
 		1B58025DF8753297BC1BD668 /* VehicleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D935BBD3517D0AE797C39CAF /* VehicleDetailView.swift */; };
 		1C5D03A6667C43DE14FE659C /* DocumentVaultStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E8F0EF13D7F6535616BA79 /* DocumentVaultStorageService.swift */; };
 		20ACC1E2F36944D788CC7DE4 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB028C99B916AD3B8C3779A4 /* PaywallView.swift */; };
@@ -79,8 +82,11 @@
 		0182F0033B65D506F687CBD9 /* VehicleFilterScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleFilterScrollView.swift; sourceTree = "<group>"; };
 		0549892E577DF0443D60AA81 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		068CCD1462B4A1EBD1A9E954 /* AttachmentViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentViews.swift; sourceTree = "<group>"; };
-		07A0B1C2D3E4F50617283941 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		0A01EBF05137A193FA299FBB /* EmptyStateCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateCard.swift; sourceTree = "<group>"; };
+			07A0B1C2D3E4F50617283941 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+			11A111111111111111111112 /* PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyView.swift; sourceTree = "<group>"; };
+			11A111111111111111111114 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+			11A111111111111111111116 /* VINValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VINValidator.swift; sourceTree = "<group>"; };
+			0A01EBF05137A193FA299FBB /* EmptyStateCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateCard.swift; sourceTree = "<group>"; };
 		0C9089A55064256021265852 /* FuelEntryFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelEntryFormSheet.swift; sourceTree = "<group>"; };
 		13D9378B397B9D24F8DC9ECB /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
 		14C7CFD1BDA5D37AD8FA458A /* PremiumBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumBackground.swift; sourceTree = "<group>"; };
@@ -217,10 +223,11 @@
 				D5A99035291BF423F032E910 /* FuelEntryValidator.swift */,
 				3051AAF960123C559A152C75 /* FuelLogEngine.swift */,
 				AE98AC51A32868A70E9A810F /* NotificationService.swift */,
-				21F56EF4A8A210F7B78ECC57 /* PDFExportService.swift */,
-				DEEF995C6BEB4EDF5B64F03F /* ScannedReceiptStorageService.swift */,
-				DD6B27EB84D02FC1EBECF209 /* VINLookupService.swift */,
-			);
+					21F56EF4A8A210F7B78ECC57 /* PDFExportService.swift */,
+					DEEF995C6BEB4EDF5B64F03F /* ScannedReceiptStorageService.swift */,
+					DD6B27EB84D02FC1EBECF209 /* VINLookupService.swift */,
+					11A111111111111111111116 /* VINValidator.swift */,
+				);
 			path = Services;
 			sourceTree = "<group>";
 		};
@@ -235,11 +242,12 @@
 		};
 		8BD3B994FD81A3FC375D2456 = {
 			isa = PBXGroup;
-			children = (
-				FF23A6714660F52119ED6D0D /* App */,
-				07A0B1C2D3E4F50617283941 /* Assets.xcassets */,
-				BEEC7D61636C9852EBD2391A /* Components */,
-				24594AF3570A92ADA2E0A464 /* Data */,
+				children = (
+					FF23A6714660F52119ED6D0D /* App */,
+					07A0B1C2D3E4F50617283941 /* Assets.xcassets */,
+					11A111111111111111111114 /* PrivacyInfo.xcprivacy */,
+					BEEC7D61636C9852EBD2391A /* Components */,
+					24594AF3570A92ADA2E0A464 /* Data */,
 				2A75F2819966B0F31E4667E9 /* Features */,
 				F315040865339C0F831AEBAD /* Helpers */,
 				9EFB88A6CB219BDAA29B88C5 /* Models */,
@@ -280,15 +288,16 @@
 		};
 		BEEC7D61636C9852EBD2391A /* Components */ = {
 			isa = PBXGroup;
-			children = (
-				897D4D05497B02C4BD2D160A /* ActivityView.swift */,
-				068CCD1462B4A1EBD1A9E954 /* AttachmentViews.swift */,
-				842AA785AFB813052ACEE49D /* CameraCaptureView.swift */,
-				A68FB7155C191D41E5067599 /* DocumentThumbnailView.swift */,
-				0A01EBF05137A193FA299FBB /* EmptyStateCard.swift */,
-				3899FF7098FDEB80C84271F9 /* PremiumComponents.swift */,
-				24499B55CF20EB779A0CAAF9 /* ServiceTypeChip.swift */,
-				5A12A3136D6855ECF3346ED6 /* StatCard.swift */,
+				children = (
+					897D4D05497B02C4BD2D160A /* ActivityView.swift */,
+					068CCD1462B4A1EBD1A9E954 /* AttachmentViews.swift */,
+					842AA785AFB813052ACEE49D /* CameraCaptureView.swift */,
+					A68FB7155C191D41E5067599 /* DocumentThumbnailView.swift */,
+					0A01EBF05137A193FA299FBB /* EmptyStateCard.swift */,
+					3899FF7098FDEB80C84271F9 /* PremiumComponents.swift */,
+					11A111111111111111111112 /* PrivacyPolicyView.swift */,
+					24499B55CF20EB779A0CAAF9 /* ServiceTypeChip.swift */,
+					5A12A3136D6855ECF3346ED6 /* StatCard.swift */,
 				F78C2D135FC29E7C298E10F0 /* SurfaceCard.swift */,
 				0182F0033B65D506F687CBD9 /* VehicleFilterScrollView.swift */,
 				AB27F9C4B4513F6F81D98264 /* VehicleViews.swift */,
@@ -416,9 +425,10 @@
 		07A0B1C2D3E4F50617283942 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = (
-				07A0B1C2D3E4F50617283940 /* Assets.xcassets in Resources */,
-			);
+				files = (
+					07A0B1C2D3E4F50617283940 /* Assets.xcassets in Resources */,
+					11A111111111111111111113 /* PrivacyInfo.xcprivacy in Resources */,
+				);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
@@ -453,11 +463,11 @@
 				B938F2EDE116674CF8DEAFDE /* DocumentsView.swift in Sources */,
 				BF0451E234EB01B5D5FF5AA6 /* DraftAttachment.swift in Sources */,
 				03C65148C080A7137E471A57 /* EmptyStateCard.swift in Sources */,
-				09A7DCB961DE77EFC4BB37FB /* EntitlementStore.swift in Sources */,
-				C021A1CDB2A643C78167D7F2 /* ProProductID.swift in Sources */,
-				B2EDA7C783D43C9A78111A3A /* Formatters.swift in Sources */,
-				80744BFC80B996C89FDB30BB /* FuelAnalyticsService.swift in Sources */,
-				AAB535742C042B78C3CB8E9A /* FuelEntry.swift in Sources */,
+					09A7DCB961DE77EFC4BB37FB /* EntitlementStore.swift in Sources */,
+					C021A1CDB2A643C78167D7F2 /* ProProductID.swift in Sources */,
+					B2EDA7C783D43C9A78111A3A /* Formatters.swift in Sources */,
+					80744BFC80B996C89FDB30BB /* FuelAnalyticsService.swift in Sources */,
+					AAB535742C042B78C3CB8E9A /* FuelEntry.swift in Sources */,
 				17E26DB739CCCC8A1A93293E /* FuelEntryFormSheet.swift in Sources */,
 				9EC9EB678FD31A6E06932F40 /* FuelEntryValidator.swift in Sources */,
 				30400B59936B8A7C81A3B820 /* FuelLogEngine.swift in Sources */,
@@ -469,8 +479,9 @@
 				03E3C21804A9F90C3DC88696 /* PDFExportService.swift in Sources */,
 				20ACC1E2F36944D788CC7DE4 /* PaywallView.swift in Sources */,
 				CB97B4CBDA3D1788FDA91252 /* PremiumBackground.swift in Sources */,
-				E68DCB80254E2B09CAF61BF4 /* PremiumComponents.swift in Sources */,
-				D452F71FDCC0A4A353F12498 /* PreviewURL.swift in Sources */,
+					E68DCB80254E2B09CAF61BF4 /* PremiumComponents.swift in Sources */,
+					11A111111111111111111111 /* PrivacyPolicyView.swift in Sources */,
+					D452F71FDCC0A4A353F12498 /* PreviewURL.swift in Sources */,
 				80A8E1EAA56028864006B35A /* ReminderFormView.swift in Sources */,
 				5CD10C73B922434F4F1773EF /* ReminderItem.swift in Sources */,
 				5AD538E9E717F5C143F5BAA7 /* RemindersView.swift in Sources */,
@@ -485,8 +496,9 @@
 				363BD0CA582BED1D48830C74 /* StatCard.swift in Sources */,
 				5D0306143706CE875E7A7273 /* SurfaceCard.swift in Sources */,
 				398D7615F76E1DB5DCC475F7 /* TimelineView.swift in Sources */,
-				CAB816725C8ADA64BF516CDB /* VINLookupService.swift in Sources */,
-				EC233467E89F1DED8AE6B584 /* Vehicle.swift in Sources */,
+					CAB816725C8ADA64BF516CDB /* VINLookupService.swift in Sources */,
+					11A111111111111111111115 /* VINValidator.swift in Sources */,
+					EC233467E89F1DED8AE6B584 /* Vehicle.swift in Sources */,
 				71D52CA63AB1F267CE63CA19 /* VehicleAnalyticsView.swift in Sources */,
 				1B58025DF8753297BC1BD668 /* VehicleDetailView.swift in Sources */,
 				04212E4B5AA017EFBF52CF3A /* VehicleFilterScrollView.swift in Sources */,

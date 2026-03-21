@@ -237,7 +237,14 @@ final class EntitlementStore: ObservableObject {
                 guard let id = ProProductID(rawValue: product.id) else { return nil }
                 return (id, product)
             })
-            productLoadErrorMessage = products.count == ProProductID.allCases.count ? nil : "Pricing unavailable right now."
+            switch products.count {
+            case ProProductID.allCases.count:
+                productLoadErrorMessage = nil
+            case 0:
+                productLoadErrorMessage = "Pricing unavailable right now."
+            default:
+                productLoadErrorMessage = "Some plans are temporarily unavailable."
+            }
         } catch {
             products = [:]
             productLoadErrorMessage = "Pricing unavailable right now."

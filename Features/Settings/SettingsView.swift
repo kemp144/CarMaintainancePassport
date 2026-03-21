@@ -70,6 +70,7 @@ struct SettingsView: View {
     @State private var pendingRestoreTarget: RestoreTarget?
     @State private var backupFeedback: BackupFeedback?
     @State private var isRunningBackupAction = false
+    @State private var showingPrivacyPolicy = false
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -85,6 +86,7 @@ struct SettingsView: View {
                         proSection
                         backupSection
                         notificationsSection
+                        legalSection
                         dangerZoneSection
                         aboutSection
                     }
@@ -150,6 +152,9 @@ struct SettingsView: View {
                 message: Text(feedback.message),
                 dismissButton: .default(Text("OK"))
             )
+        }
+        .sheet(isPresented: $showingPrivacyPolicy) {
+            PrivacyPolicyView()
         }
     }
 
@@ -517,6 +522,36 @@ struct SettingsView: View {
                 settingsInfoRow(title: "Vehicles", value: "\(vehicles.count)")
                 settingsDivider()
                 settingsInfoRow(title: "Entries", value: "\(services.count)")
+            }
+        }
+    }
+
+    private var legalSection: some View {
+        settingsGroupCard(title: "Legal", subtitle: "Privacy, terms, and support") {
+            VStack(spacing: 0) {
+                settingsActionRow(
+                    title: "Privacy Policy",
+                    subtitle: "Review the full in-app privacy policy and data handling details.",
+                    icon: "hand.raised"
+                ) {
+                    showingPrivacyPolicy = true
+                }
+                settingsDivider()
+                settingsActionRow(
+                    title: "Terms of Use",
+                    subtitle: "Open Apple's standard terms for subscriptions and purchases.",
+                    icon: "doc.text"
+                ) {
+                    openURL(AppLegalLinks.termsOfUse)
+                }
+                settingsDivider()
+                settingsActionRow(
+                    title: "Support",
+                    subtitle: "Open the support page for bug reports, questions, or restore help.",
+                    icon: "questionmark.circle"
+                ) {
+                    openURL(AppLegalLinks.support)
+                }
             }
         }
     }
