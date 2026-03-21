@@ -243,8 +243,14 @@ struct ServiceEntryFormView: View {
             Button("12 months") {
                 createSuggestedReminder(months: 12, kilometers: nil)
             }
-            Button(UnitFormatter.distance(10_000)) {
-                createSuggestedReminder(months: nil, kilometers: 10_000)
+            if entitlementStore.canUseMileageReminders() {
+                Button(UnitFormatter.distance(10_000)) {
+                    createSuggestedReminder(months: nil, kilometers: 10_000)
+                }
+            } else {
+                Button("\(UnitFormatter.distance(10_000)) (Pro)") {
+                    paywallCoordinator.present(.advancedReminders)
+                }
             }
             Button("Custom") {
                 showingCustomReminder = true

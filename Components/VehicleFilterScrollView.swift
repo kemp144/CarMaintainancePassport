@@ -30,18 +30,18 @@ struct VehicleFilterScrollView: View {
         if !vehicles.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    VehicleFilterChip(title: "All", icon: "square.grid.2x2", isSelected: appState.selectedVehicleID == nil)
+                    VehicleFilterChip(title: "All", icon: "square.grid.2x2", isSelected: appState.selectedVehicleFilterID == nil)
                         .onTapGesture {
                             withAnimation(.easeInOut(duration: 0.2)) {
-                                appState.selectedVehicleID = nil
+                                appState.selectSharedVehicleFilter(nil)
                             }
                         }
                     
                     ForEach(vehicles) { vehicle in
-                        VehicleFilterChip(title: vehicle.title, icon: "car.fill", isSelected: appState.selectedVehicleID == vehicle.id)
+                        VehicleFilterChip(title: vehicle.title, icon: "car.fill", isSelected: appState.selectedVehicleFilterID == vehicle.id)
                             .onTapGesture {
                                 withAnimation(.easeInOut(duration: 0.2)) {
-                                    appState.selectedVehicleID = vehicle.id
+                                    appState.selectSharedVehicleFilter(vehicle.id)
                                 }
                             }
                     }

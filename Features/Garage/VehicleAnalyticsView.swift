@@ -225,8 +225,12 @@ struct VehicleAnalyticsView: View {
                             }
                         }
 
-                        if viewModel.upcomingPlannedCost == 0 {
+                        if viewModel.forecastItems.isEmpty {
                             Text("No upcoming scheduled costs")
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        } else if viewModel.upcomingPlannedCost == 0 {
+                            Text("Scheduled items found, but cost estimates need more history.")
                                 .font(.subheadline)
                                 .foregroundStyle(AppTheme.secondaryText)
                         } else {
@@ -1643,33 +1647,36 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                 if let due = reminder.dateDue {
                     if due >= now && due <= oneYearFromNow {
                         let relatedServices = sortedServices.filter { $0.serviceType.rawValue == reminder.typeRaw }
-                        let isEstimate = relatedServices.isEmpty
-                        let avg: Double
-                        if isEstimate {
-                            avg = 100.0
+                        let estimatedCost = relatedServices.isEmpty
+                            ? nil
+                            : relatedServices.reduce(0) { $0 + $1.price } / Double(relatedServices.count)
+                        if estimatedCost == nil {
                             forecastFallbackCount += 1
-                        } else {
-                            avg = relatedServices.reduce(0) { $0 + $1.price } / Double(relatedServices.count)
                         }
                         let itemTitle = ServiceType(rawValue: reminder.typeRaw)?.title ?? reminder.title
                         res.forecastItems.append(ForecastItem(
                             title: itemTitle,
                             dueDate: due,
                             dueMileage: nil,
-                            estimatedCost: avg,
-                            isEstimate: isEstimate
+                            estimatedCost: estimatedCost
                         ))
                         forecastItemCount += 1
-                        res.upcomingPlannedCost += avg
+                        if let estimatedCost {
+                            res.upcomingPlannedCost += estimatedCost
+                        }
                         if due <= sixMonthsFromNow {
-                            res.upcomingPlannedCost6Months += avg
+                            if let estimatedCost {
+                                res.upcomingPlannedCost6Months += estimatedCost
+                            }
                             if isMaintenanceReminder {
                                 res.upcomingMaintenanceCount += 1
                                 upcomingMaintenanceReminders.append(reminder)
                             }
                         }
                         if due <= threeMonthsFromNow {
-                            res.upcomingPlannedCost3Months += avg
+                            if let estimatedCost {
+                                res.upcomingPlannedCost3Months += estimatedCost
+                            }
                         }
                     }
                     if due < now.startOfDay {
@@ -1688,27 +1695,28 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                         }
                     } else if milDue - vehicleMileage <= 5000 {
                         let relatedServices = sortedServices.filter { $0.serviceType.rawValue == reminder.typeRaw }
-                        let isEstimate = relatedServices.isEmpty
-                        let avg: Double
-                        if isEstimate {
-                            avg = 100.0
+                        let estimatedCost = relatedServices.isEmpty
+                            ? nil
+                            : relatedServices.reduce(0) { $0 + $1.price } / Double(relatedServices.count)
+                        if estimatedCost == nil {
                             forecastFallbackCount += 1
-                        } else {
-                            avg = relatedServices.reduce(0) { $0 + $1.price } / Double(relatedServices.count)
                         }
                         let itemTitle = ServiceType(rawValue: reminder.typeRaw)?.title ?? reminder.title
                         res.forecastItems.append(ForecastItem(
                             title: itemTitle,
                             dueDate: nil,
                             dueMileage: milDue,
-                            estimatedCost: avg,
-                            isEstimate: isEstimate
+                            estimatedCost: estimatedCost
                         ))
                         forecastItemCount += 1
-                        res.upcomingPlannedCost += avg
+                        if let estimatedCost {
+                            res.upcomingPlannedCost += estimatedCost
+                        }
 
                         if milDue - vehicleMileage <= 2500 {
-                            res.upcomingPlannedCost6Months += avg
+                            if let estimatedCost {
+                                res.upcomingPlannedCost6Months += estimatedCost
+                            }
                             if isMaintenanceReminder {
                                 res.upcomingMaintenanceCount += 1
                                 upcomingMaintenanceReminders.append(reminder)
@@ -1767,11 +1775,13 @@ final class VehicleIntelligenceViewModel: ObservableObject {
             }
 
             if res.upcomingPlannedCost == 0 {
-                res.forecastConfidenceText = reminders.isEmpty
+                res.forecastConfidenceText = res.forecastItems.isEmpty
+                    ? (reminders.isEmpty
                     ? "Add reminders or more service history to improve forecasts."
-                    : "No upcoming costs detected yet."
+                    : "No upcoming costs detected yet.")
+                    : "Scheduled items were found, but more matching service history is needed before showing cost estimates."
             } else if forecastFallbackCount > 0 {
-                res.forecastConfidenceText = "Some upcoming costs are estimate-only until more history is logged."
+                res.forecastConfidenceText = "Some scheduled items are not included in these totals yet because more matching service history is needed."
             } else if forecastItemCount < 2 {
                 res.forecastConfidenceText = "Forecast is based on a small number of scheduled items."
             }
@@ -1957,7 +1967,7 @@ final class VehicleIntelligenceViewModel: ObservableObject {
                     }
 
                     if let latestVehicleService = v.services.max(by: { $0.date < $1.date }) {
-                        if latestService == nil || latestVehicleService.date > latestService!.date {
+                        if latestService == nil || latestVehicleService.date > (latestService?.date ?? .distantPast) {
                             latestService = (v.title, latestVehicleService.date)
                         }
                     }
@@ -2140,8 +2150,7 @@ fileprivate struct ForecastItem: Identifiable {
     let title: String
     let dueDate: Date?
     let dueMileage: Int?
-    let estimatedCost: Double
-    let isEstimate: Bool
+    let estimatedCost: Double?
 
     var dueDateDescription: String {
         if let date = dueDate {
@@ -2294,11 +2303,11 @@ private struct ForecastDetailSheet: View {
                                 }
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 3) {
-                                    Text(AppFormatters.currency(item.estimatedCost, code: vehicle.currencyCode))
+                                    Text(item.estimatedCost.map { AppFormatters.currency($0, code: vehicle.currencyCode) } ?? "Estimate pending")
                                         .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(AppTheme.primaryText)
-                                    if item.isEstimate {
-                                        Text("estimated")
+                                        .foregroundStyle(item.estimatedCost == nil ? AppTheme.tertiaryText : AppTheme.primaryText)
+                                    if item.estimatedCost == nil {
+                                        Text("need history")
                                             .font(.caption2)
                                             .foregroundStyle(AppTheme.tertiaryText)
                                     }
@@ -2313,7 +2322,7 @@ private struct ForecastDetailSheet: View {
                             .foregroundStyle(AppTheme.secondaryText)
                             .textCase(nil)
                     } footer: {
-                        Text("Amounts are based on your service history. Items marked \"estimated\" use a placeholder until more history is logged.")
+                        Text("Amounts are based on your matching service history. Items marked \"Estimate pending\" need more history before a cost can be shown.")
                             .font(.caption)
                             .foregroundStyle(AppTheme.tertiaryText)
                     }

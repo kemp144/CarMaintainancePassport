@@ -23,7 +23,9 @@ class AnalyticsService {
     
     func track(event: AnalyticsEvent, properties: [String: Any] = [:]) {
         // In a real app, this would send data to Mixpanel, Amplitude, etc.
+        #if DEBUG
         print("Analytics: [\(event.rawValue)] - Properties: \(properties)")
+        #endif
         
         // Track milestone-based context
         // This could be used to discover which contextual moment converts best

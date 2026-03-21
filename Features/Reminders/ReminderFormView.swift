@@ -25,6 +25,8 @@ struct ReminderFormView: View {
     @State private var linkedServiceEntryID: UUID?
     @State private var linkedServiceDate: Date?
     @State private var linkedServiceMileage: Int?
+    @State private var validationMessage: String?
+    @State private var showingValidationAlert = false
     @State private var notificationInfoMessage: String?
 
     init(vehicle: Vehicle? = nil, linkedService: ServiceEntry? = nil, reminder: ReminderItem? = nil) {
@@ -116,6 +118,12 @@ struct ReminderFormView: View {
                                     .foregroundStyle(AppTheme.secondaryText)
                             }
                         }
+
+                        if !includesDate {
+                            Text("Mileage-only reminders are tracked inside the app. Add a due date too if you want a notification.")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.tertiaryText)
+                        }
                     }
 
                     Toggle("Enable reminder", isOn: $isEnabled)
@@ -129,6 +137,11 @@ struct ReminderFormView: View {
         }
         .navigationTitle(reminder == nil ? "Add Reminder" : "Edit Reminder")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Couldn’t save reminder", isPresented: $showingValidationAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(validationMessage ?? "Please review the entered values.")
+        }
         .alert(
             "Notifications Off",
             isPresented: Binding(
@@ -165,8 +178,24 @@ struct ReminderFormView: View {
 
     private func saveReminder() async {
         guard let vehicle = selectedVehicle else { return }
+
+        guard includesDate || includesMileage else {
+            validationMessage = "Add at least a due date or a mileage trigger."
+            showingValidationAlert = true
+            return
+        }
+
+        guard !includesMileage || entitlementStore.canUseMileageReminders() else {
+            paywallCoordinator.present(.advancedReminders)
+            return
+        }
+
         let parsedMileageDue = includesMileage ? UnitFormatter.parseDistance(mileageDue) : nil
-        if includesMileage && parsedMileageDue == nil { return }
+        if includesMileage && parsedMileageDue == nil {
+            validationMessage = "Mileage due isn’t a valid number."
+            showingValidationAlert = true
+            return
+        }
 
         let activeReminder: ReminderItem
         if let reminder {

@@ -99,6 +99,14 @@ struct GarageView: View {
                                     .font(.title2)
                                     .foregroundStyle(AppTheme.tertiaryText)
                             }
+
+                            Button {
+                                addVehicleTapped()
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.title2)
+                                    .foregroundStyle(AppTheme.accent)
+                            }
                         }
                     }
 

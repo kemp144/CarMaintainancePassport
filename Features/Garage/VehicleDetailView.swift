@@ -329,7 +329,7 @@ struct VehicleDetailView: View {
         }
         .navigationBarHidden(true)
         .onAppear {
-            appState.selectedVehicleID = vehicle.id
+            appState.focusVehicle(vehicle.id)
         }
         .sheet(isPresented: $showingEdit) {
             NavigationStack {
@@ -414,10 +414,19 @@ struct VehicleDetailView: View {
                         } label: {
                             Label("Resale Report (PDF)", systemImage: "tag.fill")
                         }
-                        Button {
-                            exportCSV()
+                        Menu {
+                            Button {
+                                exportServiceCSV()
+                            } label: {
+                                Label("Services (CSV)", systemImage: "wrench.and.screwdriver.fill")
+                            }
+                            Button {
+                                exportFuelCSV()
+                            } label: {
+                                Label("Fuel Log (CSV)", systemImage: "fuelpump.fill")
+                            }
                         } label: {
-                            Label("Export CSV Data", systemImage: "tablecells.fill")
+                            Label("Export Data", systemImage: "tablecells.fill")
                         }
                     } label: {
                         quickActionLabel(title: "Export", icon: "square.and.arrow.up", priority: .tertiary)
@@ -426,7 +435,7 @@ struct VehicleDetailView: View {
                     Button {
                         paywallCoordinator.present(.exportPDF)
                     } label: {
-                        quickActionLabel(title: "Export", icon: "square.and.arrow.up", priority: .tertiary, isLocked: true)
+                        quickActionLabel(title: "Export", icon: "lock.fill", priority: .tertiary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -963,12 +972,12 @@ struct VehicleDetailView: View {
     }
 
     private func openDocuments() {
-        appState.selectedVehicleID = vehicle.id
+        appState.selectSharedVehicleFilter(vehicle.id)
         showingDocuments = true
     }
 
     private func openServiceHistory() {
-        appState.selectedVehicleID = vehicle.id
+        appState.selectSharedVehicleFilter(vehicle.id)
         appState.timelineCategory = "All"
         appState.selectedTab = .timeline
         dismiss()
@@ -990,9 +999,15 @@ struct VehicleDetailView: View {
         }
     }
 
-    private func exportCSV() {
+    private func exportServiceCSV() {
         performExport(.csv) {
-            try PDFExportService.shared.exportCSV(for: vehicle)
+            try PDFExportService.shared.exportServiceCSV(for: vehicle)
+        }
+    }
+
+    private func exportFuelCSV() {
+        performExport(.csv) {
+            try PDFExportService.shared.exportFuelCSV(for: vehicle)
         }
     }
 

@@ -16,18 +16,23 @@ struct RemindersView: View {
         reminders.deduplicatedLinkedReminders()
     }
 
+    private var filteredReminders: [ReminderItem] {
+        uniqueReminders.filter { reminder in
+            guard let vehicle = reminder.vehicle else { return false }
+
+            if let vehicleID = appState.effectiveSharedVehicleID, vehicle.id != vehicleID {
+                return false
+            }
+
+            return true
+        }
+    }
+
     private var grouped: [(ReminderStatus, [ReminderItem])] {
         let orderedStatuses: [ReminderStatus] = [.overdue, .dueSoon, .upcoming, .disabled]
         return orderedStatuses.compactMap { status in
-            let matching = uniqueReminders.filter { reminder in
+            let matching = filteredReminders.filter { reminder in
                 guard let vehicle = reminder.vehicle else { return false }
-                
-                if appState.showOnlyCurrentVehicle, let globalID = appState.selectedVehicleID {
-                    if vehicle.id != globalID { return false }
-                } else if let localID = appState.selectedVehicleID {
-                    if vehicle.id != localID { return false }
-                }
-                
                 return reminder.status(for: vehicle) == status
             }
             return matching.isEmpty ? nil : (status, matching)
@@ -35,12 +40,16 @@ struct RemindersView: View {
     }
 
     private var reminderSummary: some View {
-        let activeReminders = grouped.reduce(0) { $0 + $1.1.count }
-        let overdueCount = uniqueReminders.filter { reminder in
+        let activeReminders = filteredReminders.filter { reminder in
+            guard let vehicle = reminder.vehicle else { return false }
+            return reminder.status(for: vehicle) != .disabled
+        }.count
+        let overdueCount = filteredReminders.filter { reminder in
             guard let vehicle = reminder.vehicle else { return false }
             return reminder.status(for: vehicle) == .overdue
         }.count
-        let mileageCount = uniqueReminders.filter { $0.mileageDue != nil }.count
+        let mileageCount = filteredReminders.filter { $0.mileageDue != nil }.count
+        let mileageValue = mileageCount == 0 && !entitlementStore.hasProAccess ? "Pro" : "\(mileageCount)"
 
         return VStack(spacing: 12) {
             SurfaceCard {
@@ -58,7 +67,7 @@ struct RemindersView: View {
                     HStack(spacing: 12) {
                         SummaryStatTile(title: "Active", value: "\(activeReminders)", icon: "bell.fill")
                         SummaryStatTile(title: "Overdue", value: "\(overdueCount)", icon: "exclamationmark.triangle.fill")
-                        SummaryStatTile(title: "Mileage", value: mileageCount == 0 ? "Pro" : "\(mileageCount)", icon: "speedometer")
+                        SummaryStatTile(title: "Mileage", value: mileageValue, icon: "speedometer")
                     }
                 }
             }

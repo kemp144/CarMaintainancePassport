@@ -2,6 +2,38 @@ import SwiftData
 import SwiftUI
 
 struct SettingsView: View {
+    private enum RestoreTarget {
+        case local
+        case iCloud
+
+        var confirmationTitle: String {
+            switch self {
+            case .local:
+                return "Replace this device with the latest local backup?"
+            case .iCloud:
+                return "Replace this device with the latest iCloud backup?"
+            }
+        }
+
+        var actionTitle: String {
+            switch self {
+            case .local:
+                return "Replace with Local Backup"
+            case .iCloud:
+                return "Replace with iCloud Backup"
+            }
+        }
+
+        var locations: [BackupExportService.BackupLocation] {
+            switch self {
+            case .local:
+                return [.local]
+            case .iCloud:
+                return [.iCloud]
+            }
+        }
+    }
+
     private struct BackupFeedback: Identifiable {
         let id = UUID()
         let title: String
@@ -24,6 +56,7 @@ struct SettingsView: View {
     @AppStorage(UnitSettings.distanceUnitKey) private var distanceUnitRaw = UnitSettings.suggestedProfile().distanceUnit.rawValue
     @AppStorage(UnitSettings.fuelVolumeUnitKey) private var fuelVolumeUnitRaw = UnitSettings.suggestedProfile().fuelVolumeUnit.rawValue
     @AppStorage(UnitSettings.consumptionUnitKey) private var consumptionUnitRaw = UnitSettings.suggestedProfile().consumptionUnit.rawValue
+    @AppStorage("backup.autoICloudEnabled") private var autoICloudBackupEnabled = false
 
     @Query private var vehicles: [Vehicle]
     @Query private var services: [ServiceEntry]
@@ -34,7 +67,7 @@ struct SettingsView: View {
 
     @State private var showingResetConfirmation = false
     @State private var showingResetFinalConfirmation = false
-    @State private var showingRestoreConfirmation = false
+    @State private var pendingRestoreTarget: RestoreTarget?
     @State private var backupFeedback: BackupFeedback?
     @State private var isRunningBackupAction = false
 
@@ -52,12 +85,7 @@ struct SettingsView: View {
                         proSection
                         backupSection
                         notificationsSection
-                        privacySection
                         dangerZoneSection
-                        supportSection
-                        #if DEBUG
-                        developerSection
-                        #endif
                         aboutSection
                     }
                 }
@@ -89,13 +117,32 @@ struct SettingsView: View {
         } message: {
             Text("All app data will be permanently erased. Consider waiting until a recent backup exists first.")
         }
-        .confirmationDialog("Restore latest backup?", isPresented: $showingRestoreConfirmation, titleVisibility: .visible) {
-            Button("Restore Latest Backup") {
-                Task { await restoreLatestBackup() }
+        .confirmationDialog(
+            pendingRestoreTarget?.confirmationTitle ?? "Restore backup?",
+            isPresented: Binding(
+                get: { pendingRestoreTarget != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        pendingRestoreTarget = nil
+                    }
+                }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(pendingRestoreTarget?.actionTitle ?? "Restore Backup") {
+                guard let target = pendingRestoreTarget else { return }
+                Task { await restoreLatestBackup(from: target) }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This imports any missing records from the newest backup and reschedules reminder notifications.")
+            switch pendingRestoreTarget {
+            case .local:
+                Text("Before restoring, the app creates a local safety snapshot. Then it replaces the current data on this device with your newest local backup.")
+            case .iCloud:
+                Text("Before restoring, the app creates a local safety snapshot. Then it replaces the current data on this device with your newest iCloud backup.")
+            case nil:
+                Text("Before restoring, the app creates a local safety snapshot. Then it replaces the current data on this device with your selected backup.")
+            }
         }
         .alert(item: $backupFeedback) { feedback in
             Alert(
@@ -269,9 +316,7 @@ struct SettingsView: View {
                     Spacer(minLength: 0)
                 }
 
-                if entitlementStore.hasProAccess {
-                    settingsCompactNote("Premium features are ready to use whenever you need them.")
-                } else {
+                if !entitlementStore.hasProAccess {
                     HStack(spacing: 10) {
                         Button {
                             paywallCoordinator.present(.settings)
@@ -299,54 +344,152 @@ struct SettingsView: View {
     private var backupSection: some View {
         settingsGroupCard(title: "Backup", subtitle: backupSectionSubtitle) {
             VStack(spacing: 0) {
-                if let lastDate = BackupExportService.shared.lastBackupDate() {
+                if let lastDate = BackupExportService.shared.lastBackupDate(locations: [.local]) {
                     settingsInfoRow(
-                        title: "Last backup",
+                        title: "Last local backup",
                         value: AppFormatters.mediumDate.string(from: lastDate)
                     )
                     settingsDivider()
                 }
 
                 settingsInfoRow(
-                    title: "Storage",
-                    value: BackupExportService.shared.isUsingICloud ? "iCloud Drive" : "On device"
+                    title: "Local backup",
+                    value: "Available"
                 )
 
                 settingsDivider()
 
                 settingsActionRow(
-                    title: isRunningBackupAction ? "Creating backup..." : "Create backup now",
-                    subtitle: "Saves a fresh snapshot of your current records.",
+                    title: isRunningBackupAction ? "Creating backup..." : "Back up now",
+                    subtitle: "Saves a fresh copy of your current records on this device.",
                     icon: "externaldrive.badge.plus"
                 ) {
-                    Task { await createBackupNow() }
+                    Task { await createBackupNow(preferredLocation: .local) }
                 }
 
                 settingsDivider()
 
                 settingsActionRow(
-                    title: isRunningBackupAction ? "Working..." : "Restore latest backup",
-                    subtitle: "Imports missing records from your newest backup.",
+                    title: isRunningBackupAction ? "Working..." : "Restore from local backup",
+                    subtitle: "Replaces the current data on this device with your newest local backup.",
                     icon: "arrow.clockwise.circle"
                 ) {
                     guard !isRunningBackupAction else { return }
-                    guard BackupExportService.shared.lastBackupDate() != nil else {
+                    guard BackupExportService.shared.lastBackupDate(locations: [.local]) != nil else {
                         backupFeedback = BackupFeedback(
                             title: "No Backup Found",
-                            message: "There isn’t a restorable backup yet."
+                            message: "There isn’t a restorable local backup yet."
                         )
                         return
                     }
-                    showingRestoreConfirmation = true
+                    pendingRestoreTarget = .local
+                }
+
+                settingsCompactNote("Local backup stays available for every plan while the app remains installed on this device.")
+
+                settingsDivider()
+
+                if entitlementStore.canUseICloudBackupRestore() {
+                    proICloudBackupRows
+                } else {
+                    lockedICloudBackupRows
                 }
             }
         }
     }
 
     private var backupSectionSubtitle: String {
-        BackupExportService.shared.isUsingICloud
-            ? "Backup snapshots are saved to iCloud Drive automatically when you leave the app."
-            : "Backup snapshots stay on this device and are removed if the app is deleted."
+        "Your records stay on this device. Pro adds Automatic iCloud Backup for extra recovery protection."
+    }
+
+    @ViewBuilder
+    private var proICloudBackupRows: some View {
+        if let lastDate = BackupExportService.shared.lastBackupDate(locations: [.iCloud]) {
+            settingsInfoRow(
+                title: "Last iCloud backup",
+                value: AppFormatters.mediumDate.string(from: lastDate)
+            )
+            settingsDivider()
+        }
+
+        if BackupExportService.shared.locationAvailable(.iCloud) {
+            settingsToggleRow(
+                title: "Automatic iCloud Backup",
+                subtitle: "Creates an iCloud backup when you leave the app.",
+                isOn: $autoICloudBackupEnabled
+            )
+
+            settingsDivider()
+
+            settingsInfoRow(
+                title: "Destination",
+                value: "iCloud Drive"
+            )
+
+            settingsDivider()
+
+            settingsActionRow(
+                title: isRunningBackupAction ? "Creating backup..." : "Back Up Now to iCloud",
+                subtitle: "Saves a fresh backup copy to iCloud.",
+                icon: "icloud.and.arrow.up"
+            ) {
+                Task { await createBackupNow(preferredLocation: .iCloud) }
+            }
+
+            settingsDivider()
+
+            settingsActionRow(
+                title: isRunningBackupAction ? "Working..." : "Restore from iCloud Backup",
+                subtitle: "Replaces the current data on this device with your newest iCloud backup.",
+                icon: "icloud.and.arrow.down"
+            ) {
+                guard !isRunningBackupAction else { return }
+                guard BackupExportService.shared.lastBackupDate(locations: [.iCloud]) != nil else {
+                    backupFeedback = BackupFeedback(
+                        title: "No iCloud Backup Yet",
+                        message: "Create your first iCloud backup to use restore from iCloud."
+                    )
+                    return
+                }
+                pendingRestoreTarget = .iCloud
+            }
+
+            settingsCompactNote("Local data stays on this device. iCloud keeps a backup copy for recovery.")
+        } else {
+            settingsInfoRow(
+                title: "Automatic iCloud Backup",
+                value: "Unavailable"
+            )
+
+            settingsCompactNote("Sign in to iCloud and enable iCloud Drive to store backup copies there. Your local data is still safe on this device.")
+        }
+    }
+
+    private var lockedICloudBackupRows: some View {
+        VStack(spacing: 0) {
+            if let lastDate = BackupExportService.shared.lastBackupDate(locations: [.iCloud]) {
+                settingsInfoRow(
+                    title: "Last iCloud backup",
+                    value: AppFormatters.mediumDate.string(from: lastDate)
+                )
+                settingsDivider()
+            }
+
+            settingsInfoRow(
+                title: "Automatic iCloud Backup",
+                value: "Pro"
+            )
+
+            settingsCompactNote("Automatic iCloud Backup is a Pro feature. Your local data is still safe on this device.")
+
+            settingsActionRow(
+                title: "Upgrade to Pro",
+                subtitle: "Unlock automatic iCloud backup and restore from iCloud.",
+                icon: "sparkles"
+            ) {
+                paywallCoordinator.present(.settings)
+            }
+        }
     }
 
 
@@ -365,75 +508,6 @@ struct SettingsView: View {
             }
         }
     }
-
-    private var privacySection: some View {
-        settingsGroupCard(title: "Privacy", subtitle: "Local-first by design") {
-            VStack(spacing: 0) {
-                settingsInfoRow(title: "Account", value: "Not required")
-                settingsDivider()
-                settingsInfoRow(
-                    title: "Storage",
-                    value: BackupExportService.shared.isUsingICloud ? "On device + iCloud backup snapshots" : "On device"
-                )
-                settingsDivider()
-                settingsInfoRow(title: "VIN lookup", value: "Only when requested")
-                settingsDivider()
-                settingsInfoRow(title: "Ads", value: "None")
-            }
-        }
-    }
-
-    private var supportSection: some View {
-        settingsGroupCard(title: "Support", subtitle: "Help and feedback") {
-            VStack(spacing: 0) {
-                settingsInfoRow(title: "Help", value: "Use the App Store support link for contact details.")
-            }
-        }
-    }
-
-    #if DEBUG
-    private var developerSection: some View {
-        settingsGroupCard(title: "Developer", subtitle: "Debug tools for local builds") {
-            VStack(spacing: 0) {
-                settingsToggleRow(
-                    title: "Debug Pro Override",
-                    subtitle: "Force premium access during development.",
-                    isOn: Binding(get: {
-                        entitlementStore.debugProOverride
-                    }, set: { value in
-                        entitlementStore.setDebugOverride(value)
-                    })
-                )
-
-                settingsDivider()
-
-                settingsActionRow(
-                    title: "Generate full demo garage",
-                    subtitle: "Replaces current data with a fully loaded demo set.",
-                    icon: "wand.and.stars"
-                ) {
-                    PreviewData.generateFullDemoGarage(in: modelContext)
-                    selectDemoVehicle(withVIN: PreviewData.fullDemoPrimaryVIN)
-                    appState.refreshDataViews()
-                    Haptics.success()
-                }
-
-                settingsDivider()
-
-                settingsActionRow(
-                    title: "Generate partial demo garage",
-                    subtitle: "Replaces current data with a mixed-completeness demo set.",
-                    icon: "wand.and.stars"
-                ) {
-                    PreviewData.generatePartialDemoGarage(in: modelContext)
-                    selectDemoVehicle(withVIN: PreviewData.partialDemoPrimaryVIN)
-                    appState.refreshDataViews()
-                    Haptics.success()
-                }
-            }
-        }
-    }
-    #endif
 
     private var aboutSection: some View {
         settingsGroupCard(title: "About", subtitle: "Build and library stats") {
@@ -499,6 +573,7 @@ struct SettingsView: View {
     private func resetAllData() async {
         do {
             try await AppDataMaintenanceService.resetAllData(vehicles: vehicles, in: modelContext)
+            entitlementStore.setDebugOverride(false)
             appState.refreshDataViews()
             Haptics.success()
         } catch {
@@ -507,7 +582,7 @@ struct SettingsView: View {
     }
 
     @MainActor
-    private func createBackupNow() async {
+    private func createBackupNow(preferredLocation: BackupExportService.BackupLocation) async {
         guard !isRunningBackupAction else { return }
         isRunningBackupAction = true
         defer { isRunningBackupAction = false }
@@ -519,13 +594,14 @@ struct SettingsView: View {
                 reminders: reminders,
                 attachments: attachments,
                 documents: documents,
-                fuelEntries: fuelEntries
+                fuelEntries: fuelEntries,
+                preferredLocation: preferredLocation
             )
             backupFeedback = BackupFeedback(
                 title: "Backup Created",
-                message: BackupExportService.shared.isUsingICloud
-                    ? "A new backup snapshot was saved to iCloud Drive."
-                    : "A new backup snapshot was saved on this device."
+                message: preferredLocation == .iCloud
+                    ? "A fresh backup was saved to iCloud Drive."
+                    : "A fresh backup was saved on this device while the app remains installed."
             )
             Haptics.success()
         } catch let error as BackupExportService.BackupError {
@@ -544,24 +620,27 @@ struct SettingsView: View {
     }
 
     @MainActor
-    private func restoreLatestBackup() async {
+    private func restoreLatestBackup(from target: RestoreTarget) async {
         guard !isRunningBackupAction else { return }
         isRunningBackupAction = true
         defer { isRunningBackupAction = false }
+        defer { pendingRestoreTarget = nil }
 
         do {
-            let result = try BackupExportService.shared.importLatestBackup(into: modelContext)
-            try await AppDataMaintenanceService.rescheduleReminderNotifications(in: modelContext)
+            guard let backupURL = BackupExportService.shared.findLatestBackup(locations: target.locations) else {
+                throw BackupExportService.ImportError.invalidFile
+            }
+            let result = try await AppDataMaintenanceService.replaceLocalData(with: backupURL, in: modelContext)
             appState.refreshDataViews()
             backupFeedback = BackupFeedback(
                 title: "Backup Restored",
-                message: restoreSummary(for: result)
+                message: restoreSummary(for: result, target: target)
             )
             Haptics.success()
-        } catch let error as BackupExportService.ImportError {
+        } catch let error as LocalizedError {
             backupFeedback = BackupFeedback(
                 title: "Restore Failed",
-                message: error.localizedDescription
+                message: error.errorDescription ?? "The selected backup couldn’t be restored."
             )
             Haptics.error()
         } catch {
@@ -573,25 +652,15 @@ struct SettingsView: View {
         }
     }
 
-    private func restoreSummary(for result: BackupExportService.ImportResult) -> String {
-        let importedRecords = result.vehiclesImported
-            + result.servicesImported
-            + result.remindersImported
-            + result.attachmentsImported
-            + result.documentsImported
-            + result.fuelEntriesImported
-
-        guard importedRecords > 0 else {
-            return "No new records were imported because this backup was already fully present."
+    private func restoreSummary(for result: BackupExportService.ImportResult, target: RestoreTarget) -> String {
+        let source: String
+        switch target {
+        case .local:
+            source = "local backup"
+        case .iCloud:
+            source = "iCloud backup"
         }
-
-        return "Imported \(result.vehiclesImported) vehicles, \(result.servicesImported) services, \(result.remindersImported) reminders, \(result.documentsImported) documents, and \(result.fuelEntriesImported) fuel entries."
-    }
-
-    private func selectDemoVehicle(withVIN vin: String) {
-        let descriptor = FetchDescriptor<Vehicle>()
-        guard let refreshedVehicles = try? modelContext.fetch(descriptor) else { return }
-        appState.selectedVehicleID = refreshedVehicles.first(where: { $0.vin == vin })?.id
+        return "This device was restored from your \(source). Imported \(result.vehiclesImported) vehicles, \(result.servicesImported) services, \(result.remindersImported) reminders, \(result.documentsImported) documents, and \(result.fuelEntriesImported) fuel entries."
     }
 
     private func settingsGroupCard<Content: View>(

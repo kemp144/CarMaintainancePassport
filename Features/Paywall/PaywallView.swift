@@ -135,6 +135,22 @@ struct PaywallView: View {
                 )
 
                 VStack(spacing: 10) {
+                    if entitlementStore.isLoadingProducts && entitlementStore.products.isEmpty {
+                        pricingStatusRow(
+                            icon: "hourglass",
+                            title: "Loading pricing",
+                            message: "Fetching App Store product details."
+                        )
+                    } else if let message = entitlementStore.productLoadErrorMessage {
+                        pricingStatusRow(
+                            icon: "exclamationmark.triangle.fill",
+                            title: "Pricing unavailable right now",
+                            message: message
+                        ) {
+                            Task { await entitlementStore.loadProducts() }
+                        }
+                    }
+
                     ForEach(EntitlementStore.ProPlan.allCases, id: \.rawValue) { plan in
                         pricingPlanRow(for: plan)
                     }
@@ -158,7 +174,7 @@ struct PaywallView: View {
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle())
-                .disabled(entitlementStore.isBusy)
+                .disabled(entitlementStore.isBusy || entitlementStore.product(for: selectedPlan) == nil || entitlementStore.isLoadingProducts)
 
                 if let message = entitlementStore.purchaseErrorMessage {
                     Text(message)
@@ -332,7 +348,7 @@ struct PaywallView: View {
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle())
-                .disabled(entitlementStore.isBusy)
+                .disabled(entitlementStore.isBusy || entitlementStore.product(for: selectedPlan) == nil || entitlementStore.isLoadingProducts)
 
                 if selectedPlan == .yearly {
                     Text(yearlySavingsText)
@@ -371,21 +387,21 @@ struct PaywallView: View {
         } label: {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(plan.title)
+                    Text(entitlementStore.displayName(for: plan))
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(AppTheme.primaryText)
                         .fixedSize(horizontal: false, vertical: true)
                         .layoutPriority(1)
 
                     if let badge = plan.badge {
-                        badgeView(badge, highlighted: isYearly || plan == .lifetime)
+                        badgeView(badge, highlighted: isYearly)
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(plan.subtitle)
+                        Text(entitlementStore.displayDescription(for: plan) ?? plan.subtitle)
                             .font(.caption)
                             .foregroundStyle(AppTheme.secondaryText)
-                            .lineLimit(1)
+                            .lineLimit(2)
                             .minimumScaleFactor(0.85)
 
                         if isYearly {
@@ -477,7 +493,7 @@ struct PaywallView: View {
     }
 
     private func planPriceText(for plan: EntitlementStore.ProPlan) -> String {
-        entitlementStore.product(for: plan)?.displayPrice ?? plan.priceUnavailableText
+        entitlementStore.displayPrice(for: plan) ?? plan.priceUnavailableText
     }
 
     private var showsStickyCTA: Bool {
@@ -495,7 +511,7 @@ struct PaywallView: View {
             ComparisonFeature(title: "Fuel history", free: "Logs + totals", pro: "Logs + totals", highlightPro: false),
             ComparisonFeature(title: "Fuel insights", free: "Basic averages", pro: "Long-term trends", highlightPro: true),
             ComparisonFeature(title: "Documents", free: "Up to 10 saved", pro: "Unlimited", highlightPro: true),
-            ComparisonFeature(title: "Automatic backup", free: "Included", pro: "Included", highlightPro: false),
+            ComparisonFeature(title: "Backup protection", free: "Local backup", pro: "Automatic iCloud Backup", highlightPro: true),
             ComparisonFeature(title: "Reports", free: "Not included", pro: "PDF + CSV + resale", highlightPro: true),
             ComparisonFeature(title: "Ownership insights", free: "Core summary", pro: "Deep breakdowns", highlightPro: true)
         ]
@@ -506,6 +522,56 @@ struct PaywallView: View {
             monthly: entitlementStore.product(for: .monthly),
             yearly: entitlementStore.product(for: .yearly)
         ) ?? "Save with yearly billing"
+    }
+
+    @ViewBuilder
+    private func pricingStatusRow(
+        icon: String,
+        title: String,
+        message: String,
+        actionTitle: String? = nil,
+        action: (() -> Void)? = nil
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(AppTheme.accentSecondary)
+                    .frame(width: 28, height: 28)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.white.opacity(0.04))
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.primaryText)
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+
+                Spacer()
+            }
+
+            if let actionTitle, let action {
+                Button(actionTitle) {
+                    action()
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.02))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(AppTheme.separator, lineWidth: 1)
+                }
+        )
     }
 
     private var paywallBenefits: [PaywallBenefit] {
@@ -563,6 +629,7 @@ struct PaywallView: View {
             return [
                 PaywallBenefit(icon: "car.2.fill", title: "Unlimited vehicles", message: "Track your whole garage, not just one car."),
                 PaywallBenefit(icon: "bell.badge.fill", title: "Smart reminders", message: "Get reminders by date, mileage, or both."),
+                PaywallBenefit(icon: "icloud.and.arrow.up.fill", title: "Automatic iCloud Backup", message: "Keep a protected backup copy of your records in iCloud when you leave the app."),
                 PaywallBenefit(icon: "fuelpump.fill", title: "Fuel efficiency insights", message: "Unlock consumption, charts, filters, and deeper fuel trends."),
                 PaywallBenefit(icon: "doc.richtext.fill", title: "Reports and resale tools", message: "Keep receipts organized and export buyer-ready history.")
             ]
@@ -582,7 +649,7 @@ struct PaywallView: View {
                                 .foregroundStyle(AppTheme.primaryText)
 
                             privacyRow(title: "Account", message: "You can use the app without creating an account.")
-                            privacyRow(title: "Storage", message: BackupExportService.shared.isUsingICloud ? "Your records stay on this device, with backups saved to iCloud Drive when available." : "Your records stay on this device. Local backups are removed if the app is deleted.")
+                            privacyRow(title: "Storage", message: "Your records stay on this device. Local backup is always available, and Pro can add iCloud backup copies.")
                             privacyRow(title: "VIN Lookup", message: "Only when you tap Autofill, the entered VIN is sent to the NHTSA VIN decoder service to fetch vehicle details.")
                             privacyRow(title: "Purchases", message: "Subscriptions and purchases are handled by the App Store.")
                             privacyRow(title: "Ads", message: "The app does not show ads or use ad tracking.")
@@ -659,9 +726,9 @@ private extension EntitlementStore.ProPlan {
         case .monthly:
             return "Flexible monthly access"
         case .yearly:
-            return "Best balance of value and flexibility"
+            return "Best value for long-term use"
         case .lifetime:
-            return "One purchase, forever access"
+            return "Pay once, unlock Pro forever"
         }
     }
 
@@ -688,15 +755,15 @@ private extension EntitlementStore.ProPlan {
     }
 
     var priceUnavailableText: String {
-        "App Store price"
+        "Pricing unavailable right now"
     }
 
     func ctaTitle(priceText: String) -> String {
         switch self {
         case .monthly:
-            return priceText == priceUnavailableText ? "Continue with Monthly" : "Start Pro for \(priceText)/month"
+            return priceText == priceUnavailableText ? "Choose Monthly" : "Start Pro for \(priceText)"
         case .yearly:
-            return priceText == priceUnavailableText ? "Continue with Yearly" : "Start Pro for \(priceText)/year"
+            return priceText == priceUnavailableText ? "Choose Yearly" : "Start Pro for \(priceText)"
         case .lifetime:
             return priceText == priceUnavailableText ? "Unlock Lifetime Pro" : "Unlock Pro forever for \(priceText)"
         }
@@ -719,6 +786,6 @@ private enum PaywallPriceFormatter {
         }
 
         let formattedSavings = yearly.priceFormatStyle.format(savings)
-        return "Save \(formattedSavings)/year"
+        return "Save \(formattedSavings) over monthly billing"
     }
 }

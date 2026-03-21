@@ -27,20 +27,22 @@ final class EntitlementStore: ObservableObject {
         case yearly
         case lifetime
 
-        var productID: String {
+        var productID: ProProductID {
             switch self {
             case .monthly:
-                return "com.robertengel.carservicepassport.pro.monthly"
+                return .monthly
             case .yearly:
-                return "com.robertengel.carservicepassport.pro.yearly"
+                return .yearly
             case .lifetime:
-                return "com.robertengel.carservicepassport.pro.lifetime"
+                return .lifetime
             }
         }
     }
 
-    @Published private(set) var products: [String: Product] = [:]
-    @Published private(set) var isProUnlocked: Bool
+    @Published private(set) var products: [ProProductID: Product] = [:]
+    @Published private(set) var isProUnlocked = false
+    @Published private(set) var isLoadingProducts = false
+    @Published private(set) var productLoadErrorMessage: String?
     @Published private(set) var isBusy = false
     @Published private(set) var premiumPreviewStates: [PremiumPreviewModule: PremiumPreviewState]
     @Published var purchaseErrorMessage: String?
@@ -57,19 +59,12 @@ final class EntitlementStore: ObservableObject {
         case resaleReport
     }
 
-    private enum Cache {
-        static let proAccessGracePeriod: TimeInterval = 60 * 60 * 24 * 3
-    }
-
     private enum Keys {
-        static let cachedProUnlocked = "entitlement.cachedProUnlocked"
-        static let cachedProUnlockedAt = "entitlement.cachedProUnlockedAt"
         static let debugProOverride = "entitlement.debugProOverride"
         static let premiumPreviewStates = "entitlement.premiumPreviewStates"
     }
 
     init() {
-        isProUnlocked = Self.cachedProAccessIsFresh()
         premiumPreviewStates = Self.loadPremiumPreviewStates()
     }
 
@@ -167,6 +162,14 @@ final class EntitlementStore: ObservableObject {
         hasProAccess
     }
 
+    func canUseAutomaticICloudBackup() -> Bool {
+        hasProAccess
+    }
+
+    func canUseICloudBackupRestore() -> Bool {
+        hasProAccess
+    }
+
     func previewState(for module: PremiumPreviewModule) -> PremiumPreviewState {
         premiumPreviewStates[module] ?? Self.defaultPreviewState(for: module)
     }
@@ -221,11 +224,23 @@ final class EntitlementStore: ObservableObject {
     }
 
     func loadProducts() async {
+        isLoadingProducts = true
+        productLoadErrorMessage = nil
+
+        defer {
+            isLoadingProducts = false
+        }
+
         do {
-            let productList = try await Product.products(for: ProPlan.allCases.map { $0.productID })
-            products = Dictionary(uniqueKeysWithValues: productList.map { ($0.id, $0) })
+            let productList = try await Product.products(for: ProProductID.allProductIDs)
+            products = Dictionary(uniqueKeysWithValues: productList.compactMap { product in
+                guard let id = ProProductID(rawValue: product.id) else { return nil }
+                return (id, product)
+            })
+            productLoadErrorMessage = products.count == ProProductID.allCases.count ? nil : "Pricing unavailable right now."
         } catch {
-            purchaseErrorMessage = error.localizedDescription
+            products = [:]
+            productLoadErrorMessage = "Pricing unavailable right now."
         }
     }
 
@@ -237,7 +252,7 @@ final class EntitlementStore: ObservableObject {
         guard let product = product(for: plan) else {
             await loadProducts()
             guard let product = product(for: plan) else {
-                purchaseErrorMessage = "This plan is not available yet."
+                purchaseErrorMessage = productLoadErrorMessage ?? "Pricing unavailable right now."
                 return
             }
             await purchase(product)
@@ -254,6 +269,7 @@ final class EntitlementStore: ObservableObject {
         do {
             try await AppStore.sync()
             await refreshEntitlements()
+            purchaseErrorMessage = nil
         } catch {
             purchaseErrorMessage = error.localizedDescription
         }
@@ -303,7 +319,7 @@ final class EntitlementStore: ObservableObject {
         for await result in Transaction.currentEntitlements {
             do {
                 let transaction = try verify(result)
-                if ProPlan.allCases.contains(where: { $0.productID == transaction.productID }) {
+                if ProProductID(rawValue: transaction.productID) != nil {
                     unlocked = true
                 }
             } catch {
@@ -312,7 +328,6 @@ final class EntitlementStore: ObservableObject {
         }
 
         isProUnlocked = unlocked
-        persistCachedProAccess(unlocked)
     }
 
     private func verify<T>(_ result: VerificationResult<T>) throws -> T {
@@ -359,21 +374,20 @@ final class EntitlementStore: ObservableObject {
         )
     }
 
-    private func persistCachedProAccess(_ unlocked: Bool) {
-        let defaults = UserDefaults.standard
-        defaults.set(unlocked, forKey: Keys.cachedProUnlocked)
-
-        if unlocked {
-            defaults.set(Date(), forKey: Keys.cachedProUnlockedAt)
-        } else {
-            defaults.removeObject(forKey: Keys.cachedProUnlockedAt)
-        }
+    func displayName(for plan: ProPlan) -> String {
+        product(for: plan)?.displayName ?? plan.rawValue.capitalized
     }
 
-    private static func cachedProAccessIsFresh(now: Date = .now, defaults: UserDefaults = .standard) -> Bool {
-        guard defaults.bool(forKey: Keys.cachedProUnlocked) else { return false }
-        guard let cachedAt = defaults.object(forKey: Keys.cachedProUnlockedAt) as? Date else { return false }
-        return now.timeIntervalSince(cachedAt) <= Cache.proAccessGracePeriod
+    func displayDescription(for plan: ProPlan) -> String? {
+        let description = product(for: plan)?.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let description, !description.isEmpty else {
+            return nil
+        }
+        return description
+    }
+
+    func displayPrice(for plan: ProPlan) -> String? {
+        product(for: plan)?.displayPrice
     }
 }
 

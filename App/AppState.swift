@@ -111,7 +111,7 @@ enum PaywallCopyBuilder {
         case .settings:
             return PaywallCopy(
                 title: "Unlock the full ownership experience",
-                message: "Unlock full cost breakdowns, fuel efficiency tracking, smarter maintenance insights, resale tools, polished exports, and an unlimited garage."
+                message: "Unlock automatic iCloud backup, full cost breakdowns, fuel efficiency tracking, smarter maintenance insights, polished exports, and an unlimited garage."
             )
         }
     }
@@ -139,16 +139,37 @@ final class AppState: ObservableObject {
     @Published var dataRefreshToken = UUID()
 
     @AppStorage("showOnlyCurrentVehicle") var showOnlyCurrentVehicle: Bool = false
-    @AppStorage("globalSelectedVehicleID") var globalSelectedVehicleIDString: String = ""
+    @AppStorage("globalCurrentVehicleID") private var globalCurrentVehicleIDString: String = ""
+    @AppStorage("globalSelectedVehicleFilterID") private var globalSelectedVehicleFilterIDString: String = ""
     @Published var timelineCategory: String = "All" // "All", "Maintenance", "Repairs", "Documents", "Expenses"
 
-    var selectedVehicleID: UUID? {
-        get { UUID(uuidString: globalSelectedVehicleIDString) }
-        set { globalSelectedVehicleIDString = newValue?.uuidString ?? "" }
+    var currentVehicleID: UUID? {
+        get { UUID(uuidString: globalCurrentVehicleIDString) }
+        set { globalCurrentVehicleIDString = newValue?.uuidString ?? "" }
+    }
+
+    var selectedVehicleFilterID: UUID? {
+        get { UUID(uuidString: globalSelectedVehicleFilterIDString) }
+        set { globalSelectedVehicleFilterIDString = newValue?.uuidString ?? "" }
+    }
+
+    var effectiveSharedVehicleID: UUID? {
+        if let selectedVehicleFilterID {
+            return selectedVehicleFilterID
+        }
+
+        return showOnlyCurrentVehicle ? currentVehicleID : nil
+    }
+
+    func focusVehicle(_ id: UUID?) {
+        currentVehicleID = id
+    }
+
+    func selectSharedVehicleFilter(_ id: UUID?) {
+        selectedVehicleFilterID = id
     }
 
     func refreshDataViews() {
         dataRefreshToken = UUID()
     }
 }
-

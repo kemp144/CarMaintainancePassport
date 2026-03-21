@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "FB0DD654A501BFFCBDD11BF0"
-               BuildableName = "Car Service Passport.app"
+               BuildableName = "Car Maintenance Passport.app"
                BlueprintName = "CarServicePassport"
                ReferencedContainer = "container:CarServicePassport.xcodeproj">
             </BuildableReference>
@@ -31,7 +31,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "FB0DD654A501BFFCBDD11BF0"
-            BuildableName = "Car Service Passport.app"
+            BuildableName = "Car Maintenance Passport.app"
             BlueprintName = "CarServicePassport"
             ReferencedContainer = "container:CarServicePassport.xcodeproj">
          </BuildableReference>
@@ -65,11 +65,14 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "FB0DD654A501BFFCBDD11BF0"
-            BuildableName = "Car Service Passport.app"
+            BuildableName = "Car Maintenance Passport.app"
             BlueprintName = "CarServicePassport"
             ReferencedContainer = "container:CarServicePassport.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <StoreKitConfigurationFileReference
+         identifier = "../../CarServicePassport.storekit">
+      </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -82,7 +85,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "FB0DD654A501BFFCBDD11BF0"
-            BuildableName = "Car Service Passport.app"
+            BuildableName = "Car Maintenance Passport.app"
             BlueprintName = "CarServicePassport"
             ReferencedContainer = "container:CarServicePassport.xcodeproj">
          </BuildableReference>

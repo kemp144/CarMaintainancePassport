@@ -4,13 +4,26 @@ import SwiftData
 struct BackupExportService {
     static let shared = BackupExportService()
 
+    private let userBackupPrefix = "backup_"
+    private let safetySnapshotPrefix = "restore-safety_"
+
+    enum BackupLocation: CaseIterable {
+        case iCloud
+        case local
+    }
+
     enum BackupError: LocalizedError {
         case noDataToBackup
+        case unavailableLocation(BackupLocation)
 
         var errorDescription: String? {
             switch self {
             case .noDataToBackup:
                 return "There’s nothing to back up yet."
+            case .unavailableLocation(.iCloud):
+                return "iCloud Backup isn’t available right now."
+            case .unavailableLocation(.local):
+                return "Local backup storage isn’t available right now."
             }
         }
     }
@@ -30,7 +43,7 @@ struct BackupExportService {
         return folder
     }
 
-    /// On-device Documents folder — accessible via Files app, but deleted with the app.
+    /// On-device Documents folder — kept inside this app and deleted with the app.
     var localBackupFolder: URL {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Documents")
@@ -46,16 +59,17 @@ struct BackupExportService {
 
     // MARK: - Auto backup
 
-    /// Saves a timestamped backup to iCloud Drive if available, otherwise to the local Documents folder.
-    /// Retains the 10 most recent backups and prunes older ones.
+    @discardableResult
     func saveBackup(
         vehicles: [Vehicle],
         services: [ServiceEntry],
         reminders: [ReminderItem],
         attachments: [AttachmentRecord],
         documents: [DocumentRecord],
-        fuelEntries: [FuelEntry]
-    ) throws {
+        fuelEntries: [FuelEntry],
+        preferredLocation: BackupLocation? = nil,
+        isSafetySnapshot: Bool = false
+    ) throws -> URL {
         let snapshot = BackupSnapshot(
             exportedAt: .now,
             vehicles:    vehicles.map(BackupVehicle.init),
@@ -80,28 +94,19 @@ struct BackupExportService {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
 
-        let folder = iCloudBackupFolder ?? localBackupFolder
+        let folder = try resolvedFolder(for: preferredLocation)
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd_HHmmss"
-        let file = folder.appendingPathComponent("backup_\(formatter.string(from: .now)).json")
+        let prefix = isSafetySnapshot ? safetySnapshotPrefix : userBackupPrefix
+        let file = folder.appendingPathComponent("\(prefix)\(formatter.string(from: .now)).json")
         try encoder.encode(snapshot).write(to: file)
 
-        pruneBackups(in: folder)
+        pruneBackups(in: folder, prefix: prefix, keep: isSafetySnapshot ? 3 : 10)
+        return file
     }
 
-    /// Keeps the 10 most recent backup files in the given folder.
-    private func pruneBackups(in folder: URL) {
-        let all = (try? FileManager.default.contentsOfDirectory(
-            at: folder,
-            includingPropertiesForKeys: [.creationDateKey],
-            options: .skipsHiddenFiles
-        )) ?? []
-        let sorted = all.sorted { a, b in
-            let aDate = (try? a.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
-            let bDate = (try? b.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
-            return aDate > bDate
-        }
-        for old in sorted.dropFirst(10) {
+    private func pruneBackups(in folder: URL, prefix: String, keep: Int) {
+        for old in snapshotFileURLs(in: folder, prefix: prefix).dropFirst(keep) {
             try? FileManager.default.removeItem(at: old)
         }
     }
@@ -109,13 +114,13 @@ struct BackupExportService {
     // MARK: - Restore detection
 
     /// Returns the URL of the most recent backup file across iCloud and local storage.
-    func findLatestBackup() -> URL? {
-        backupCandidates().first(where: isRestorableBackup(at:))
+    func findLatestBackup(locations: [BackupLocation] = [.iCloud, .local]) -> URL? {
+        backupCandidates(locations: locations).first(where: isRestorableBackup(at:))
     }
 
     /// Returns the creation date of the most recent backup, if any.
-    func lastBackupDate() -> Date? {
-        guard let url = findLatestBackup() else { return nil }
+    func lastBackupDate(locations: [BackupLocation] = [.iCloud, .local]) -> Date? {
+        guard let url = findLatestBackup(locations: locations) else { return nil }
         return (try? url.resourceValues(forKeys: [.creationDateKey]).creationDate)
     }
 
@@ -133,21 +138,23 @@ struct BackupExportService {
         }
     }
 
-    private func backupCandidates() -> [URL] {
-        let folders: [URL] = [iCloudBackupFolder, localBackupFolder].compactMap { $0 }
+    private func backupCandidates(locations: [BackupLocation]) -> [URL] {
+        let folders: [URL] = locations.compactMap { folder(for: $0) }
         return folders
-            .flatMap { folder in
-                (try? FileManager.default.contentsOfDirectory(
-                    at: folder,
-                    includingPropertiesForKeys: [.creationDateKey],
-                    options: .skipsHiddenFiles
-                )) ?? []
-            }
+            .flatMap { snapshotFileURLs(in: $0, prefix: userBackupPrefix) }
             .sorted { a, b in
                 let aDate = (try? a.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
                 let bDate = (try? b.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
                 return aDate > bDate
             }
+    }
+
+    private func snapshotFileURLs(in folder: URL, prefix: String) -> [URL] {
+        ((try? FileManager.default.contentsOfDirectory(
+            at: folder,
+            includingPropertiesForKeys: [.creationDateKey],
+            options: .skipsHiddenFiles
+        )) ?? []).filter { $0.lastPathComponent.hasPrefix(prefix) }
     }
 
     private func isRestorableBackup(at url: URL) -> Bool {
@@ -173,6 +180,47 @@ struct BackupExportService {
     func importLatestBackup(into context: ModelContext) throws -> ImportResult {
         guard let url = findLatestBackup() else { throw ImportError.invalidFile }
         return try importJSON(from: url, into: context)
+    }
+
+    @MainActor
+    func importLatestBackup(into context: ModelContext, locations: [BackupLocation]) throws -> ImportResult {
+        guard let url = findLatestBackup(locations: locations) else { throw ImportError.invalidFile }
+        return try importJSON(from: url, into: context)
+    }
+
+    func hasBackup(at location: BackupLocation) -> Bool {
+        findLatestBackup(locations: [location]) != nil
+    }
+
+    func locationAvailable(_ location: BackupLocation) -> Bool {
+        folder(for: location) != nil
+    }
+
+    private func resolvedFolder(for preferredLocation: BackupLocation?) throws -> URL {
+        if let preferredLocation {
+            guard let folder = folder(for: preferredLocation) else {
+                throw BackupError.unavailableLocation(preferredLocation)
+            }
+            return folder
+        }
+
+        if let iCloudFolder = folder(for: .iCloud) {
+            return iCloudFolder
+        }
+
+        guard let localFolder = folder(for: .local) else {
+            throw BackupError.unavailableLocation(.local)
+        }
+        return localFolder
+    }
+
+    private func folder(for location: BackupLocation) -> URL? {
+        switch location {
+        case .iCloud:
+            return iCloudBackupFolder
+        case .local:
+            return localBackupFolder
+        }
     }
 
     /// Imports a backup JSON file into the provided model context. Skips records with duplicate IDs.

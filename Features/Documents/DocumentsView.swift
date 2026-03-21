@@ -10,7 +10,7 @@ struct DocumentsView: View {
         var id: String { rawValue }
     }
 
-    @Query(sort: \DocumentRecord.createdAt, order: .reverse) private var documents: [DocumentRecord]
+    @Query(sort: \DocumentRecord.documentDate, order: .reverse) private var documents: [DocumentRecord]
     @Query(sort: \AttachmentRecord.createdAt, order: .reverse) private var attachments: [AttachmentRecord]
     @Query(sort: \Vehicle.updatedAt, order: .reverse) private var vehicles: [Vehicle]
 
@@ -36,10 +36,8 @@ struct DocumentsView: View {
         return combined
             .filter { item in
                 var matchesVehicle = true
-                if appState.showOnlyCurrentVehicle, let globalID = appState.selectedVehicleID {
-                    matchesVehicle = (item.vehicle?.id == globalID)
-                } else if let localID = appState.selectedVehicleID {
-                    matchesVehicle = (item.vehicle?.id == localID)
+                if let vehicleID = appState.effectiveSharedVehicleID {
+                    matchesVehicle = (item.vehicle?.id == vehicleID)
                 }
 
                 let matchesFilter: Bool = {
@@ -53,7 +51,7 @@ struct DocumentsView: View {
                 let matchesSearch = searchText.isEmpty || item.searchBlob.localizedCaseInsensitiveContains(searchText)
                 return matchesVehicle && matchesFilter && matchesSearch
             }
-            .sorted { $0.createdAt > $1.createdAt }
+            .sorted { $0.sortDate > $1.sortDate }
     }
 
     private var savedDocumentCount: Int {
@@ -353,7 +351,13 @@ struct DocumentsView: View {
     }
 
     private var currentVehicle: Vehicle? {
-        if let globalID = appState.selectedVehicleID {
+        if let globalID = appState.effectiveSharedVehicleID {
+            return vehicles.first(where: { $0.id == globalID })
+        }
+        if let currentID = appState.currentVehicleID {
+            return vehicles.first(where: { $0.id == currentID })
+        }
+        if let globalID = appState.selectedVehicleFilterID {
             return vehicles.first(where: { $0.id == globalID })
         }
         return vehicles.first
@@ -392,7 +396,7 @@ struct DocumentsView: View {
                             .truncationMode(.tail)
                     }
 
-                    Text(AppFormatters.mediumDate.string(from: item.createdAt))
+                    Text(AppFormatters.mediumDate.string(from: item.displayDate))
                         .font(.system(size: 10))
                         .foregroundStyle(AppTheme.tertiaryText)
 
@@ -578,13 +582,17 @@ private struct DocumentListItem: Identifiable {
         }
     }
 
-    var createdAt: Date {
+    var sortDate: Date {
         switch source {
         case .modern(let document):
-            return document.createdAt
+            return document.documentDate
         case .legacy(let attachment):
             return attachment.createdAt
         }
+    }
+
+    var displayDate: Date {
+        sortDate
     }
 
     var previewReference: String? {

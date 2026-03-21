@@ -593,8 +593,8 @@ struct PDFExportService {
 
     // MARK: - CSV
 
-    func exportCSV(for vehicle: Vehicle) throws -> URL {
-        let filename = "\(vehicle.make)-\(vehicle.model)-history.csv"
+    func exportServiceCSV(for vehicle: Vehicle) throws -> URL {
+        let filename = "\(vehicle.make)-\(vehicle.model)-services.csv"
             .replacingOccurrences(of: " ", with: "-")
         let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
 
@@ -617,6 +617,43 @@ struct PDFExportService {
                 String(format: "%.2f", entry.price),
                 entry.currencyCode,
                 entry.workshopName,
+                entry.notes.replacingOccurrences(of: "\n", with: " ")
+            ]
+            csvString += row.map(csvField).joined(separator: ",") + "\n"
+        }
+
+        try csvString.write(to: outputURL, atomically: true, encoding: .utf8)
+        return outputURL
+    }
+
+    func exportFuelCSV(for vehicle: Vehicle) throws -> URL {
+        let filename = "\(vehicle.make)-\(vehicle.model)-fuel.csv"
+            .replacingOccurrences(of: " ", with: "-")
+        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        let mileageHeader = "Odometer (\(UnitSettings.currentDistanceUnit.shortTitle))"
+        let volumeHeader = "Volume (\(UnitSettings.currentFuelVolumeUnit.shortTitle))"
+
+        var csvString = ["Date", mileageHeader, volumeHeader, "Total Cost", "Currency", "Station", "Fill-up Type", "Notes"]
+            .map(csvField)
+            .joined(separator: ",") + "\n"
+
+        let sortedFuel = vehicle.fuelEntries.sorted { $0.date > $1.date }
+
+        for entry in sortedFuel {
+            let row = [
+                dateFormatter.string(from: entry.date),
+                UnitFormatter.distanceValue(Double(entry.odometerKm)),
+                String(format: "%.2f", entry.liters),
+                String(format: "%.2f", entry.totalCost),
+                entry.currencyCode,
+                entry.station,
+                entry.entryType.shortTitle,
                 entry.notes.replacingOccurrences(of: "\n", with: " ")
             ]
             csvString += row.map(csvField).joined(separator: ",") + "\n"

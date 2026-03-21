@@ -6,6 +6,7 @@ struct CarServicePassportApp: App {
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("dataRecovery.pendingNotice") private var pendingRecoveryNotice = ""
     @AppStorage("backup.hasOfferedRestore") private var hasOfferedRestore = false
+    @AppStorage("backup.autoICloudEnabled") private var autoICloudBackupEnabled = false
     @State private var pendingRestoreURL: URL?
     @AppStorage("reminder.linkedServiceRepair.v1") private var didRepairLinkedServiceReminders = false
     @AppStorage("reminder.linkedServiceCleanup.v1") private var didCleanupLinkedServiceReminders = false
@@ -83,9 +84,9 @@ struct CarServicePassportApp: App {
             } message: {
                 if let url = pendingRestoreURL,
                    let date = try? url.resourceValues(forKeys: [.creationDateKey]).creationDate {
-                    Text("A backup from \(AppFormatters.mediumDate.string(from: date)) was found. Restore your vehicles, services, fuel history, reminders, and documents now?")
+                    Text("A backup from \(AppFormatters.mediumDate.string(from: date)) was found. Restore your vehicles, services, fuel history, reminders, and documents on this device now?")
                 } else {
-                    Text("A previous backup was found. Restore your vehicles, services, fuel history, reminders, and documents now?")
+                    Text("A previous backup was found. Restore your vehicles, services, fuel history, reminders, and documents on this device now?")
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
@@ -170,6 +171,10 @@ struct CarServicePassportApp: App {
     }
 
     private func performAutoBackup() {
+        guard entitlementStore.canUseAutomaticICloudBackup() else { return }
+        guard autoICloudBackupEnabled else { return }
+        guard BackupExportService.shared.locationAvailable(.iCloud) else { return }
+
         do {
             let ctx = modelContainer.mainContext
             try BackupExportService.shared.saveBackup(
@@ -178,7 +183,8 @@ struct CarServicePassportApp: App {
                 reminders:   try ctx.fetch(FetchDescriptor<ReminderItem>()),
                 attachments: try ctx.fetch(FetchDescriptor<AttachmentRecord>()),
                 documents:   try ctx.fetch(FetchDescriptor<DocumentRecord>()),
-                fuelEntries: try ctx.fetch(FetchDescriptor<FuelEntry>())
+                fuelEntries: try ctx.fetch(FetchDescriptor<FuelEntry>()),
+                preferredLocation: .iCloud
             )
         } catch {
             // Silent — backup failure must never interrupt the user experience.
@@ -188,7 +194,10 @@ struct CarServicePassportApp: App {
     @MainActor
     private func checkForBackupRestoreIfNeeded() async {
         guard !hasOfferedRestore else { return }
-        guard let backupURL = BackupExportService.shared.findLatestBackup() else { return }
+        let restoreLocations: [BackupExportService.BackupLocation] = entitlementStore.canUseICloudBackupRestore()
+            ? [.iCloud, .local]
+            : [.local]
+        guard let backupURL = BackupExportService.shared.findLatestBackup(locations: restoreLocations) else { return }
         let vehicles = (try? modelContainer.mainContext.fetch(FetchDescriptor<Vehicle>())) ?? []
         guard vehicles.isEmpty else {
             // Data already exists — no restore needed.
@@ -204,8 +213,7 @@ struct CarServicePassportApp: App {
         hasOfferedRestore = true
         pendingRestoreURL = nil
         do {
-            _ = try BackupExportService.shared.importJSON(from: url, into: modelContainer.mainContext)
-            try await AppDataMaintenanceService.rescheduleReminderNotifications(in: modelContainer.mainContext)
+            _ = try await AppDataMaintenanceService.replaceLocalData(with: url, in: modelContainer.mainContext)
             Haptics.success()
         } catch {
             Haptics.error()

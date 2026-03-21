@@ -77,10 +77,8 @@ struct TimelineView: View {
 
         let filtered = combined.filter { event in
             var matchesVehicle = true
-            if appState.showOnlyCurrentVehicle, let globalID = appState.selectedVehicleID {
-                matchesVehicle = (vehicleID(for: event) == globalID)
-            } else if let localID = appState.selectedVehicleID {
-                matchesVehicle = (vehicleID(for: event) == localID)
+            if let activeVehicleID = appState.effectiveSharedVehicleID {
+                matchesVehicle = (vehicleID(for: event) == activeVehicleID)
             }
             
             let matchesCategory = matchesCategoryFilter(for: event)
@@ -164,7 +162,8 @@ struct TimelineView: View {
             }
         } else {
             let vehicleContext: String = {
-                if let id = appState.selectedVehicleID, let selectedVehicle = vehicles.first(where: { $0.id == id }) {
+                if let id = appState.effectiveSharedVehicleID,
+                   let selectedVehicle = vehicles.first(where: { $0.id == id }) {
                     return " for \(selectedVehicle.title)"
                 }
                 return ""
@@ -320,7 +319,11 @@ struct TimelineView: View {
             QuickLookPreviewSheet(url: item.url)
         }
         .sheet(isPresented: $showingServiceForm) {
-            let vehicle = appState.selectedVehicleID.flatMap { id in vehicles.first(where: { $0.id == id }) } ?? vehicles.first
+            let vehicle = appState.effectiveSharedVehicleID.flatMap { id in
+                vehicles.first(where: { $0.id == id })
+            } ?? appState.currentVehicleID.flatMap { id in
+                vehicles.first(where: { $0.id == id })
+            } ?? vehicles.first
             if let vehicle {
                 NavigationStack {
                     ServiceEntryFormView(vehicle: vehicle)
@@ -490,8 +493,14 @@ struct TimelineView: View {
     }
 
     private var scopeSummaryText: String {
-        if let localID = appState.selectedVehicleID, let vehicle = vehicles.first(where: { $0.id == localID }) {
+        if let filterID = appState.selectedVehicleFilterID,
+           let vehicle = vehicles.first(where: { $0.id == filterID }) {
             return "Showing \(vehicle.title)"
+        }
+        if appState.showOnlyCurrentVehicle,
+           let currentID = appState.currentVehicleID,
+           let vehicle = vehicles.first(where: { $0.id == currentID }) {
+            return "Following the current vehicle: \(vehicle.title)"
         }
         if appState.showOnlyCurrentVehicle {
             return "Showing the current vehicle"

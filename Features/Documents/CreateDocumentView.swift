@@ -24,6 +24,7 @@ struct CreateDocumentView: View {
     @State private var showingAddFilesSheet = false
     @State private var isSaving = false
     @State private var previewPage: DocumentDraftPage?
+    @State private var saveErrorMessage: String?
 
     init(
         preselectedVehicle: Vehicle? = nil,
@@ -86,6 +87,20 @@ struct CreateDocumentView: View {
         }
         .sheet(item: $previewPage) { page in
             DraftPagePreviewSheet(page: page)
+        }
+        .alert("Couldn’t save document", isPresented: Binding(
+            get: { saveErrorMessage != nil },
+            set: { newValue in
+                if !newValue {
+                    saveErrorMessage = nil
+                }
+            }
+        )) {
+            Button("OK", role: .cancel) {
+                saveErrorMessage = nil
+            }
+        } message: {
+            Text(saveErrorMessage ?? "Please try again.")
         }
     }
 
@@ -309,6 +324,9 @@ struct CreateDocumentView: View {
             dismiss()
         } catch {
             Haptics.error()
+            saveErrorMessage = error.localizedDescription.isEmpty
+                ? "The document couldn’t be saved. Please try again."
+                : error.localizedDescription
         }
     }
 }
