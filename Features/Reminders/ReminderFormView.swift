@@ -210,17 +210,33 @@ struct ReminderFormView: View {
             let outcome = await NotificationService.shared.schedule(for: activeReminder, vehicleName: vehicle.title)
             activeReminder.notificationIdentifier = outcome.identifier
 
-            if case .permissionDenied = outcome {
-                notificationInfoMessage = "Reminder saved, but notifications are currently disabled for Car Service Passport. You can enable them in Settings anytime."
+            if let message = notificationMessage(for: outcome) {
+                notificationInfoMessage = message
             }
         }
 
         vehicle.updatedAt = .now
-        try? modelContext.save()
-        Haptics.success()
+        do {
+            try modelContext.save()
+            Haptics.success()
+        } catch {
+            Haptics.error()
+            return
+        }
 
         if notificationInfoMessage == nil {
             dismiss()
+        }
+    }
+
+    private func notificationMessage(for outcome: NotificationService.ScheduleOutcome) -> String? {
+        switch outcome {
+        case .permissionDenied:
+            return "Reminder saved, but notifications are currently disabled for Car Maintenance Passport. You can enable them in Settings anytime."
+        case .schedulingFailed:
+            return "Reminder saved, but the notification couldn’t be scheduled. Please try again."
+        default:
+            return nil
         }
     }
 }

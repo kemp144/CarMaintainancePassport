@@ -583,6 +583,7 @@ struct PaywallView: View {
 
                             privacyRow(title: "Account", message: "You can use the app without creating an account.")
                             privacyRow(title: "Storage", message: BackupExportService.shared.isUsingICloud ? "Your records stay on this device, with backups saved to iCloud Drive when available." : "Your records stay on this device. Local backups are removed if the app is deleted.")
+                            privacyRow(title: "VIN Lookup", message: "Only when you tap Autofill, the entered VIN is sent to the NHTSA VIN decoder service to fetch vehicle details.")
                             privacyRow(title: "Purchases", message: "Subscriptions and purchases are handled by the App Store.")
                             privacyRow(title: "Ads", message: "The app does not show ads or use ad tracking.")
                         }

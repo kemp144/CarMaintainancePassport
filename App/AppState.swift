@@ -106,7 +106,7 @@ enum PaywallCopyBuilder {
         case .importData:
             return PaywallCopy(
                 title: "Import your existing data",
-                message: "Bring your existing records into Car Service Passport in one step."
+                message: "Bring your existing records into Car Maintenance Passport in one step."
             )
         case .settings:
             return PaywallCopy(

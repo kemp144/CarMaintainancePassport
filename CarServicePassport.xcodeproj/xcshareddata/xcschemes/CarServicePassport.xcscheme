@@ -37,6 +37,17 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "44F3281C3407ACB4F9C581EF"
+               BuildableName = "CarServicePassportTests.xctest"
+               BlueprintName = "CarServicePassportTests"
+               ReferencedContainer = "container:CarServicePassport.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

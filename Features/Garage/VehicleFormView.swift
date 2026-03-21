@@ -30,6 +30,8 @@ struct VehicleFormView: View {
     @State private var vinLookupError: String?
     @State private var showingVINError = false
     @State private var hasEditedMileage = false
+    @State private var validationMessage: String?
+    @State private var showingValidationAlert = false
 
     private let initialManualMileage: Int?
 
@@ -43,7 +45,7 @@ struct VehicleFormView: View {
         _currentMileage = State(initialValue: vehicle.map { UnitFormatter.distanceValue(Double($0.currentMileage)) } ?? "")
         _purchaseDate = State(initialValue: vehicle?.purchaseDate ?? .now)
         _hasPurchaseDate = State(initialValue: vehicle?.purchaseDate != nil)
-        _purchasePrice = State(initialValue: vehicle?.purchasePrice.map { String(Int($0)) } ?? "")
+        _purchasePrice = State(initialValue: UnitFormatter.decimalInputString(vehicle?.purchasePrice))
         _currencyCode = State(initialValue: vehicle?.currencyCode ?? CurrencyPreset.suggested().rawValue)
         _vin = State(initialValue: vehicle?.vin ?? "")
         _notes = State(initialValue: vehicle?.notes ?? "")
@@ -217,6 +219,11 @@ struct VehicleFormView: View {
         } message: {
             Text(vinLookupError ?? "Could not fetch vehicle data.")
         }
+        .alert("Couldn’t save vehicle", isPresented: $showingValidationAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(validationMessage ?? "Please review the entered values.")
+        }
         .navigationTitle(vehicle == nil ? "Add Vehicle" : "Edit Vehicle")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -263,6 +270,14 @@ struct VehicleFormView: View {
     }
 
     private func saveVehicle() async {
+        let trimmedPurchasePrice = purchasePrice.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parsedPurchasePrice = trimmedPurchasePrice.isEmpty ? nil : UnitFormatter.parseDecimal(trimmedPurchasePrice)
+        if !trimmedPurchasePrice.isEmpty && parsedPurchasePrice == nil {
+            validationMessage = "Purchase price isn’t a valid number."
+            showingValidationAlert = true
+            return
+        }
+
         isSaving = true
         defer { isSaving = false }
 
@@ -271,6 +286,7 @@ struct VehicleFormView: View {
             let now = Date()
             let trimmedMileage = currentMileage.trimmingCharacters(in: .whitespacesAndNewlines)
             let parsedManualMileage = UnitFormatter.parseDistance(currentMileage)
+            let previousCoverReference = vehicle?.coverImageReference
 
             if let vehicle {
                 vehicle.make = make.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -278,7 +294,7 @@ struct VehicleFormView: View {
                 vehicle.year = year
                 vehicle.licensePlate = licensePlate.trimmingCharacters(in: .whitespacesAndNewlines)
                 vehicle.purchaseDate = hasPurchaseDate ? purchaseDate : nil
-                vehicle.purchasePrice = Double(purchasePrice)
+                vehicle.purchasePrice = parsedPurchasePrice
                 vehicle.currencyCode = currencyCode
                 vehicle.vin = vin.trimmingCharacters(in: .whitespacesAndNewlines)
                 vehicle.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -303,7 +319,7 @@ struct VehicleFormView: View {
                     licensePlate: licensePlate.trimmingCharacters(in: .whitespacesAndNewlines),
                     currentMileage: 0,
                     purchaseDate: hasPurchaseDate ? purchaseDate : nil,
-                    purchasePrice: Double(purchasePrice),
+                    purchasePrice: parsedPurchasePrice,
                     currencyCode: currencyCode,
                     vin: vin.trimmingCharacters(in: .whitespacesAndNewlines),
                     notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -314,7 +330,13 @@ struct VehicleFormView: View {
                 VehicleMileageResolver.recalculateCurrentMileage(for: newVehicle, updateTimestamp: now)
             }
 
-            try? modelContext.save()
+            try modelContext.save()
+
+            if let previousCoverReference,
+               previousCoverReference != vehicle?.coverImageReference {
+                await AttachmentStorageService.shared.delete(reference: previousCoverReference)
+            }
+
             Haptics.success()
             dismiss()
         } catch {

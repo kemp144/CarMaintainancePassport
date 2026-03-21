@@ -13,6 +13,7 @@ struct FuelTrackingView: View {
     @State private var entryToEdit: FuelEntry?
     @State private var entryToDelete: FuelEntry?
     @State private var showingDeleteConfirmation = false
+    @State private var deleteErrorMessage: String?
     @State private var selectedPeriod: FuelLogPeriod = .allTime
     @State private var selectedChartMetric: FuelChartMetric = .spend
     @State private var selectedChartDate: Date?
@@ -119,10 +120,22 @@ struct FuelTrackingView: View {
         .confirmationDialog("Delete fuel entry?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let entry = entryToDelete {
-                    deleteEntry(entry)
+                    Task { await deleteEntry(entry) }
                 }
             }
             Button("Cancel", role: .cancel) {}
+        }
+        .alert("Couldn’t delete fuel entry", isPresented: Binding(
+            get: { deleteErrorMessage != nil },
+            set: { newValue in
+                if !newValue { deleteErrorMessage = nil }
+            }
+        )) {
+            Button("OK", role: .cancel) {
+                deleteErrorMessage = nil
+            }
+        } message: {
+            Text(deleteErrorMessage ?? "Please try again.")
         }
     }
 
@@ -749,14 +762,17 @@ struct FuelTrackingView: View {
         )
     }
 
-    private func deleteEntry(_ entry: FuelEntry) {
-        let vehicle = self.vehicle
-        modelContext.delete(entry)
-        try? modelContext.save()
-        VehicleMileageResolver.recalculateCurrentMileage(for: vehicle)
-        try? modelContext.save()
-        entryToDelete = nil
-        showingDeleteConfirmation = false
+    @MainActor
+    private func deleteEntry(_ entry: FuelEntry) async {
+        do {
+            try await AppDataMaintenanceService.deleteFuelEntry(entry, in: modelContext)
+            entryToDelete = nil
+            showingDeleteConfirmation = false
+            Haptics.success()
+        } catch {
+            deleteErrorMessage = "Please try again."
+            Haptics.error()
+        }
     }
 
     private var fuelPreviewText: String? {

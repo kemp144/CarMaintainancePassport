@@ -33,7 +33,7 @@ struct FuelEntryFormSheet: View {
         _mileage = State(initialValue: entry.map { UnitFormatter.distanceValue(Double($0.mileage)) } ?? "")
         _entryType = State(initialValue: entry?.entryType ?? .fullFillUp)
         _liters = State(initialValue: entry.map { $0.liters > 0 ? UnitFormatter.fuelVolumeValue($0.liters) : "" } ?? "")
-        _totalCost = State(initialValue: entry.map { $0.totalCost > 0 ? String(format: "%.2f", $0.totalCost) : "" } ?? "")
+        _totalCost = State(initialValue: entry.map { $0.totalCost > 0 ? UnitFormatter.decimalInputString($0.totalCost) : "" } ?? "")
         _fuelTypeName = State(initialValue: entry?.fuelTypeName ?? "")
         _station = State(initialValue: entry?.station ?? "")
         _notes = State(initialValue: entry?.notes ?? "")
@@ -339,6 +339,7 @@ struct FuelEntryFormSheet: View {
         guard let mileageValue = draft.odometerKm else { return }
 
         isSaving = true
+        defer { isSaving = false }
 
         let litersValue = draft.liters ?? 0
         let totalCostValue = draft.totalCost ?? 0
@@ -376,13 +377,19 @@ struct FuelEntryFormSheet: View {
             modelContext.insert(newEntry)
         }
 
-        lastFuelTypeName = draft.fuelTypeName
-        lastStation = draft.station
-        lastCurrencyCode = draft.currencyCode
-
         VehicleMileageResolver.recalculateCurrentMileage(for: vehicle)
-        try? modelContext.save()
-        Haptics.success()
-        dismiss()
+        do {
+            try modelContext.save()
+            lastFuelTypeName = draft.fuelTypeName
+            lastStation = draft.station
+            lastCurrencyCode = draft.currencyCode
+            Haptics.success()
+            dismiss()
+        } catch {
+            modelContext.rollback()
+            validationMessage = "Fuel entry couldn’t be saved. Please try again."
+            showingValidationAlert = true
+            Haptics.error()
+        }
     }
 }

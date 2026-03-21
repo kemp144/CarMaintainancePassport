@@ -4,6 +4,17 @@ import SwiftData
 struct BackupExportService {
     static let shared = BackupExportService()
 
+    enum BackupError: LocalizedError {
+        case noDataToBackup
+
+        var errorDescription: String? {
+            switch self {
+            case .noDataToBackup:
+                return "There’s nothing to back up yet."
+            }
+        }
+    }
+
     // MARK: - Storage locations
 
     /// iCloud Drive folder for backups — survives app deletion.
@@ -61,6 +72,10 @@ struct BackupExportService {
             )
         )
 
+        guard snapshot.hasContent else {
+            throw BackupError.noDataToBackup
+        }
+
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
@@ -95,21 +110,7 @@ struct BackupExportService {
 
     /// Returns the URL of the most recent backup file across iCloud and local storage.
     func findLatestBackup() -> URL? {
-        let folders: [URL] = [iCloudBackupFolder, localBackupFolder].compactMap { $0 }
-        return folders
-            .flatMap { folder in
-                (try? FileManager.default.contentsOfDirectory(
-                    at: folder,
-                    includingPropertiesForKeys: [.creationDateKey],
-                    options: .skipsHiddenFiles
-                )) ?? []
-            }
-            .sorted { a, b in
-                let aDate = (try? a.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
-                let bDate = (try? b.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
-                return aDate > bDate
-            }
-            .first
+        backupCandidates().first(where: isRestorableBackup(at:))
     }
 
     /// Returns the creation date of the most recent backup, if any.
@@ -126,10 +127,35 @@ struct BackupExportService {
 
         var errorDescription: String? {
             switch self {
-            case .invalidFile:         return "The selected file is not a valid Car Service Passport backup."
+            case .invalidFile:         return "The selected file is not a valid Car Maintenance Passport backup."
             case .decodeError(let m):  return "Import failed: \(m)"
             }
         }
+    }
+
+    private func backupCandidates() -> [URL] {
+        let folders: [URL] = [iCloudBackupFolder, localBackupFolder].compactMap { $0 }
+        return folders
+            .flatMap { folder in
+                (try? FileManager.default.contentsOfDirectory(
+                    at: folder,
+                    includingPropertiesForKeys: [.creationDateKey],
+                    options: .skipsHiddenFiles
+                )) ?? []
+            }
+            .sorted { a, b in
+                let aDate = (try? a.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
+                let bDate = (try? b.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
+                return aDate > bDate
+            }
+    }
+
+    private func isRestorableBackup(at url: URL) -> Bool {
+        guard let data = try? Data(contentsOf: url) else { return false }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        guard let snapshot = try? decoder.decode(BackupSnapshot.self, from: data) else { return false }
+        return snapshot.hasContent
     }
 
     struct ImportResult {
@@ -379,6 +405,18 @@ struct BackupSnapshot: Codable {
     let documents:   [BackupDocument]?
     let fuelEntries: [BackupFuelEntry]?
     let storedAssets: [BackupStoredAsset]?
+}
+
+private extension BackupSnapshot {
+    var hasContent: Bool {
+        !vehicles.isEmpty
+            || !services.isEmpty
+            || !reminders.isEmpty
+            || !attachments.isEmpty
+            || !(documents?.isEmpty ?? true)
+            || !(fuelEntries?.isEmpty ?? true)
+            || !(storedAssets?.isEmpty ?? true)
+    }
 }
 
 struct BackupVehicle: Codable {

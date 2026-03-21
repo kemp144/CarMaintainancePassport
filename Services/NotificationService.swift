@@ -11,6 +11,7 @@ struct NotificationService {
         case disabled
         case triggerDatePassed
         case permissionDenied
+        case schedulingFailed
 
         var identifier: String? {
             if case .scheduled(let identifier) = self {
@@ -53,8 +54,12 @@ struct NotificationService {
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
 
-        try? await center.add(request)
-        return .scheduled(identifier)
+        do {
+            try await center.add(request)
+            return .scheduled(identifier)
+        } catch {
+            return .schedulingFailed
+        }
     }
 
     func cancel(identifier: String?) {

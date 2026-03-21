@@ -380,7 +380,7 @@ struct VehicleDetailView: View {
         }
         .confirmationDialog("Delete this vehicle?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
-                deleteVehicle()
+                Task { await deleteVehicle() }
             }
             Button("Cancel", role: .cancel) {}
         }
@@ -1011,15 +1011,12 @@ struct VehicleDetailView: View {
         }
     }
 
-    private func deleteVehicle() {
-        for attachment in vehicle.attachments {
-            Task {
-                await AttachmentStorageService.shared.delete(reference: attachment.storageReference)
-                await AttachmentStorageService.shared.delete(reference: attachment.thumbnailReference)
-            }
+    private func deleteVehicle() async {
+        do {
+            try await AppDataMaintenanceService.deleteVehicle(vehicle, in: modelContext)
+            dismiss()
+        } catch {
+            Haptics.error()
         }
-        modelContext.delete(vehicle)
-        try? modelContext.save()
-        dismiss()
     }
 }

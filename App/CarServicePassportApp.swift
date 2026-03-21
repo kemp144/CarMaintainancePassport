@@ -4,7 +4,6 @@ import SwiftUI
 @main
 struct CarServicePassportApp: App {
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
-    @AppStorage("settings.autoBackup") private var autoBackupEnabled = true
     @AppStorage("dataRecovery.pendingNotice") private var pendingRecoveryNotice = ""
     @AppStorage("backup.hasOfferedRestore") private var hasOfferedRestore = false
     @State private var pendingRestoreURL: URL?
@@ -74,7 +73,9 @@ struct CarServicePassportApp: App {
                 get: { pendingRestoreURL != nil },
                 set: { if !$0 { pendingRestoreURL = nil } }
             )) {
-                Button("Restore") { performRestore() }
+                Button("Restore") {
+                    Task { await performRestore() }
+                }
                 Button("Skip", role: .cancel) {
                     hasOfferedRestore = true
                     pendingRestoreURL = nil
@@ -88,7 +89,7 @@ struct CarServicePassportApp: App {
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
-                if newPhase == .background, autoBackupEnabled {
+                if newPhase == .background {
                     performAutoBackup()
                 }
             }
@@ -107,7 +108,9 @@ struct CarServicePassportApp: App {
         ])
 
         let storeURL = defaultStoreURL()
-        let configuration = ModelConfiguration(schema: schema, url: storeURL)
+        // Keep the app database local. iCloud is used only for exported backup files,
+        // not for SwiftData/CloudKit sync, because the current schema is not CloudKit-safe.
+        let configuration = ModelConfiguration(schema: schema, url: storeURL, cloudKitDatabase: .none)
 
         do {
             return try ModelContainer(for: schema, configurations: configuration)
@@ -196,12 +199,13 @@ struct CarServicePassportApp: App {
     }
 
     @MainActor
-    private func performRestore() {
+    private func performRestore() async {
         guard let url = pendingRestoreURL else { return }
         hasOfferedRestore = true
         pendingRestoreURL = nil
         do {
             _ = try BackupExportService.shared.importJSON(from: url, into: modelContainer.mainContext)
+            try await AppDataMaintenanceService.rescheduleReminderNotifications(in: modelContainer.mainContext)
             Haptics.success()
         } catch {
             Haptics.error()

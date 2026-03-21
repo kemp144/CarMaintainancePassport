@@ -7,6 +7,7 @@ struct ServiceDetailView: View {
     @State private var showingEditForm = false
     @State private var showingReminderForm = false
     @State private var showingDeleteConfirmation = false
+    @State private var deleteErrorMessage: String?
     @State private var previewURL: URL?
 
     let entry: ServiceEntry
@@ -213,26 +214,32 @@ struct ServiceDetailView: View {
         }
         .confirmationDialog("Delete this service entry?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
-                deleteEntry()
+                Task { await deleteEntry() }
             }
             Button("Cancel", role: .cancel) {}
         }
+        .alert("Couldn’t delete service entry", isPresented: Binding(get: {
+            deleteErrorMessage != nil
+        }, set: { newValue in
+            if !newValue { deleteErrorMessage = nil }
+        })) {
+            Button("OK", role: .cancel) {
+                deleteErrorMessage = nil
+            }
+        } message: {
+            Text(deleteErrorMessage ?? "Please try again.")
+        }
     }
 
-    private func deleteEntry() {
-        let vehicle = entry.vehicle
-        for attachment in entry.attachments {
-            Task {
-                await AttachmentStorageService.shared.delete(reference: attachment.storageReference)
-                await AttachmentStorageService.shared.delete(reference: attachment.thumbnailReference)
-            }
+    @MainActor
+    private func deleteEntry() async {
+        do {
+            try await AppDataMaintenanceService.deleteServiceEntry(entry, in: modelContext)
+            Haptics.success()
+            dismiss()
+        } catch {
+            deleteErrorMessage = "Please try again."
+            Haptics.error()
         }
-        modelContext.delete(entry)
-        try? modelContext.save()
-        if let vehicle {
-            VehicleMileageResolver.recalculateCurrentMileage(for: vehicle)
-            try? modelContext.save()
-        }
-        dismiss()
     }
 }

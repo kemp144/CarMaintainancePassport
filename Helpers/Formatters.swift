@@ -342,6 +342,13 @@ enum UnitFormatter {
         return Double(normalized)
     }
 
+    static func decimalInputString(_ value: Double?, maxFractionDigits: Int = 2) -> String {
+        guard let value else { return "" }
+        let rounded = value.rounded()
+        let digits = abs(value - rounded) < 0.000_1 ? 0 : maxFractionDigits
+        return formatted(value, digits: digits)
+    }
+
     static func formatted(_ value: Double, digits: Int = 0) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal

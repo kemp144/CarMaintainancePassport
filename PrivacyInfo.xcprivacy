@@ -27,6 +27,15 @@
                 <string>CA92.1</string>
             </array>
         </dict>
+        <!-- File timestamps — used to sort and present the latest backup found on-device or in iCloud. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>C617.1</string>
+            </array>
+        </dict>
     </array>
 </dict>
 </plist>

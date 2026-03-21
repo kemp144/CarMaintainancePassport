@@ -2,6 +2,12 @@ import SwiftData
 import SwiftUI
 
 struct SettingsView: View {
+    private struct BackupFeedback: Identifiable {
+        let id = UUID()
+        let title: String
+        let message: String
+    }
+
     private let settingsRowHorizontalPadding: CGFloat = 14
     private let settingsRowVerticalPadding: CGFloat = 11
     private let settingsRowSpacing: CGFloat = 12
@@ -24,11 +30,13 @@ struct SettingsView: View {
     @Query private var reminders: [ReminderItem]
     @Query private var attachments: [AttachmentRecord]
     @Query private var documents: [DocumentRecord]
-
-    @AppStorage("settings.autoBackup") private var autoBackupEnabled = true
+    @Query private var fuelEntries: [FuelEntry]
 
     @State private var showingResetConfirmation = false
     @State private var showingResetFinalConfirmation = false
+    @State private var showingRestoreConfirmation = false
+    @State private var backupFeedback: BackupFeedback?
+    @State private var isRunningBackupAction = false
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -75,11 +83,26 @@ struct SettingsView: View {
         }
         .alert("Are you sure?", isPresented: $showingResetFinalConfirmation) {
             Button("Delete Everything", role: .destructive) {
-                resetAllData()
+                Task { await resetAllData() }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("All app data will be permanently erased. Consider exporting a backup first.")
+            Text("All app data will be permanently erased. Consider waiting until a recent backup exists first.")
+        }
+        .confirmationDialog("Restore latest backup?", isPresented: $showingRestoreConfirmation, titleVisibility: .visible) {
+            Button("Restore Latest Backup") {
+                Task { await restoreLatestBackup() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This imports any missing records from the newest backup and reschedules reminder notifications.")
+        }
+        .alert(item: $backupFeedback) { feedback in
+            Alert(
+                title: Text(feedback.title),
+                message: Text(feedback.message),
+                dismissButton: .default(Text("OK"))
+            )
         }
     }
 
@@ -276,34 +299,56 @@ struct SettingsView: View {
     private var backupSection: some View {
         settingsGroupCard(title: "Backup", subtitle: backupSectionSubtitle) {
             VStack(spacing: 0) {
-                settingsToggleRow(
-                    title: "Back up automatically",
-                    subtitle: "Creates a backup each time the app moves to the background.",
-                    isOn: $autoBackupEnabled
-                )
-
                 if let lastDate = BackupExportService.shared.lastBackupDate() {
-                    settingsDivider()
                     settingsInfoRow(
                         title: "Last backup",
                         value: AppFormatters.mediumDate.string(from: lastDate)
                     )
+                    settingsDivider()
+                }
+
+                settingsInfoRow(
+                    title: "Storage",
+                    value: BackupExportService.shared.isUsingICloud ? "iCloud Drive" : "On device"
+                )
+
+                settingsDivider()
+
+                settingsActionRow(
+                    title: isRunningBackupAction ? "Creating backup..." : "Create backup now",
+                    subtitle: "Saves a fresh snapshot of your current records.",
+                    icon: "externaldrive.badge.plus"
+                ) {
+                    Task { await createBackupNow() }
                 }
 
                 settingsDivider()
-                settingsInfoRow(
-                    title: "Storage",
-                    value: BackupExportService.shared.isUsingICloud ? "iCloud" : "On device"
-                )
+
+                settingsActionRow(
+                    title: isRunningBackupAction ? "Working..." : "Restore latest backup",
+                    subtitle: "Imports missing records from your newest backup.",
+                    icon: "arrow.clockwise.circle"
+                ) {
+                    guard !isRunningBackupAction else { return }
+                    guard BackupExportService.shared.lastBackupDate() != nil else {
+                        backupFeedback = BackupFeedback(
+                            title: "No Backup Found",
+                            message: "There isn’t a restorable backup yet."
+                        )
+                        return
+                    }
+                    showingRestoreConfirmation = true
+                }
             }
         }
     }
 
     private var backupSectionSubtitle: String {
         BackupExportService.shared.isUsingICloud
-            ? "Backups are saved to iCloud Drive when it is available on this device."
-            : "Backups are stored locally on this device and are removed if the app is deleted."
+            ? "Backup snapshots are saved to iCloud Drive automatically when you leave the app."
+            : "Backup snapshots stay on this device and are removed if the app is deleted."
     }
+
 
     private var notificationsSection: some View {
         settingsGroupCard(title: "Notifications", subtitle: "Reminder permissions") {
@@ -328,8 +373,10 @@ struct SettingsView: View {
                 settingsDivider()
                 settingsInfoRow(
                     title: "Storage",
-                    value: BackupExportService.shared.isUsingICloud ? "On device + iCloud backup" : "On device"
+                    value: BackupExportService.shared.isUsingICloud ? "On device + iCloud backup snapshots" : "On device"
                 )
+                settingsDivider()
+                settingsInfoRow(title: "VIN lookup", value: "Only when requested")
                 settingsDivider()
                 settingsInfoRow(title: "Ads", value: "None")
             }
@@ -449,22 +496,96 @@ struct SettingsView: View {
         }
     }
 
-    private func resetAllData() {
+    private func resetAllData() async {
         do {
-            for vehicle in vehicles {
-                for attachment in vehicle.attachments {
-                    Task {
-                        await AttachmentStorageService.shared.delete(reference: attachment.storageReference)
-                        await AttachmentStorageService.shared.delete(reference: attachment.thumbnailReference)
-                    }
-                }
-                modelContext.delete(vehicle)
-            }
-            try modelContext.save()
+            try await AppDataMaintenanceService.resetAllData(vehicles: vehicles, in: modelContext)
+            appState.refreshDataViews()
             Haptics.success()
         } catch {
             Haptics.error()
         }
+    }
+
+    @MainActor
+    private func createBackupNow() async {
+        guard !isRunningBackupAction else { return }
+        isRunningBackupAction = true
+        defer { isRunningBackupAction = false }
+
+        do {
+            try BackupExportService.shared.saveBackup(
+                vehicles: vehicles,
+                services: services,
+                reminders: reminders,
+                attachments: attachments,
+                documents: documents,
+                fuelEntries: fuelEntries
+            )
+            backupFeedback = BackupFeedback(
+                title: "Backup Created",
+                message: BackupExportService.shared.isUsingICloud
+                    ? "A new backup snapshot was saved to iCloud Drive."
+                    : "A new backup snapshot was saved on this device."
+            )
+            Haptics.success()
+        } catch let error as BackupExportService.BackupError {
+            backupFeedback = BackupFeedback(
+                title: "No Data Yet",
+                message: error.localizedDescription
+            )
+            Haptics.error()
+        } catch {
+            backupFeedback = BackupFeedback(
+                title: "Backup Failed",
+                message: "The backup couldn’t be created. Please try again."
+            )
+            Haptics.error()
+        }
+    }
+
+    @MainActor
+    private func restoreLatestBackup() async {
+        guard !isRunningBackupAction else { return }
+        isRunningBackupAction = true
+        defer { isRunningBackupAction = false }
+
+        do {
+            let result = try BackupExportService.shared.importLatestBackup(into: modelContext)
+            try await AppDataMaintenanceService.rescheduleReminderNotifications(in: modelContext)
+            appState.refreshDataViews()
+            backupFeedback = BackupFeedback(
+                title: "Backup Restored",
+                message: restoreSummary(for: result)
+            )
+            Haptics.success()
+        } catch let error as BackupExportService.ImportError {
+            backupFeedback = BackupFeedback(
+                title: "Restore Failed",
+                message: error.localizedDescription
+            )
+            Haptics.error()
+        } catch {
+            backupFeedback = BackupFeedback(
+                title: "Restore Failed",
+                message: "The latest backup couldn’t be restored. Please try again."
+            )
+            Haptics.error()
+        }
+    }
+
+    private func restoreSummary(for result: BackupExportService.ImportResult) -> String {
+        let importedRecords = result.vehiclesImported
+            + result.servicesImported
+            + result.remindersImported
+            + result.attachmentsImported
+            + result.documentsImported
+            + result.fuelEntriesImported
+
+        guard importedRecords > 0 else {
+            return "No new records were imported because this backup was already fully present."
+        }
+
+        return "Imported \(result.vehiclesImported) vehicles, \(result.servicesImported) services, \(result.remindersImported) reminders, \(result.documentsImported) documents, and \(result.fuelEntriesImported) fuel entries."
     }
 
     private func selectDemoVehicle(withVIN vin: String) {

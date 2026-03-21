@@ -49,7 +49,7 @@ struct ServiceEntryFormView: View {
         _serviceType = State(initialValue: entry?.serviceType ?? .oilChange)
         _customServiceTypeName = State(initialValue: entry?.customServiceTypeName ?? "")
         _category = State(initialValue: entry?.category ?? (entry?.serviceType.defaultCategory ?? .maintenance))
-        _price = State(initialValue: entry?.price == 0 ? "" : String(format: "%.0f", entry?.price ?? 0))
+        _price = State(initialValue: UnitFormatter.decimalInputString(entry?.price == 0 ? nil : entry?.price))
         _currencyCode = State(initialValue: entry?.currencyCode ?? vehicle?.currencyCode ?? CurrencyPreset.suggested().rawValue)
         _workshopName = State(initialValue: entry?.workshopName ?? "")
         _notes = State(initialValue: entry?.notes ?? "")
@@ -292,6 +292,13 @@ struct ServiceEntryFormView: View {
 
     private func saveEntry() async {
         guard let vehicle = selectedVehicle, let mileageValue = UnitFormatter.parseDistance(mileage) else { return }
+        let trimmedPrice = price.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parsedPrice = trimmedPrice.isEmpty ? 0 : (UnitFormatter.parseDecimal(trimmedPrice) ?? -1)
+        if !trimmedPrice.isEmpty && parsedPrice < 0 {
+            validationMessage = "Cost isn’t a valid number."
+            showingValidationAlert = true
+            return
+        }
         let today = Calendar.current.startOfDay(for: .now)
         if Calendar.current.startOfDay(for: date) > today {
             validationMessage = "Service date cannot be in the future."
@@ -336,7 +343,7 @@ struct ServiceEntryFormView: View {
                 entry.serviceType = serviceType
                 entry.customServiceTypeName = customServiceTypeName.isEmpty ? nil : customServiceTypeName
                 entry.category = category
-                entry.price = Double(price) ?? 0
+                entry.price = parsedPrice
                 entry.currencyCode = currencyCode.uppercased()
                 entry.workshopName = workshopName.trimmingCharacters(in: .whitespacesAndNewlines)
                 entry.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -351,7 +358,7 @@ struct ServiceEntryFormView: View {
                     serviceType: serviceType,
                     customServiceTypeName: customServiceTypeName.isEmpty ? nil : customServiceTypeName,
                     category: category,
-                    price: Double(price) ?? 0,
+                    price: parsedPrice,
                     currencyCode: currencyCode.uppercased(),
                     workshopName: workshopName.trimmingCharacters(in: .whitespacesAndNewlines),
                     notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -375,7 +382,7 @@ struct ServiceEntryFormView: View {
                 )
             }
 
-            try? modelContext.save()
+            try modelContext.save()
             Haptics.success()
 
             if serviceType.supportsReminderSuggestion, existingSuggestedReminder(for: targetEntry) == nil {
@@ -562,8 +569,8 @@ struct ServiceEntryFormView: View {
             reminder.notificationIdentifier = outcome.identifier
             try? modelContext.save()
 
-            if case .permissionDenied = outcome {
-                notificationInfoMessage = "Reminder saved, but notifications are currently disabled for Car Service Passport. You can enable them in Settings anytime."
+            if let message = notificationMessage(for: outcome) {
+                notificationInfoMessage = message
                 return
             }
 
@@ -580,6 +587,17 @@ struct ServiceEntryFormView: View {
                 reminder.serviceEntry?.id == serviceEntry.id ||
                 reminder.title.trimmingCharacters(in: .whitespacesAndNewlines) == "\(serviceEntry.displayTitle) due"
             )
+        }
+    }
+
+    private func notificationMessage(for outcome: NotificationService.ScheduleOutcome) -> String? {
+        switch outcome {
+        case .permissionDenied:
+            return "Reminder saved, but notifications are currently disabled for Car Maintenance Passport. You can enable them in Settings anytime."
+        case .schedulingFailed:
+            return "Reminder saved, but the notification couldn’t be scheduled. Please try again."
+        default:
+            return nil
         }
     }
 }

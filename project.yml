@@ -23,6 +23,7 @@ targets:
       - Theme
     resources:
       - Assets.xcassets
+      - PrivacyInfo.xcprivacy
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.robertengel.CarServicePassport
@@ -40,5 +41,20 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone:
           - UIInterfaceOrientationPortrait
         CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: CarServicePassport.entitlements
     scheme:
-      testTargets: []
+      testTargets:
+        - CarServicePassportTests
+  CarServicePassportTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests
+    dependencies:
+      - target: CarServicePassport
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.robertengel.CarServicePassportTests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Car Service Passport.app/Car Service Passport"
+        BUNDLE_LOADER: "$(TEST_HOST)"
