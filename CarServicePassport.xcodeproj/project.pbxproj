@@ -11,6 +11,7 @@
 		03E3C21804A9F90C3DC88696 /* PDFExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F56EF4A8A210F7B78ECC57 /* PDFExportService.swift */; };
 		04212E4B5AA017EFBF52CF3A /* VehicleFilterScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0182F0033B65D506F687CBD9 /* VehicleFilterScrollView.swift */; };
 		04AEFFA9D0556461A744A730 /* DocumentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E433D15018A914E8DA43340 /* DocumentDetailView.swift */; };
+		07A0B1C2D3E4F50617283940 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 07A0B1C2D3E4F50617283941 /* Assets.xcassets */; };
 		09A7DCB961DE77EFC4BB37FB /* EntitlementStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEFEB61C93BB7961B8758CF /* EntitlementStore.swift */; };
 		17E26DB739CCCC8A1A93293E /* FuelEntryFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C9089A55064256021265852 /* FuelEntryFormSheet.swift */; };
 		1B58025DF8753297BC1BD668 /* VehicleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D935BBD3517D0AE797C39CAF /* VehicleDetailView.swift */; };
@@ -73,21 +74,12 @@
 		FF0F25531814E27F15E21C25 /* CreateDocumentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D326A868E35D92ECA47E87D9 /* CreateDocumentView.swift */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		CA2FD68DF5F9C1E7CA0AC5D0 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 41BA5CAE8093A590014929F4 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = FB0DD654A501BFFCBDD11BF0;
-			remoteInfo = CarServicePassport;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXFileReference section */
 		013E733282DCEBFD301072C9 /* AttachmentRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentRecord.swift; sourceTree = "<group>"; };
 		0182F0033B65D506F687CBD9 /* VehicleFilterScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleFilterScrollView.swift; sourceTree = "<group>"; };
 		0549892E577DF0443D60AA81 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		068CCD1462B4A1EBD1A9E954 /* AttachmentViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentViews.swift; sourceTree = "<group>"; };
+		07A0B1C2D3E4F50617283941 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0A01EBF05137A193FA299FBB /* EmptyStateCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateCard.swift; sourceTree = "<group>"; };
 		0C9089A55064256021265852 /* FuelEntryFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelEntryFormSheet.swift; sourceTree = "<group>"; };
 		13D9378B397B9D24F8DC9ECB /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
@@ -98,7 +90,6 @@
 		212DB292095C718846FE8F58 /* AnalyticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsService.swift; sourceTree = "<group>"; };
 		21F56EF4A8A210F7B78ECC57 /* PDFExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFExportService.swift; sourceTree = "<group>"; };
 		24499B55CF20EB779A0CAAF9 /* ServiceTypeChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTypeChip.swift; sourceTree = "<group>"; };
-		2A59AC821293D920198D6B12 /* CarServicePassportTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CarServicePassportTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3051AAF960123C559A152C75 /* FuelLogEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelLogEngine.swift; sourceTree = "<group>"; };
 		3899FF7098FDEB80C84271F9 /* PremiumComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumComponents.swift; sourceTree = "<group>"; };
 		415E8D8732F5E0C9899FBBDF /* DocumentPageRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentPageRecord.swift; sourceTree = "<group>"; };
@@ -115,7 +106,7 @@
 		82213E54DCF730A2BF5F8E3C /* FuelEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuelEntry.swift; sourceTree = "<group>"; };
 		822ADCE5D67B2E53A94BD073 /* VehicleFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleFormView.swift; sourceTree = "<group>"; };
 		842AA785AFB813052ACEE49D /* CameraCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraCaptureView.swift; sourceTree = "<group>"; };
-		86C9DF6E3EBDAE3409979578 /* Car Service Passport.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Car Service Passport.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		86C9DF6E3EBDAE3409979578 /* Car Service Passport.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "Car Service Passport.app"; path = "Car Maintenance Passport.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		897D4D05497B02C4BD2D160A /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		8AC299A3853F47FF006CF4F2 /* DocumentDraftSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentDraftSeed.swift; sourceTree = "<group>"; };
 		9571B07AFB8E1A6E8512C438 /* RemindersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemindersView.swift; sourceTree = "<group>"; };
@@ -246,6 +237,7 @@
 			isa = PBXGroup;
 			children = (
 				FF23A6714660F52119ED6D0D /* App */,
+				07A0B1C2D3E4F50617283941 /* Assets.xcassets */,
 				BEEC7D61636C9852EBD2391A /* Components */,
 				24594AF3570A92ADA2E0A464 /* Data */,
 				2A75F2819966B0F31E4667E9 /* Features */,
@@ -354,7 +346,6 @@
 			isa = PBXGroup;
 			children = (
 				86C9DF6E3EBDAE3409979578 /* Car Service Passport.app */,
-				2A59AC821293D920198D6B12 /* CarServicePassportTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -372,26 +363,11 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		44F3281C3407ACB4F9C581EF /* CarServicePassportTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = C25D9DC0716DBABFE210B409 /* Build configuration list for PBXNativeTarget "CarServicePassportTests" */;
-			buildPhases = (
-				7F1C5E71733563A7CF6CD9E7 /* Sources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				E1071AA52600C66BD18E8659 /* PBXTargetDependency */,
-			);
-			name = CarServicePassportTests;
-			productName = CarServicePassportTests;
-			productReference = 2A59AC821293D920198D6B12 /* CarServicePassportTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 		FB0DD654A501BFFCBDD11BF0 /* CarServicePassport */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = FFDBBEF8C39941778CB81690 /* Build configuration list for PBXNativeTarget "CarServicePassport" */;
 			buildPhases = (
+				07A0B1C2D3E4F50617283942 /* Resources */,
 				C0018CCBCB8BACF4137B3686 /* Sources */,
 			);
 			buildRules = (
@@ -432,19 +408,22 @@
 			projectRoot = "";
 			targets = (
 				FB0DD654A501BFFCBDD11BF0 /* CarServicePassport */,
-				44F3281C3407ACB4F9C581EF /* CarServicePassportTests */,
 			);
 		};
 /* End PBXProject section */
 
-/* Begin PBXSourcesBuildPhase section */
-		7F1C5E71733563A7CF6CD9E7 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
+/* Begin PBXResourcesBuildPhase section */
+		07A0B1C2D3E4F50617283942 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				07A0B1C2D3E4F50617283940 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
 		C0018CCBCB8BACF4137B3686 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -518,14 +497,6 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
-/* Begin PBXTargetDependency section */
-		E1071AA52600C66BD18E8659 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = FB0DD654A501BFFCBDD11BF0 /* CarServicePassport */;
-			targetProxy = CA2FD68DF5F9C1E7CA0AC5D0 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
 /* Begin XCBuildConfiguration section */
 		2A1E296405559ED700F8B0ED /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -582,23 +553,6 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.1;
-			};
-			name = Release;
-		};
-		6E2714C3262BF4FDCDF9FFC4 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.robertengel.CarServicePassportTests;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Car Service Passport.app/Car Service Passport";
 			};
 			name = Release;
 		};
@@ -727,23 +681,6 @@
 			};
 			name = Release;
 		};
-		AF1085832C282D244385AB08 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.robertengel.CarServicePassportTests;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Car Service Passport.app/Car Service Passport";
-			};
-			name = Debug;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -752,15 +689,6 @@
 			buildConfigurations = (
 				88C5ABAC276FF7EA9D2FAA54 /* Debug */,
 				2A1E296405559ED700F8B0ED /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		C25D9DC0716DBABFE210B409 /* Build configuration list for PBXNativeTarget "CarServicePassportTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				AF1085832C282D244385AB08 /* Debug */,
-				6E2714C3262BF4FDCDF9FFC4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
